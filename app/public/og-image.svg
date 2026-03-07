@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c2631a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d4841d;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="580" width="1200" height="50" fill="url(#accent)"/>
+  <text x="600" y="250" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">📚 BookDiscovery</text>
+  <text x="600" y="330" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#b0b0b0" text-anchor="middle">AI-Powered Book Recommendations</text>
+  <text x="600" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#808080" text-anchor="middle">Discover Your Next Great Read from 50,000+ Books</text>
+  <g transform="translate(440, 440)">
+    <rect x="0" y="0" width="320" height="48" rx="24" fill="url(#accent)"/>
+    <text x="160" y="32" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="white" text-anchor="middle">Start Exploring →</text>
+  </g>
+</svg>

@@ -1,0 +1,117 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# BookDiscovery — Docker Compose for DEVELOPMENT
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up --build
+#   docker compose -f docker-compose.dev.yml down
+#
+# Features:
+#   • Hot-reload on both frontend (Vite HMR) and backend (tsx watch)
+#   • Source code mounted as volumes — edit files and see changes live
+#   • MySQL database in a dedicated container
+#   • Uploaded files persisted in a named volume
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── MySQL Database ────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: bookdiscovery-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: bookdiscovery
+      MYSQL_USER: bookdiscovery
+      MYSQL_PASSWORD: bookdiscovery
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql-data-dev:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "bookdiscovery", "-pbookdiscovery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Backend API Server ───────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: development
+    container_name: bookdiscovery-server-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: bookdiscovery
+      MYSQL_PASSWORD: bookdiscovery
+      MYSQL_DATABASE: bookdiscovery
+      FRONTEND_URL: http://localhost:5173
+      JWT_SECRET: dev-docker-secret-change-in-production
+      ADMIN_EMAIL: admin@bookdiscovery.com
+      ADMIN_PASSWORD: admin123456
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      IMPORT_JOB_ENABLED: "true"
+      IMPORT_RUN_ON_STARTUP: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_BLOG_ENABLED: ${AI_BLOG_ENABLED:-false}
+    volumes:
+      - ./server/src:/app/src
+      - server-uploads-dev:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Frontend Vite Dev Server ─────────────────────────────────────────────
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      target: development
+    container_name: bookdiscovery-app-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      # Enable Vite polling for Docker file-watch (inotify doesn't bridge host→container)
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      # ── Source code bind-mount for Vite HMR hot-reload ──
+      # Edit any file under app/src/ on the host and the browser refreshes instantly.
+      # Config files (vite.config.ts, tailwind, tsconfig, etc.) are baked into the
+      # image via COPY in the Dockerfile — rebuild if you change them.
+      # NOTE: Individual-file bind-mounts were removed because they cause
+      #   ENODEV / "mount source path" errors on Windows + Docker Desktop (WSL2).
+      - ./app/src:/app/src
+      - ./app/public:/app/public
+    depends_on:
+      server:
+        condition: service_healthy
+
+# ── Named volumes ────────────────────────────────────────────────────────────
+# Named volumes are managed by Docker and persist across:
+#   • docker compose down / up
+#   • docker compose up --build (rebuilds)
+#   • container restarts
+# They are only removed with: docker compose down -v  (or docker volume rm)
+volumes:
+  mysql-data-dev:
+    name: bookdiscovery-mysql-dev
+  server-uploads-dev:
+    name: bookdiscovery-uploads-dev

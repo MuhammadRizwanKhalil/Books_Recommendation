@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth scrolling for the whole page */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Reduce motion if user prefers */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Content-visibility for below-fold sections — improves initial render perf */
+section:not(#hero) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Horizontal scroll containers */
+.scroll-fade {
+  mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
+}
+
+/* Section divider utility */
+.section-divider::before {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: hsl(var(--primary));
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+.section-divider-center::before {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@layer base {
+  :root {
+    --background: 30 25% 98%;
+    --foreground: 20 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 10%;
+    --primary: 24 72% 44%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --secondary: 30 18% 93%;
+    --secondary-foreground: 24 9.8% 20%;
+    --muted: 30 18% 95%;
+    --muted-foreground: 20 8% 42%;
+    --accent: 36 50% 90%;
+    --accent-foreground: 24 9.8% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 14% 89%;
+    --input: 30 14% 89%;
+    --ring: 24 72% 44%;
+    --radius: 0.625rem;
+    --sidebar-background: 30 20% 97%;
+    --sidebar-foreground: 20 20% 10%;
+    --sidebar-primary: 24 72% 44%;
+    --sidebar-primary-foreground: 60 9.1% 97.8%;
+    --sidebar-accent: 36 50% 90%;
+    --sidebar-accent-foreground: 24 9.8% 20%;
+    --sidebar-border: 30 14% 89%;
+    --sidebar-ring: 24 72% 44%;
+  }
+
+  .dark {
+    --background: 20 16% 5%;
+    --foreground: 30 20% 95%;
+    --card: 20 16% 7%;
+    --card-foreground: 30 20% 95%;
+    --popover: 20 16% 7%;
+    --popover-foreground: 30 20% 95%;
+    --primary: 28 78% 52%;
+    --primary-foreground: 20 16% 5%;
+    --secondary: 20 12% 14%;
+    --secondary-foreground: 30 20% 90%;
+    --muted: 20 12% 12%;
+    --muted-foreground: 30 12% 58%;
+    --accent: 28 30% 16%;
+    --accent-foreground: 30 20% 90%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 20 12% 15%;
+    --input: 20 12% 15%;
+    --ring: 28 78% 52%;
+    --sidebar-background: 20 16% 6%;
+    --sidebar-foreground: 30 20% 90%;
+    --sidebar-primary: 28 78% 52%;
+    --sidebar-primary-foreground: 20 16% 5%;
+    --sidebar-accent: 28 30% 16%;
+    --sidebar-accent-foreground: 30 20% 90%;
+    --sidebar-border: 20 12% 15%;
+    --sidebar-ring: 28 78% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
