@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, Heart, User } from 'lucide-react';
+import { Search, Menu, Heart, User, LogOut } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -32,7 +33,7 @@ export function Navigation() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { wishlistCount, openWishlistDrawer } = useWishlist();
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isAuthenticated, openAuthModal, user, signOut } = useAuth();
   const { getSetting } = useSettings();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -254,7 +255,29 @@ export function Navigation() {
                       )}
                     </Button>
                     {isAuthenticated ? (
-                      <UserProfile />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 px-2 py-2 rounded-lg bg-muted/50">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user?.avatar} alt={user?.name} />
+                            <AvatarFallback className="text-xs">
+                              {user?.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{user?.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start text-destructive hover:text-destructive gap-2"
+                          size="sm"
+                          onClick={() => { setIsMobileOpen(false); signOut(); }}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          {t('nav.signOut')}
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         <Button variant="outline" className="w-full" onClick={() => openAuthModal('signin')}>

@@ -36,7 +36,7 @@ export function UserProfile() {
           </Avatar>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-96 p-0">
+      <SheetContent side="right" className="w-[min(90vw,24rem)] p-0">
         <SheetHeader className="p-6 pb-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14">
