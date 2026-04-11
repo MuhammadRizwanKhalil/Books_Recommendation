@@ -113,26 +113,56 @@ const BASE_URL = 'https://www.googleapis.com/books/v1/volumes';
 const MAX_RESULTS_PER_PAGE = 40; // Google API max
 const REQUEST_DELAY_MS = 1500;    // Throttle between requests (generous to avoid 429)
 
-// Search queries for the initial "top books" fetch across categories
+// Search queries for the initial "top books" fetch — wider net across sub-genres
 const TOP_BOOKS_QUERIES = [
-  { query: 'subject:fiction bestseller', category: 'Fiction' },
-  { query: 'subject:business bestseller', category: 'Business' },
-  { query: 'subject:technology programming', category: 'Technology' },
-  { query: 'subject:self-help personal development', category: 'Self-Help' },
-  { query: 'subject:science popular', category: 'Science' },
-  { query: 'subject:history', category: 'History' },
-  { query: 'subject:psychology', category: 'Psychology' },
-  { query: 'subject:biography memoir', category: 'Biography' },
+  // Fiction — multiple angles for depth
+  { query: 'subject:fiction bestseller award winning', category: 'Fiction' },
+  { query: 'subject:fiction NYT bestseller popular', category: 'Fiction' },
+  { query: 'subject:literary fiction Pulitzer Booker prize', category: 'Fiction' },
+  { query: 'subject:fiction thriller mystery top rated', category: 'Fiction' },
+
+  // Business & Economics
+  { query: 'subject:business bestseller leadership strategy', category: 'Business' },
+  { query: 'subject:business economics finance investing', category: 'Business' },
+
+  // Technology & Programming
+  { query: 'subject:computers programming bestseller', category: 'Technology' },
+  { query: 'subject:technology artificial intelligence machine learning', category: 'Technology' },
+
+  // Self-Help & Personal Development
+  { query: 'subject:self-help bestseller habits productivity', category: 'Self-Help' },
+  { query: 'subject:self-help personal development mindfulness', category: 'Self-Help' },
+
+  // Science
+  { query: 'subject:science popular bestseller', category: 'Science' },
+  { query: 'subject:science physics cosmology evolution', category: 'Science' },
+
+  // History
+  { query: 'subject:history bestseller civilization', category: 'History' },
+  { query: 'subject:history war revolution modern', category: 'History' },
+
+  // Psychology
+  { query: 'subject:psychology bestseller behavior cognitive', category: 'Psychology' },
+  { query: 'subject:psychology thinking brain neuroscience', category: 'Psychology' },
+
+  // Biography & Memoir
+  { query: 'subject:biography memoir bestseller', category: 'Biography' },
+  { query: 'subject:biography autobiography inspiring', category: 'Biography' },
 ];
 
-// Queries for daily new book discovery
-const DAILY_QUERIES = [
-  'new releases 2025 2026 bestseller',
-  'trending books this week',
-  'award winning books recent',
-  'new york times bestseller list',
-  'most anticipated books',
-];
+// Generate daily queries with the current year for freshness
+function getDailyQueries(): string[] {
+  const year = new Date().getFullYear();
+  return [
+    `new releases ${year} bestseller`,
+    `trending books ${year} popular`,
+    `award winning books ${year}`,
+    `new york times bestseller list ${year}`,
+    `most anticipated books ${year}`,
+    `best new fiction ${year}`,
+    `best new nonfiction ${year}`,
+  ];
+}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -224,8 +254,12 @@ export async function fetchTopBooks(
 
         const normalized = await normalizeVolume(volume, category);
         if (normalized) {
+          // Quality gate: skip books with very low engagement for initial import
+          if (normalized.googleRating && normalized.googleRating < 3.0 && normalized.ratingsCount < 10) {
+            continue;
+          }
           allBooks.push(normalized);
-          onProgress?.(`  ✓ ${normalized.title} by ${normalized.author}`);
+          onProgress?.(`  ✓ ${normalized.title} by ${normalized.author} (★${normalized.googleRating ?? '?'} · ${normalized.ratingsCount} ratings)`);
         }
       }
     } catch (err: any) {
@@ -245,6 +279,9 @@ export async function fetchTopBooks(
         seenIds.add(volume.id);
         const normalized = await normalizeVolume(volume);
         if (normalized) {
+          if (normalized.googleRating && normalized.googleRating < 3.0 && normalized.ratingsCount < 10) {
+            continue;
+          }
           allBooks.push(normalized);
         }
       }
@@ -270,7 +307,8 @@ export async function fetchDailyNewBooks(
   let consecutiveFailures = 0;
   const MAX_CONSECUTIVE_FAILURES = 3; // Stop early if API keeps failing
 
-  for (const query of DAILY_QUERIES) {
+  const dailyQueries = getDailyQueries();
+  for (const query of dailyQueries) {
     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
       onProgress?.(`Aborting: ${consecutiveFailures} consecutive API failures — check your GOOGLE_BOOKS_API_KEY.`);
       break;

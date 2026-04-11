@@ -20,10 +20,12 @@ import { config } from '../config.js';
 import {
   fetchTopBooks,
   fetchDailyNewBooks,
+  isValidIsbn10,
+  buildAmazonSearchUrl,
   type NormalizedBook,
 } from '../services/googleBooks.js';
 import { calculateCompositeScore, recalculateAllScores, invalidatePriorCache } from '../services/scoring.js';
-import { resolveAuthorImage } from '../services/coverResolver.js';
+import { resolveAuthorImage, resolveHDCover } from '../services/coverResolver.js';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -236,7 +238,23 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
   const primaryAuthorId = authorIds[0] || null;
 
   if (existingId) {
-    // Update existing book with fresher data
+    // Only update existing books if they haven't been updated in the last 30 days.
+    // New books are always inserted; this guard prevents constant overwrites.
+    const existingRow = await dbGet<any>(
+      'SELECT updated_at FROM books WHERE id = ?',
+      [existingId],
+    );
+    if (existingRow?.updated_at) {
+      const daysSinceUpdate = (Date.now() - new Date(existingRow.updated_at).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceUpdate < 30) {
+        // Still link any new authors/categories even when skipping the data update
+        await linkBookAuthors(existingId, authorIds);
+        await linkCategories(existingId, book.categories);
+        return 'skipped';
+      }
+    }
+
+    // Update existing book with fresher data (only when > 30 days old)
     await dbRun(`
       UPDATE books SET
         google_rating = COALESCE(?, google_rating),
@@ -361,6 +379,95 @@ async function linkCategories(bookId: string, categoryNames: string[]) {
       await dbRun('INSERT IGNORE INTO book_categories (book_id, category_id) VALUES (?, ?)', [bookId, cat.id]);
     }
   }
+}
+
+/**
+ * Post-import: fix Amazon /dp/ URLs that use invalid ISBN-10 check digits.
+ * Replaces them with reliable search URLs that always resolve.
+ */
+async function fixInvalidAmazonUrls(log: (msg: string) => void): Promise<number> {
+  const books = await dbAll<any>(
+    `SELECT id, isbn10, isbn13, title, author, amazon_url
+     FROM books WHERE amazon_url LIKE '%/dp/%' AND is_active = 1`,
+  );
+
+  let fixed = 0;
+  for (const book of books) {
+    const dpMatch = book.amazon_url?.match(/\/dp\/(\w+)/);
+    if (!dpMatch) continue;
+
+    const isbn = dpMatch[1];
+    if (isbn.length === 10 && isValidIsbn10(isbn)) continue; // Valid — keep
+
+    // Invalid ISBN in /dp/ link — replace with search URL
+    const searchUrl = buildAmazonSearchUrl({
+      isbn10: book.isbn10,
+      isbn13: book.isbn13,
+      title: book.title,
+      author: book.author,
+    });
+    await dbRun('UPDATE books SET amazon_url = ? WHERE id = ?', [searchUrl, book.id]);
+    fixed++;
+  }
+
+  // Also fill in missing Amazon URLs
+  const missing = await dbAll<any>(
+    `SELECT id, isbn10, isbn13, title, author FROM books
+     WHERE (amazon_url IS NULL OR amazon_url = '') AND is_active = 1`,
+  );
+  for (const book of missing) {
+    const url = buildAmazonSearchUrl({
+      isbn10: book.isbn10,
+      isbn13: book.isbn13,
+      title: book.title,
+      author: book.author,
+    });
+    await dbRun('UPDATE books SET amazon_url = ? WHERE id = ?', [url, book.id]);
+    fixed++;
+  }
+
+  if (fixed > 0) log(`Amazon URL fix: ${fixed} links corrected`);
+  return fixed;
+}
+
+/**
+ * Post-import: upgrade low-res Google thumbnails to HD covers.
+ * Processes a small batch each run to avoid overloading Open Library.
+ */
+async function upgradeImportedCovers(log: (msg: string) => void): Promise<number> {
+  const books = await dbAll<any>(
+    `SELECT id, isbn10, isbn13, google_books_id, cover_image FROM books
+     WHERE is_active = 1
+       AND ((cover_image LIKE '%books.google%' AND cover_image LIKE '%zoom=1%')
+         OR cover_image LIKE '%zoom=5%'
+         OR cover_image LIKE '%smallThumbnail%')
+     LIMIT 50`,
+  );
+
+  let upgraded = 0;
+  for (const book of books) {
+    try {
+      const hd = await resolveHDCover({
+        isbn13: book.isbn13,
+        isbn10: book.isbn10,
+        googleBooksId: book.google_books_id,
+        currentCoverUrl: book.cover_image,
+      });
+
+      if (hd && hd.url !== book.cover_image) {
+        await dbRun(
+          'UPDATE books SET cover_image = ?, og_image = ? WHERE id = ?',
+          [hd.url, hd.url, book.id],
+        );
+        upgraded++;
+      }
+    } catch { /* skip */ }
+
+    await new Promise(r => setTimeout(r, 300)); // Respect rate limits
+  }
+
+  if (upgraded > 0) log(`Cover upgrade: ${upgraded} books upgraded to HD`);
+  return upgraded;
 }
 
 /**
@@ -510,6 +617,22 @@ export async function runImportJob(
       } catch (e: any) {
         log(`Score recalculation warning: ${e.message}`);
       }
+    }
+
+    // ── Post-import cleanup ──────────────────────────────────────────
+
+    // Fix Amazon URLs with invalid ISBN-10 check digits + fill missing ones
+    try {
+      await fixInvalidAmazonUrls(log);
+    } catch (e: any) {
+      log(`Amazon URL fix warning: ${e.message}`);
+    }
+
+    // Upgrade low-res Google thumbnails to HD covers (small batch per run)
+    try {
+      await upgradeImportedCovers(log);
+    } catch (e: any) {
+      log(`Cover upgrade warning: ${e.message}`);
     }
 
     return result;
