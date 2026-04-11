@@ -285,29 +285,26 @@ docker compose -f docker-compose.prod.yml restart server
 
 ## Email Configuration
 
-### Current Status
-Email sending is disabled (no SMTP configured).
+### Current Setup: Resend SDK
+The server uses the **Resend SDK** (not SMTP) for transactional emails.
 
-### Recommended Service: Resend
-1. Sign up at https://resend.com (3,000 free emails/month)
-2. Add domain DNS records for verification
-3. Get API key
+**Email Features:**
+- Welcome email on user signup
+- Admin login alerts
+- Newsletter subscription confirmations
+- Beautiful HTML email templates with The Book Times branding
 
-### Configure SMTP
+### Configure Resend
 ```bash
 ssh -i "D:\My_Projects\deployKey" deploy@159.65.189.149
 cd /opt/thebooktimes
 nano .env
 ```
 
-Add:
+Add/update:
 ```env
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=resend
-SMTP_PASS=re_your_api_key_here
-SMTP_FROM=noreply@thebooktimes.com
+RESEND_API_KEY=re_your_api_key_here
+EMAIL_FROM=The Book Times <noreply@thebooktimes.com>
 ```
 
 Restart:
@@ -315,13 +312,12 @@ Restart:
 docker compose -f docker-compose.prod.yml restart server
 ```
 
-### Alternative Services
-| Service | Free Tier |
-|---------|-----------|
-| Resend | 3,000/month |
-| SendGrid | 100/day |
-| Mailgun | 5,000/month (3 months) |
-| Brevo | 300/day |
+### Resend Setup Steps
+1. Sign up at https://resend.com (3,000 free emails/month)
+2. Add & verify your domain (thebooktimes.com) — add the DNS records Resend provides
+3. Generate an API key and set it as `RESEND_API_KEY` in `.env`
+
+> **Note:** Without `RESEND_API_KEY`, emails are logged to console only (dev mode).
 
 ---
 

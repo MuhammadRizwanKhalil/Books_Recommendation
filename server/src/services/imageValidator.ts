@@ -148,10 +148,14 @@ interface HeadResult {
   contentLength?: number;
 }
 
+const HTTP_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; TheBookTimes/1.0; +https://thebooktimes.com)',
+};
+
 function headRequest(url: string): Promise<HeadResult> {
   return new Promise((resolve) => {
     const client = url.startsWith('https') ? https : http;
-    const req = client.request(url, { method: 'HEAD', timeout: REQUEST_TIMEOUT_MS }, (res) => {
+    const req = client.request(url, { method: 'HEAD', timeout: REQUEST_TIMEOUT_MS, headers: HTTP_HEADERS }, (res) => {
       // Follow redirects (up to 3)
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         resolve(headRequest(res.headers.location));
@@ -183,7 +187,7 @@ function downloadImage(url: string, redirectCount = 0): Promise<DownloadResult> 
 
   return new Promise((resolve) => {
     const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, { timeout: REQUEST_TIMEOUT_MS }, (res) => {
+    const req = client.get(url, { timeout: REQUEST_TIMEOUT_MS, headers: HTTP_HEADERS }, (res) => {
       // Follow redirects
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         resolve(downloadImage(res.headers.location, redirectCount + 1));
