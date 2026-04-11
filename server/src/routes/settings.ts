@@ -7,8 +7,6 @@ import { logger } from '../lib/logger.js';
 
 const router = Router();
 
-const router = Router();
-
 // ── Legal page content ──────────────────────────────────────────────────────
 
 const PRIVACY_POLICY_HTML = `<h2>Introduction</h2>
