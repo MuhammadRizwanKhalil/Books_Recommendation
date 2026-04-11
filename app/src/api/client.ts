@@ -916,6 +916,15 @@ export const importApi = {
       method: 'POST',
       body: JSON.stringify(type ? { type } : {}),
     }),
+
+  getCoverUpgradeStatus: () =>
+    apiFetch<{ running: boolean }>('/import/upgrade-covers/status'),
+
+  upgradCovers: (limit = 500, forceAll = false) =>
+    apiFetch<{ message: string; started: boolean; booksToProcess: number } | { error: string }>('/import/upgrade-covers', {
+      method: 'POST',
+      body: JSON.stringify({ limit, forceAll }),
+    }),
 };
 
 // â”€â”€ Session ID helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

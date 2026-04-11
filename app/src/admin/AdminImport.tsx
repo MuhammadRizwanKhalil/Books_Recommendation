@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, Play, Loader2, CheckCircle2, XCircle,
-  Clock, BookOpen, RefreshCw, AlertTriangle,
+  Clock, BookOpen, RefreshCw, AlertTriangle, ImageIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { importApi } from '@/api/client';
 import { toast } from 'sonner';
 
@@ -25,23 +26,27 @@ interface ImportJob {
 
 export function AdminImport() {
   const [isRunning, setIsRunning] = useState(false);
+  const [isCoverUpgradeRunning, setIsCoverUpgradeRunning] = useState(false);
+  const [coverLimit, setCoverLimit] = useState(500);
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [statusRes, historyRes] = await Promise.all([
+      const [statusRes, historyRes, coverStatusRes] = await Promise.all([
         importApi.getStatus(),
         importApi.getHistory(20),
+        importApi.getCoverUpgradeStatus(),
       ]);
       setIsRunning(statusRes.running);
       setJobs(historyRes.jobs);
+      setIsCoverUpgradeRunning(coverStatusRes.running);
 
       // If a job is running, start polling
-      if (statusRes.running && !polling) {
+      if ((statusRes.running || coverStatusRes.running) && !polling) {
         setPolling(true);
-      } else if (!statusRes.running && polling) {
+      } else if (!statusRes.running && !coverStatusRes.running && polling) {
         setPolling(false);
       }
     } catch (err) {
@@ -61,6 +66,23 @@ export function AdminImport() {
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
   }, [polling, loadData]);
+
+  const handleUpgradeCovers = async () => {
+    try {
+      const res = await importApi.upgradCovers(coverLimit, false);
+      if ('error' in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Cover upgrade started! Processing ${res.booksToProcess} books...`);
+      setIsCoverUpgradeRunning(true);
+      setPolling(true);
+      loadData();
+    } catch (err) {
+      console.error('Failed to start cover upgrade:', err);
+      toast.error('Failed to start cover upgrade');
+    }
+  };
 
   const handleRunImport = async (type: 'initial' | 'daily') => {
     try {
@@ -242,6 +264,58 @@ export function AdminImport() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Cover Upgrade */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" />
+            Upgrade Book Covers
+          </CardTitle>
+          <CardDescription>
+            Upgrade existing book covers to higher resolution images using Open Library and Google Books HD sources
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will find books with low-resolution cover images (zoom=1 thumbnails) and attempt to upgrade them to HD versions from Open Library or Google Books (zoom=0).
+            </p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="w-full sm:w-40">
+                <label className="text-sm font-medium mb-1.5 block">Books to process</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={5000}
+                  value={coverLimit}
+                  onChange={(e) => setCoverLimit(Math.min(5000, Math.max(1, parseInt(e.target.value) || 500)))}
+                  disabled={isCoverUpgradeRunning}
+                />
+              </div>
+              <Button
+                onClick={handleUpgradeCovers}
+                disabled={isCoverUpgradeRunning || isRunning}
+                className="w-full sm:w-auto"
+              >
+                {isCoverUpgradeRunning ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                )}
+                {isCoverUpgradeRunning ? 'Upgrading Covers...' : 'Upgrade Covers'}
+              </Button>
+            </div>
+            {isCoverUpgradeRunning && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Cover upgrade in progress. This may take several minutes depending on the number of books. Check server logs for detailed progress.
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

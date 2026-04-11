@@ -17,6 +17,8 @@ import {
   initImportJobsTable,
   resetImportState,
 } from '../jobs/bookImport.js';
+import { resolveHDCover } from '../services/coverResolver.js';
+import { dbAll, dbRun } from '../database.js';
 
 const router = Router();
 
@@ -110,6 +112,96 @@ router.post('/cancel', async (_req: Request, res: Response) => {
   } catch (err: any) {
     logger.error({ err: err.message }, '[ImportAPI] Cancel error');
     res.status(500).json({ error: 'Failed to reset import state' });
+  }
+});
+
+// ── POST /api/import/upgrade-covers ─────────────────────────────────────────
+// Upgrade existing book covers to HD from Open Library / Google Books zoom=0.
+// Processes books that still have low-res Google Books thumbnails.
+let coverUpgradeRunning = false;
+
+router.get('/upgrade-covers/status', (_req: Request, res: Response) => {
+  res.json({ running: coverUpgradeRunning });
+});
+
+router.post('/upgrade-covers', async (req: Request, res: Response) => {
+  if (coverUpgradeRunning) {
+    res.status(409).json({ error: 'Cover upgrade is already running' });
+    return;
+  }
+
+  const limit = Math.min(parseInt(req.body.limit as string || '500', 10), 5000);
+  const forceAll = req.body.forceAll === true;
+
+  // Return immediately, run in background
+  res.json({
+    message: `Cover upgrade started (limit: ${limit}, forceAll: ${forceAll})`,
+    running: true,
+  });
+
+  coverUpgradeRunning = true;
+
+  try {
+    // Fetch books that need cover upgrades
+    // By default, only upgrade books still using Google Books thumbnail URLs
+    const whereClause = forceAll
+      ? '1=1'
+      : "cover_image LIKE '%books.google%' AND cover_image LIKE '%zoom=1%'";
+
+    const books = await dbAll<any>(
+      `SELECT id, isbn10, isbn13, google_books_id, cover_image
+       FROM books
+       WHERE ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [limit],
+    );
+
+    logger.info(`[CoverUpgrade] Starting upgrade for ${books.length} books (limit: ${limit}, forceAll: ${forceAll})`);
+
+    let upgraded = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (let i = 0; i < books.length; i++) {
+      const book = books[i];
+      try {
+        const result = await resolveHDCover({
+          isbn13: book.isbn13,
+          isbn10: book.isbn10,
+          googleBooksId: book.google_books_id,
+          currentCoverUrl: book.cover_image,
+        });
+
+        if (result && result.url !== book.cover_image) {
+          await dbRun(
+            `UPDATE books SET cover_image = ?, og_image = ?, updated_at = NOW() WHERE id = ?`,
+            [result.url, result.url, book.id],
+          );
+          upgraded++;
+
+          if (upgraded % 50 === 0) {
+            logger.info(`[CoverUpgrade] Progress: ${upgraded} upgraded, ${skipped} skipped, ${failed} failed (${i + 1}/${books.length})`);
+          }
+        } else {
+          skipped++;
+        }
+      } catch (err: any) {
+        failed++;
+        logger.warn(`[CoverUpgrade] Failed for book ${book.id}: ${err.message}`);
+      }
+
+      // Rate limit: 300ms between books to respect Open Library limits
+      if (i < books.length - 1) {
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    logger.info(`[CoverUpgrade] Complete! Upgraded: ${upgraded}, Skipped: ${skipped}, Failed: ${failed}`);
+  } catch (err: any) {
+    logger.error({ err }, '[CoverUpgrade] Job failed');
+  } finally {
+    coverUpgradeRunning = false;
   }
 });
 

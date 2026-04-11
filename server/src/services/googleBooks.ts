@@ -16,6 +16,7 @@
 
 import { config } from '../config.js';
 import { validateImageUrl, findBestValidImage, type ImageValidationResult } from './imageValidator.js';
+import { resolveHDCover } from './coverResolver.js';
 import { logger } from '../lib/logger.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -406,6 +407,22 @@ async function normalizeVolume(
       ? `https://www.amazon.com/s?k=${isbn13}&tag=thebooktimes-20`
       : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + info.authors[0])}&tag=thebooktimes-20`;
 
+  // Try to upgrade to HD cover (Open Library → Google zoom=0)
+  let finalCoverUrl = validImage.url;
+  try {
+    const hdCover = await resolveHDCover({
+      isbn13,
+      isbn10,
+      googleBooksId: volume.id,
+      currentCoverUrl: validImage.url,
+    });
+    if (hdCover) {
+      finalCoverUrl = hdCover.url;
+    }
+  } catch {
+    // HD upgrade failed, keep original thumbnail
+  }
+
   return {
     googleBooksId: volume.id,
     isbn10,
@@ -414,7 +431,7 @@ async function normalizeVolume(
     subtitle: info.subtitle || null,
     author: info.authors.join(', '),
     description: info.description || null,
-    coverImage: validImage.url,
+    coverImage: finalCoverUrl,
     publisher: info.publisher || null,
     publishedDate: info.publishedDate || null,
     pageCount: info.pageCount || null,
