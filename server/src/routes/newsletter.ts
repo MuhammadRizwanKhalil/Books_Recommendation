@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../lib/logger.js';
-import { dbGet, dbRun } from '../database.js';
+import { dbGet, dbRun, dbAll } from '../database.js';
 import { sendEmail, wrapInBaseTemplate, getSiteSetting, buildNewsletterWelcomeEmail } from '../services/email.js';
 import { rateLimit } from '../middleware.js';
 import { validate, newsletterSubscribeSchema } from '../lib/validation.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -51,14 +52,36 @@ router.post('/subscribe', rateLimit('newsletter', 5, 60 * 60 * 1000), validate(n
     // ── Fire-and-forget: Admin notification ─────────────────────────────
     try {
       if (await getSiteSetting('notify_new_subscriber', 'true') === 'true') {
-        const adminEmail = await getSiteSetting('admin_email', '');
+        const dbAdminEmail = await getSiteSetting('admin_email', '');
+        const adminEmail = dbAdminEmail && dbAdminEmail !== 'admin@thebooktimes.com'
+          ? dbAdminEmail
+          : config.admin.email || '';
         if (adminEmail) {
           const siteName = await getSiteSetting('site_name', 'The Book Times');
+          const siteUrl = await getSiteSetting('site_url', 'https://thebooktimes.com');
+
+          // Count total subscribers
+          const countResult = await dbAll<any>('SELECT COUNT(*) as cnt FROM newsletter_subscribers WHERE is_active = 1', []);
+          const totalSubs = countResult[0]?.cnt || 0;
+
           const html = await wrapInBaseTemplate(
-            `<h2>New Newsletter Subscriber</h2><p>A new user subscribed to the newsletter:</p><p><strong>Email:</strong> ${escapeHtml(normalizedEmail)}</p><p><strong>Name:</strong> ${name?.trim() ? escapeHtml(name.trim()) : 'Not provided'}</p>`,
+            `<h2 style="color:#c2631a;">🔔 New Newsletter Subscriber</h2>
+             <p>Someone just subscribed to your newsletter!</p>
+
+             <div style="background:#fef9f3;border-left:4px solid #c2631a;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
+               <p style="margin:0 0 8px;"><strong>📧 Email:</strong> ${escapeHtml(normalizedEmail)}</p>
+               <p style="margin:0;"><strong>👤 Name:</strong> ${name?.trim() ? escapeHtml(name.trim()) : '<em>Not provided</em>'}</p>
+             </div>
+
+             <p style="font-size:14px;color:#666;">📊 <strong>Total active subscribers:</strong> ${totalSubs}</p>
+
+             <div style="text-align:center;margin:24px 0;">
+               <a href="${escapeHtml(siteUrl)}/admin/newsletter" style="display:inline-block;background:#c2631a;color:#ffffff !important;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">View All Subscribers →</a>
+             </div>`,
             `New Subscriber - ${siteName}`,
           );
-          await sendEmail({ to: adminEmail, subject: `[${siteName}] New Newsletter Subscriber: ${normalizedEmail}`, html });
+          sendEmail({ to: adminEmail, subject: `[${siteName}] 🎉 New Subscriber: ${normalizedEmail}`, html })
+            .catch(e => logger.error({ err: e }, 'Admin subscriber notification failed'));
         }
       }
     } catch (e) {

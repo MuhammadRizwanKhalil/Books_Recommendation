@@ -47,7 +47,7 @@ export function Testimonials() {
           </h2>
           <p className="text-muted-foreground">
             Join thousands of readers who have discovered their next favorite book through our
-            AI-powered recommendation engine.
+            smart recommendation engine.
           </p>
         </motion.div>
 

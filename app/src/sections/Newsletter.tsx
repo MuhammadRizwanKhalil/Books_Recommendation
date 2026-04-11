@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Send, CheckCircle, Sparkles, BookOpen, Bell } from 'lucide-react';
+import { Mail, Send, CheckCircle, Sparkles, BookOpen, Bell, PartyPopper, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +32,9 @@ export function Newsletter() {
     try {
       await newsletterApi.subscribe(email);
       setIsSubscribed(true);
-      toast.success('Successfully subscribed to our newsletter!');
+      toast.success('Welcome aboard! Check your inbox for a confirmation email.', {
+        duration: 5000,
+      });
     } catch (err: any) {
       toast.error(err?.body?.error || 'Subscription failed. Please try again.');
     } finally {
@@ -159,25 +161,82 @@ export function Newsletter() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-center text-white space-y-4"
+                      transition={{ type: 'spring', duration: 0.6 }}
+                      className="text-center text-white space-y-5"
                     >
-                      <div className="w-16 h-16 mx-auto rounded-full bg-white/20 flex items-center justify-center">
-                        <CheckCircle className="h-8 w-8" />
-                      </div>
-                      <h3 className="text-2xl font-bold">{t('newsletter.subscribed')}</h3>
-                      <p className="text-white/80">
-                        {t('newsletter.checkInbox')}
-                      </p>
-                      <Button
-                        variant="outline"
-                        className="border-white text-white hover:bg-white/20"
-                        onClick={() => {
-                          setIsSubscribed(false);
-                          setEmail('');
-                        }}
+                      {/* Animated success icon */}
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
+                        className="relative mx-auto w-20 h-20"
                       >
-                        {t('newsletter.subscribeAnother')}
-                      </Button>
+                        <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" style={{ animationDuration: '2s' }} />
+                        <div className="relative w-20 h-20 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                          <CheckCircle className="h-10 w-10 text-white" />
+                        </div>
+                      </motion.div>
+
+                      {/* Title with confetti icon */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <h3 className="text-2xl font-bold flex items-center justify-center gap-2">
+                          <PartyPopper className="h-6 w-6" />
+                          {t('newsletter.subscribed')}
+                        </h3>
+                      </motion.div>
+
+                      {/* Description */}
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-white/85 text-base leading-relaxed"
+                      >
+                        {t('newsletter.checkInbox')}
+                      </motion.p>
+
+                      {/* What's next hints */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="space-y-2 text-left bg-white/10 rounded-xl p-4"
+                      >
+                        <p className="text-sm font-semibold text-white/90">What happens next:</p>
+                        <div className="flex items-center gap-2 text-sm text-white/75">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span>Welcome email on its way</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-white/75">
+                          <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                          <span>Curated picks every week</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-white/75">
+                          <Heart className="h-3.5 w-3.5 shrink-0" />
+                          <span>No spam, unsubscribe anytime</span>
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        <Button
+                          variant="outline"
+                          className="border-white/40 text-white hover:bg-white/20"
+                          onClick={() => {
+                            setIsSubscribed(false);
+                            setEmail('');
+                          }}
+                        >
+                          {t('newsletter.subscribeAnother')}
+                        </Button>
+                      </motion.div>
                     </motion.div>
                   )}
                 </div>

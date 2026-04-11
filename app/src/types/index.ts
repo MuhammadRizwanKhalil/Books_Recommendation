@@ -15,6 +15,13 @@ export interface Book {
     slug: string;
     imageUrl?: string;
   } | null;
+  /** All authors linked to this book (multi-author support) */
+  authorsData?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string;
+  }>;
   description?: string;
   coverImage: string;
   publisher?: string;

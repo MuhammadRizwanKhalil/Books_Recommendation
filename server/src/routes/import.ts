@@ -10,14 +10,9 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireAdmin } from '../middleware.js';
 import { logger } from '../lib/logger.js';
-import {
-  runImportJob,
-  getImportJobHistory,
-  isImportRunning,
-  initImportJobsTable,
-  resetImportState,
-} from '../jobs/bookImport.js';
-import { resolveHDCover } from '../services/coverResolver.js';
+import { runImportJob, getImportJobHistory, isImportRunning, initImportJobsTable, resetImportState } from '../jobs/bookImport.js';
+import { resolveHDCover, resolveAuthorImage } from '../services/coverResolver.js';
+import { isValidIsbn10, buildAmazonSearchUrl } from '../services/googleBooks.js';
 import { dbAll, dbRun } from '../database.js';
 
 const router = Router();
@@ -133,20 +128,29 @@ router.post('/upgrade-covers', async (req: Request, res: Response) => {
   const limit = Math.min(parseInt(req.body.limit as string || '500', 10), 5000);
   const forceAll = req.body.forceAll === true;
 
+  // Count eligible books first
+  const eligibleWhere = forceAll
+    ? '1=1'
+    : "(cover_image LIKE '%books.google%' AND cover_image LIKE '%zoom=1%') OR (cover_image LIKE '%zoom=5%') OR (cover_image LIKE '%smallThumbnail%')";
+
+  const countResult = await dbAll<any>(`SELECT COUNT(*) as cnt FROM books WHERE ${eligibleWhere}`, []);
+  const booksToProcess = Math.min(countResult[0]?.cnt || 0, limit);
+
   // Return immediately, run in background
   res.json({
     message: `Cover upgrade started (limit: ${limit}, forceAll: ${forceAll})`,
-    running: true,
+    started: true,
+    booksToProcess,
   });
 
   coverUpgradeRunning = true;
 
   try {
     // Fetch books that need cover upgrades
-    // By default, only upgrade books still using Google Books thumbnail URLs
+    // Target: low-res Google thumbnails, small thumbnails, and zoom=5 (tiny)
     const whereClause = forceAll
       ? '1=1'
-      : "cover_image LIKE '%books.google%' AND cover_image LIKE '%zoom=1%'";
+      : "(cover_image LIKE '%books.google%' AND cover_image LIKE '%zoom=1%') OR (cover_image LIKE '%zoom=5%') OR (cover_image LIKE '%smallThumbnail%')";
 
     const books = await dbAll<any>(
       `SELECT id, isbn10, isbn13, google_books_id, cover_image
@@ -202,6 +206,172 @@ router.post('/upgrade-covers', async (req: Request, res: Response) => {
     logger.error({ err }, '[CoverUpgrade] Job failed');
   } finally {
     coverUpgradeRunning = false;
+  }
+});
+
+// ── POST /api/import/upgrade-author-images ──────────────────────────────────
+// Fetch missing author images from Open Library in bulk.
+let authorImageUpgradeRunning = false;
+
+router.get('/upgrade-author-images/status', (_req: Request, res: Response) => {
+  res.json({ running: authorImageUpgradeRunning });
+});
+
+router.post('/upgrade-author-images', async (req: Request, res: Response) => {
+  if (authorImageUpgradeRunning) {
+    res.status(409).json({ error: 'Author image upgrade is already running' });
+    return;
+  }
+
+  const limit = Math.min(parseInt(req.body.limit as string || '200', 10), 2000);
+
+  // Count eligible authors
+  const countResult = await dbAll<any>('SELECT COUNT(*) as cnt FROM authors WHERE image_url IS NULL OR image_url = ?', ['']);
+  const authorsToProcess = Math.min(countResult[0]?.cnt || 0, limit);
+
+  res.json({
+    message: `Author image upgrade started (limit: ${limit})`,
+    started: true,
+    authorsToProcess,
+  });
+
+  authorImageUpgradeRunning = true;
+
+  try {
+    const authors = await dbAll<any>(
+      `SELECT id, name FROM authors WHERE image_url IS NULL OR image_url = '' ORDER BY RAND() LIMIT ?`,
+      [limit],
+    );
+
+    logger.info(`[AuthorImageUpgrade] Starting for ${authors.length} authors`);
+
+    let upgraded = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (let i = 0; i < authors.length; i++) {
+      const author = authors[i];
+      try {
+        const imageUrl = await resolveAuthorImage(author.name);
+        if (imageUrl) {
+          await dbRun('UPDATE authors SET image_url = ? WHERE id = ?', [imageUrl, author.id]);
+          upgraded++;
+        } else {
+          skipped++;
+        }
+      } catch (err: any) {
+        failed++;
+        logger.warn(`[AuthorImageUpgrade] Failed for "${author.name}": ${err.message}`);
+      }
+
+      // Respect rate limits
+      if (i < authors.length - 1) {
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      if ((i + 1) % 50 === 0) {
+        logger.info(`[AuthorImageUpgrade] Progress: ${upgraded} upgraded, ${skipped} skipped, ${failed} failed (${i + 1}/${authors.length})`);
+      }
+    }
+
+    logger.info(`[AuthorImageUpgrade] Complete! Upgraded: ${upgraded}, Skipped: ${skipped}, Failed: ${failed}`);
+  } catch (err: any) {
+    logger.error({ err }, '[AuthorImageUpgrade] Job failed');
+  } finally {
+    authorImageUpgradeRunning = false;
+  }
+});
+
+// ── POST /api/import/fix-amazon-urls ────────────────────────────────────────
+// Verify and fix broken Amazon /dp/ URLs by replacing them with reliable search URLs.
+let amazonFixRunning = false;
+
+router.get('/fix-amazon-urls/status', (_req: Request, res: Response) => {
+  res.json({ running: amazonFixRunning });
+});
+
+router.post('/fix-amazon-urls', async (req: Request, res: Response) => {
+  if (amazonFixRunning) {
+    res.status(409).json({ error: 'Amazon URL fix is already running' });
+    return;
+  }
+
+  const mode: string = req.body.mode || 'invalid-isbn'; // 'invalid-isbn' | 'all-dp' | 'missing'
+
+  let whereClause: string;
+  let description: string;
+
+  switch (mode) {
+    case 'all-dp':
+      // Replace ALL /dp/ links with search URLs (safest option)
+      whereClause = `amazon_url LIKE '%/dp/%' AND is_active = 1`;
+      description = 'all /dp/ links';
+      break;
+    case 'missing':
+      // Generate Amazon URLs for books that have none
+      whereClause = `(amazon_url IS NULL OR amazon_url = '') AND is_active = 1`;
+      description = 'books with no Amazon URL';
+      break;
+    case 'invalid-isbn':
+    default:
+      // Only fix /dp/ links where the ISBN-10 fails check digit validation
+      whereClause = `amazon_url LIKE '%/dp/%' AND is_active = 1`;
+      description = '/dp/ links with invalid ISBN-10 check digits';
+      break;
+  }
+
+  const books = await dbAll<any>(
+    `SELECT id, title, author, isbn10, isbn13, amazon_url FROM books WHERE ${whereClause} ORDER BY indexed_at DESC`,
+    [],
+  );
+
+  // For 'invalid-isbn' mode, filter down to only books with bad ISBN-10s
+  let toFix: any[] = books;
+  if (mode === 'invalid-isbn') {
+    toFix = books.filter((b: any) => {
+      const match = b.amazon_url?.match(/\/dp\/([A-Z0-9]{10})/i);
+      if (!match) return false;
+      return !isValidIsbn10(match[1]);
+    });
+  }
+
+  res.json({
+    message: `Amazon URL fix started (mode: ${mode})`,
+    started: true,
+    booksToProcess: toFix.length,
+    description,
+  });
+
+  amazonFixRunning = true;
+
+  try {
+    let fixed = 0;
+    let skipped = 0;
+
+    for (const book of toFix) {
+      try {
+        if (mode === 'missing') {
+          // Generate a new search URL
+          const searchUrl = buildAmazonSearchUrl(book);
+          await dbRun('UPDATE books SET amazon_url = ? WHERE id = ?', [searchUrl, book.id]);
+          fixed++;
+        } else {
+          // Replace /dp/ with search URL
+          const searchUrl = buildAmazonSearchUrl(book);
+          await dbRun('UPDATE books SET amazon_url = ? WHERE id = ?', [searchUrl, book.id]);
+          fixed++;
+        }
+      } catch (err: any) {
+        skipped++;
+        logger.warn(`[AmazonFix] Failed for "${book.title}": ${err.message}`);
+      }
+    }
+
+    logger.info(`[AmazonFix] Complete (mode: ${mode})! Fixed: ${fixed}, Skipped: ${skipped}, Total: ${toFix.length}`);
+  } catch (err: any) {
+    logger.error({ err }, '[AmazonFix] Job failed');
+  } finally {
+    amazonFixRunning = false;
   }
 });
 

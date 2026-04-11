@@ -109,14 +109,14 @@ export function BlogPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Badge variant="default" className="bg-purple-500 mb-4">
+          <Badge variant="default" className="bg-primary mb-4">
             <Sparkles className="w-3 h-3 mr-1" />
-            AI-Powered Content
+            Featured Content
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Blog</h1>
           <p className="text-lg text-muted-foreground">
             Curated reading lists, book recommendations, and literary insights.
-            Fresh content every week powered by AI.
+            Fresh content every week.
           </p>
           {total > 0 && (
             <p className="text-sm text-muted-foreground mt-2">{total} articles published</p>

@@ -920,10 +920,28 @@ export const importApi = {
   getCoverUpgradeStatus: () =>
     apiFetch<{ running: boolean }>('/import/upgrade-covers/status'),
 
-  upgradCovers: (limit = 500, forceAll = false) =>
+  upgradeCovers: (limit = 500, forceAll = false) =>
     apiFetch<{ message: string; started: boolean; booksToProcess: number } | { error: string }>('/import/upgrade-covers', {
       method: 'POST',
       body: JSON.stringify({ limit, forceAll }),
+    }),
+
+  getAuthorImageUpgradeStatus: () =>
+    apiFetch<{ running: boolean }>('/import/upgrade-author-images/status'),
+
+  upgradeAuthorImages: (limit = 200) =>
+    apiFetch<{ message: string; started: boolean; authorsToProcess: number } | { error: string }>('/import/upgrade-author-images', {
+      method: 'POST',
+      body: JSON.stringify({ limit }),
+    }),
+
+  getAmazonFixStatus: () =>
+    apiFetch<{ running: boolean }>('/import/fix-amazon-urls/status'),
+
+  fixAmazonUrls: (mode: 'invalid-isbn' | 'all-dp' | 'missing' = 'invalid-isbn') =>
+    apiFetch<{ message: string; started: boolean; booksToProcess: number; description: string } | { error: string }>('/import/fix-amazon-urls', {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
     }),
 };
 

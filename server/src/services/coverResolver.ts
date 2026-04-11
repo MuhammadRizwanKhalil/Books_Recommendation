@@ -219,6 +219,75 @@ function tryGoogleBooksHD(
   return null;
 }
 
+// ── Author Image Resolution ─────────────────────────────────────────────────
+
+/**
+ * Try to find an author photo from Open Library Authors API.
+ * Uses the search endpoint to find the OLID, then builds the photo URL.
+ */
+export async function resolveAuthorImage(authorName: string): Promise<string | null> {
+  if (!authorName || authorName.trim().length < 2) return null;
+
+  try {
+    // 1. Try Open Library Author search
+    const olImage = await tryOpenLibraryAuthorImage(authorName);
+    if (olImage) return olImage;
+
+    return null;
+  } catch (err) {
+    logger.debug(`Author image resolution failed for "${authorName}": ${err}`);
+    return null;
+  }
+}
+
+/**
+ * Search Open Library for an author and get their photo.
+ * Open Library Authors API: https://openlibrary.org/dev/docs/api/authors
+ */
+async function tryOpenLibraryAuthorImage(authorName: string): Promise<string | null> {
+  try {
+    // Search for author
+    const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}&limit=1`;
+    const response = await fetch(searchUrl, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': USER_AGENT },
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json() as any;
+    if (!data.docs || data.docs.length === 0) return null;
+
+    const author = data.docs[0];
+    const olKey = author.key; // e.g. "OL1234A"
+
+    if (!olKey) return null;
+
+    // Check if the author photo exists
+    const photoUrl = `${OL_COVERS_BASE}/olid/${olKey}-L.jpg?default=false`;
+
+    const headRes = await fetch(photoUrl, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000),
+      headers: { 'User-Agent': USER_AGENT },
+      redirect: 'follow',
+    });
+
+    if (!headRes.ok) return null;
+
+    const contentType = headRes.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return null;
+
+    const contentLength = parseInt(headRes.headers.get('content-length') || '0', 10);
+    if (contentLength > 0 && contentLength < 1000) return null; // tiny placeholder
+
+    // Return the actual image URL (without default=false)
+    return `${OL_COVERS_BASE}/olid/${olKey}-L.jpg`;
+  } catch {
+    return null;
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function delay(ms: number): Promise<void> {

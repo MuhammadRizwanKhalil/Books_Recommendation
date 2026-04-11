@@ -183,7 +183,7 @@ const DEFAULT_SETTINGS = [
   { key: 'site_url', value: 'http://localhost:5173', category: 'general', label: 'Site URL', description: 'Public URL of the website', field_type: 'url', sort_order: 2 },
   { key: 'site_tagline', value: 'Discover your next favorite book', category: 'general', label: 'Site Tagline', description: 'Short tagline or slogan', field_type: 'text', sort_order: 3 },
   { key: 'site_description', value: 'The Book Times is a curated platform for book lovers to find, review, and discover new books.', category: 'general', label: 'Site Description', description: 'Short description of the website', field_type: 'textarea', sort_order: 4 },
-  { key: 'admin_email', value: 'admin@thebooktimes.com', category: 'general', label: 'Admin Email', description: 'Primary admin email for receiving notifications', field_type: 'email', sort_order: 5 },
+  { key: 'admin_email', value: process.env.ADMIN_EMAIL || 'admin@thebooktimes.com', category: 'general', label: 'Admin Email', description: 'Primary admin email for receiving notifications', field_type: 'email', sort_order: 5 },
   { key: 'contact_email', value: 'contact@thebooktimes.com', category: 'general', label: 'Contact Email', description: 'Public contact email', field_type: 'email', sort_order: 6 },
   { key: 'items_per_page', value: '20', category: 'general', label: 'Items Per Page', description: 'Default number of items per page', field_type: 'number', sort_order: 7 },
   { key: 'maintenance_mode', value: 'false', category: 'general', label: 'Maintenance Mode', description: 'Enable maintenance mode (disables public access)', field_type: 'boolean', sort_order: 8 },

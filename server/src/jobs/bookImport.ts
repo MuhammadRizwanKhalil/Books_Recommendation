@@ -23,6 +23,7 @@ import {
   type NormalizedBook,
 } from '../services/googleBooks.js';
 import { calculateCompositeScore, recalculateAllScores, invalidatePriorCache } from '../services/scoring.js';
+import { resolveAuthorImage } from '../services/coverResolver.js';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -149,13 +150,24 @@ async function findExistingBook(book: NormalizedBook): Promise<string | null> {
 
 /**
  * Find or create an author by name. Returns the author's DB id.
+ * Also fetches author image from Open Library if the author is new.
  */
 async function findOrCreateAuthor(authorName: string): Promise<string | null> {
   if (!authorName || authorName.trim().length === 0) return null;
   const trimmed = authorName.trim();
 
-  const existing = await dbGet<any>('SELECT id FROM authors WHERE name = ?', [trimmed]);
-  if (existing) return existing.id;
+  const existing = await dbGet<any>('SELECT id, image_url FROM authors WHERE name = ?', [trimmed]);
+  if (existing) {
+    // If existing author has no image, try to fetch one
+    if (!existing.image_url) {
+      resolveAuthorImage(trimmed).then(async (imageUrl) => {
+        if (imageUrl) {
+          await dbRun('UPDATE authors SET image_url = ? WHERE id = ? AND image_url IS NULL', [imageUrl, existing.id]);
+        }
+      }).catch(() => { /* non-blocking */ });
+    }
+    return existing.id;
+  }
 
   const id = uuidv4();
   const baseSlug = trimmed
@@ -170,13 +182,37 @@ async function findOrCreateAuthor(authorName: string): Promise<string | null> {
     slug = `${baseSlug}-${suffix++}`;
   }
 
+  // Fetch author image (non-blocking for speed, but try before insert)
+  let imageUrl: string | null = null;
   try {
-    await dbRun('INSERT INTO authors (id, name, slug) VALUES (?, ?, ?)', [id, trimmed, slug]);
+    imageUrl = await resolveAuthorImage(trimmed);
+  } catch {
+    // Non-critical — continue without image
+  }
+
+  try {
+    await dbRun(
+      'INSERT INTO authors (id, name, slug, image_url) VALUES (?, ?, ?, ?)',
+      [id, trimmed, slug, imageUrl],
+    );
     return id;
   } catch {
     // Race condition or duplicate — try to find again
     const retry = await dbGet<any>('SELECT id FROM authors WHERE name = ?', [trimmed]);
     return retry?.id || null;
+  }
+}
+
+/**
+ * Link a book to multiple authors via the book_authors junction table.
+ * Also sets the primary author_id on the books table (first author).
+ */
+async function linkBookAuthors(bookId: string, authorIds: string[]): Promise<void> {
+  for (let i = 0; i < authorIds.length; i++) {
+    await dbRun(
+      'INSERT IGNORE INTO book_authors (book_id, author_id, position) VALUES (?, ?, ?)',
+      [bookId, authorIds[i], i],
+    );
   }
 }
 
@@ -187,7 +223,17 @@ async function findOrCreateAuthor(authorName: string): Promise<string | null> {
 async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' | 'skipped'> {
   const existingId = await findExistingBook(book);
   const score = computeInitialScore(book.googleRating, book.ratingsCount);
-  const authorId = await findOrCreateAuthor(book.author);
+
+  // Resolve all authors (multi-author support)
+  const authorNames = book.authors && book.authors.length > 0
+    ? book.authors
+    : [book.author]; // Fallback to the combined string
+  const authorIds: string[] = [];
+  for (const name of authorNames) {
+    const aid = await findOrCreateAuthor(name);
+    if (aid) authorIds.push(aid);
+  }
+  const primaryAuthorId = authorIds[0] || null;
 
   if (existingId) {
     // Update existing book with fresher data
@@ -211,10 +257,12 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
       book.description,
       book.price,
       book.amazonUrl,
-      authorId,
+      primaryAuthorId,
       existingId,
     ]);
 
+    // Link all authors
+    await linkBookAuthors(existingId, authorIds);
     // Link any new categories
     await linkCategories(existingId, book.categories);
     return 'updated';
@@ -261,7 +309,7 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
     book.title,
     book.subtitle,
     book.author,
-    authorId,
+    primaryAuthorId,
     book.description,
     book.coverImage,
     book.publisher,
@@ -282,6 +330,7 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
     book.isbn10 ? `https://www.goodreads.com/search?q=${book.isbn10}` : null,
   ]);
 
+  await linkBookAuthors(id, authorIds);
   await linkCategories(id, book.categories);
   return 'inserted';
 }

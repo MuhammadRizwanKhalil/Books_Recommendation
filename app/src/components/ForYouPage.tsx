@@ -44,7 +44,7 @@ export function ForYouPage() {
       <div className="container mx-auto px-4 py-20 text-center">
         <Sparkles className="h-16 w-16 mx-auto text-primary mb-4" />
         <h1 className="text-3xl font-bold mb-2">Personalized For You</h1>
-        <p className="text-muted-foreground mb-6">Sign in to get AI-powered book recommendations tailored to your reading taste.</p>
+        <p className="text-muted-foreground mb-6">Sign in to get personalized book recommendations tailored to your reading taste.</p>
       </div>
     );
   }

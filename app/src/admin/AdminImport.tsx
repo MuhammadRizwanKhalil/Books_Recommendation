@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, Play, Loader2, CheckCircle2, XCircle,
-  Clock, BookOpen, RefreshCw, AlertTriangle, ImageIcon,
+  Clock, BookOpen, RefreshCw, AlertTriangle, ImageIcon, UserIcon, Link2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,26 +27,34 @@ interface ImportJob {
 export function AdminImport() {
   const [isRunning, setIsRunning] = useState(false);
   const [isCoverUpgradeRunning, setIsCoverUpgradeRunning] = useState(false);
+  const [isAuthorImageRunning, setIsAuthorImageRunning] = useState(false);
+  const [isAmazonFixRunning, setIsAmazonFixRunning] = useState(false);
   const [coverLimit, setCoverLimit] = useState(500);
+  const [authorImageLimit, setAuthorImageLimit] = useState(200);
+  const [amazonFixMode, setAmazonFixMode] = useState<'invalid-isbn' | 'all-dp' | 'missing'>('invalid-isbn');
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [statusRes, historyRes, coverStatusRes] = await Promise.all([
+      const [statusRes, historyRes, coverStatusRes, authorImageStatusRes, amazonFixStatusRes] = await Promise.all([
         importApi.getStatus(),
         importApi.getHistory(20),
         importApi.getCoverUpgradeStatus(),
+        importApi.getAuthorImageUpgradeStatus(),
+        importApi.getAmazonFixStatus(),
       ]);
       setIsRunning(statusRes.running);
       setJobs(historyRes.jobs);
       setIsCoverUpgradeRunning(coverStatusRes.running);
+      setIsAuthorImageRunning(authorImageStatusRes.running);
+      setIsAmazonFixRunning(amazonFixStatusRes.running);
 
-      // If a job is running, start polling
-      if ((statusRes.running || coverStatusRes.running) && !polling) {
+      const anyRunning = statusRes.running || coverStatusRes.running || authorImageStatusRes.running || amazonFixStatusRes.running;
+      if (anyRunning && !polling) {
         setPolling(true);
-      } else if (!statusRes.running && !coverStatusRes.running && polling) {
+      } else if (!anyRunning && polling) {
         setPolling(false);
       }
     } catch (err) {
@@ -69,7 +77,7 @@ export function AdminImport() {
 
   const handleUpgradeCovers = async () => {
     try {
-      const res = await importApi.upgradCovers(coverLimit, false);
+      const res = await importApi.upgradeCovers(coverLimit, false);
       if ('error' in res) {
         toast.error(res.error);
         return;
@@ -81,6 +89,40 @@ export function AdminImport() {
     } catch (err) {
       console.error('Failed to start cover upgrade:', err);
       toast.error('Failed to start cover upgrade');
+    }
+  };
+
+  const handleUpgradeAuthorImages = async () => {
+    try {
+      const res = await importApi.upgradeAuthorImages(authorImageLimit);
+      if ('error' in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Author image upgrade started! Processing ${res.authorsToProcess} authors...`);
+      setIsAuthorImageRunning(true);
+      setPolling(true);
+      loadData();
+    } catch (err) {
+      console.error('Failed to start author image upgrade:', err);
+      toast.error('Failed to start author image upgrade');
+    }
+  };
+
+  const handleFixAmazonUrls = async () => {
+    try {
+      const res = await importApi.fixAmazonUrls(amazonFixMode);
+      if ('error' in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Amazon URL fix started! Processing ${res.booksToProcess} books (${res.description})...`);
+      setIsAmazonFixRunning(true);
+      setPolling(true);
+      loadData();
+    } catch (err) {
+      console.error('Failed to start Amazon URL fix:', err);
+      toast.error('Failed to start Amazon URL fix');
     }
   };
 
@@ -312,6 +354,111 @@ export function AdminImport() {
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   Cover upgrade in progress. This may take several minutes depending on the number of books. Check server logs for detailed progress.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Author Image Upgrade */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserIcon className="h-5 w-5" />
+            Upgrade Author Images
+          </CardTitle>
+          <CardDescription>
+            Fetch missing author photos from Open Library for authors that don't have images yet
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="w-full sm:w-40">
+                <label className="text-sm font-medium mb-1.5 block">Authors to process</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={2000}
+                  value={authorImageLimit}
+                  onChange={(e) => setAuthorImageLimit(Math.min(2000, Math.max(1, parseInt(e.target.value) || 200)))}
+                  disabled={isAuthorImageRunning}
+                />
+              </div>
+              <Button
+                onClick={handleUpgradeAuthorImages}
+                disabled={isAuthorImageRunning || isRunning}
+                className="w-full sm:w-auto"
+              >
+                {isAuthorImageRunning ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <UserIcon className="h-4 w-4 mr-2" />
+                )}
+                {isAuthorImageRunning ? 'Upgrading Author Images...' : 'Upgrade Author Images'}
+              </Button>
+            </div>
+            {isAuthorImageRunning && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Author image upgrade in progress. Check server logs for detailed progress.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fix Amazon URLs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5" />
+            Fix Amazon Links
+          </CardTitle>
+          <CardDescription>
+            Verify and fix broken Amazon product links. Direct /dp/ links can return "page not found" when the ISBN doesn't match an Amazon product.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="w-full sm:w-64">
+                <label className="text-sm font-medium mb-1.5 block">Fix mode</label>
+                <select
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={amazonFixMode}
+                  onChange={(e) => setAmazonFixMode(e.target.value as typeof amazonFixMode)}
+                  disabled={isAmazonFixRunning}
+                >
+                  <option value="invalid-isbn">Fix invalid ISBN-10 links only</option>
+                  <option value="all-dp">Replace all /dp/ links with search URLs</option>
+                  <option value="missing">Generate URLs for books without one</option>
+                </select>
+              </div>
+              <Button
+                onClick={handleFixAmazonUrls}
+                disabled={isAmazonFixRunning || isRunning}
+                className="w-full sm:w-auto"
+              >
+                {isAmazonFixRunning ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4 mr-2" />
+                )}
+                {isAmazonFixRunning ? 'Fixing Amazon Links...' : 'Fix Amazon Links'}
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><strong>Invalid ISBN-10:</strong> Replaces /dp/ links where the ISBN check digit is wrong (most likely to be broken)</p>
+              <p><strong>All /dp/ links:</strong> Converts all direct product links to reliable search URLs</p>
+              <p><strong>Missing URLs:</strong> Generates Amazon search links for books that have no Amazon URL at all</p>
+            </div>
+            {isAmazonFixRunning && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Amazon URL fix in progress. Check server logs for detailed progress.
                 </p>
               </div>
             )}

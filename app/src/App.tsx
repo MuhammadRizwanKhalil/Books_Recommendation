@@ -110,10 +110,10 @@ export function useAppNav() {
 
 function HomePage() {
   useSEO({
-    title: 'The Book Times - AI-Powered Book Recommendations | Discover Your Next Great Read',
-    description: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews.',
-    ogTitle: 'The Book Times - AI-Powered Book Recommendations',
-    ogDescription: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions.',
+    title: 'The Book Times - Book Recommendations | Discover Your Next Great Read',
+    description: 'Discover your next great read with personalized book recommendations. Explore 50,000+ books across every genre with curated suggestions, ratings, and reviews.',
+    ogTitle: 'The Book Times - Book Recommendations',
+    ogDescription: 'Discover your next great read with personalized book recommendations. Explore 50,000+ books across every genre with curated suggestions.',
     ogImage: `${window.location.origin}/og-image.png`,
     ogType: 'website',
     ogUrl: window.location.origin,
@@ -124,7 +124,7 @@ function HomePage() {
         '@type': 'WebSite',
         name: 'The Book Times',
         url: window.location.origin,
-        description: 'AI-powered book recommendations platform. Discover your next great read from 50,000+ books.',
+        description: 'Book recommendations platform. Discover your next great read from 50,000+ books.',
         potentialAction: {
           '@type': 'SearchAction',
           target: { '@type': 'EntryPoint', urlTemplate: `${window.location.origin}/search?q={search_term_string}` },
@@ -136,7 +136,7 @@ function HomePage() {
         '@type': 'Organization',
         name: 'The Book Times',
         url: window.location.origin,
-        description: 'AI-powered book discovery and recommendation platform',
+        description: 'Book discovery and recommendation platform',
       },
       {
         '@context': 'https://schema.org',
@@ -147,7 +147,7 @@ function HomePage() {
             name: 'How does The Book Times recommend books?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'The Book Times uses AI-powered algorithms that analyze your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.',
+              text: 'The Book Times analyzes your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.',
             },
           },
           {

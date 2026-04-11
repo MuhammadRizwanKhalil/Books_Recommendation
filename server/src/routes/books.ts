@@ -166,9 +166,30 @@ async function buildBookResponses(books: any[]) {
 
 // Map a raw DB book row to API response format
 async function mapBookToResponse(book: any, categoryNames: string[]) {
-  // Look up author details if author_id is present
+  // Look up all authors via book_authors junction (multi-author support)
   let authorData: any = null;
-  if (book.author_id) {
+  let authorsData: any[] = [];
+  
+  const authorRows = await dbAll<any>(
+    `SELECT a.id, a.name, a.slug, a.image_url
+     FROM book_authors ba
+     JOIN authors a ON a.id = ba.author_id
+     WHERE ba.book_id = ?
+     ORDER BY ba.position ASC`,
+    [book.id],
+  );
+
+  if (authorRows.length > 0) {
+    authorsData = authorRows.map(r => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      imageUrl: r.image_url || null,
+    }));
+    // Primary author (first) for backward compatibility
+    authorData = authorsData[0];
+  } else if (book.author_id) {
+    // Fallback to legacy author_id
     const authorRow = await dbGet<any>('SELECT id, name, slug, image_url FROM authors WHERE id = ?', [book.author_id]);
     if (authorRow) {
       authorData = {
@@ -177,6 +198,7 @@ async function mapBookToResponse(book: any, categoryNames: string[]) {
         slug: authorRow.slug,
         imageUrl: authorRow.image_url || null,
       };
+      authorsData = [authorData];
     }
   }
 
@@ -191,6 +213,7 @@ async function mapBookToResponse(book: any, categoryNames: string[]) {
     author: book.author,
     authorId: book.author_id || null,
     authorData,
+    authorsData,
     description: book.description,
     coverImage: book.cover_image,
     publisher: book.publisher,

@@ -1,7 +1,7 @@
 {
-  "name": "The Book Times - AI-Powered Book Recommendations",
+  "name": "The Book Times - Book Recommendations",
   "short_name": "The Book Times",
-  "description": "Discover your next great read with AI-powered book recommendations. Explore 50,000+ books with personalized suggestions.",
+  "description": "Discover your next great read with personalized book recommendations. Explore 50,000+ books with curated suggestions.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

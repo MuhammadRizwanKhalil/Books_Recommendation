@@ -1,4 +1,4 @@
-﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil } from 'lucide-react';
+﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -117,7 +117,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
           {/* LEFT COLUMN â€” Image + Affiliate */}
-          <div className="space-y-5 max-w-[320px] mx-auto lg:max-w-none">
+          <div className="space-y-5 lg:max-w-none">
             {/* Cover */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -166,20 +166,38 @@ export function BookPage({ book, onBack }: BookPageProps) {
                   <span className="text-3xl font-bold text-primary">{formatPrice(book.price, book.currency)}</span>
                 </div>
               )}
-              {book.amazonUrl ? (
-                <>
-                  <Button className="w-full gap-2" size="lg" asChild>
-                    <a href={book.amazonUrl} target="_blank" rel="nofollow sponsored noopener noreferrer">
-                      <ShoppingCart className="h-4 w-4" />
-                      Buy on Amazon
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                  <p className="text-[11px] text-center text-muted-foreground">
-                    Affiliate link â€” we may earn a commission
-                  </p>
-                </>
-              ) : (
+              {book.amazonUrl ? (() => {
+                const isDirectLink = book.amazonUrl!.includes('/dp/');
+                const searchFallbackUrl = `https://www.amazon.com/s?k=${encodeURIComponent(book.isbn13 || book.isbn10 || `${book.title} ${book.author}`)}&tag=thebooktimes-20`;
+                return (
+                  <>
+                    <Button className="w-full gap-2" size="lg" asChild>
+                      <a href={book.amazonUrl} target="_blank" rel="nofollow sponsored noopener noreferrer">
+                        {isDirectLink ? (
+                          <ShoppingCart className="h-4 w-4" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                        {isDirectLink ? 'Buy on Amazon' : 'Find on Amazon'}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    {isDirectLink && (
+                      <a
+                        href={searchFallbackUrl}
+                        target="_blank"
+                        rel="nofollow sponsored noopener noreferrer"
+                        className="block text-[11px] text-center text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        Not finding the book? Search on Amazon instead
+                      </a>
+                    )}
+                    <p className="text-[11px] text-center text-muted-foreground">
+                      Affiliate link — we may earn a commission
+                    </p>
+                  </>
+                );
+              })() : (
                 <Button className="w-full gap-2" size="lg" variant="secondary" disabled>
                   <ShoppingCart className="h-4 w-4" />
                   Coming Soon
@@ -264,7 +282,16 @@ export function BookPage({ book, onBack }: BookPageProps) {
                 <p className="text-xl text-muted-foreground mt-1">{book.subtitle}</p>
               )}
               <p className="text-lg mt-2">
-                by {book.authorData?.slug ? (
+                by {book.authorsData && book.authorsData.length > 0 ? (
+                  book.authorsData.map((a, i) => (
+                    <span key={a.id}>
+                      {i > 0 && ', '}
+                      <Link to={`/author/${a.slug}`} className="font-medium text-primary hover:underline">
+                        {a.name}
+                      </Link>
+                    </span>
+                  ))
+                ) : book.authorData?.slug ? (
                   <Link to={`/author/${book.authorData.slug}`} className="font-medium text-primary hover:underline">
                     {book.author}
                   </Link>

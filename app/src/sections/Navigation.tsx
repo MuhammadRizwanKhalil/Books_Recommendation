@@ -195,7 +195,7 @@ export function Navigation() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[min(80vw,20rem)]">
+              <SheetContent side="right" className="w-[min(80vw,20rem)] px-5 pt-6 pb-6">
                 {/* Mobile brand header */}
                 <div className="flex items-center gap-2.5 pb-4 mb-2 border-b">
                   <div className="p-2 rounded-xl bg-primary">

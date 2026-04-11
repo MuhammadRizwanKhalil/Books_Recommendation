@@ -60,6 +60,28 @@ export interface GoogleBooksSearchResult {
   items?: GoogleBookVolume[];
 }
 
+/** Validate ISBN-10 check digit */
+export function isValidIsbn10(isbn: string): boolean {
+  const cleaned = isbn.replace(/[\s-]/g, '');
+  if (cleaned.length !== 10) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    const digit = parseInt(cleaned[i], 10);
+    if (isNaN(digit)) return false;
+    sum += digit * (10 - i);
+  }
+  const last = cleaned[9].toUpperCase();
+  sum += last === 'X' ? 10 : parseInt(last, 10);
+  if (isNaN(sum)) return false;
+  return sum % 11 === 0;
+}
+
+/** Build an Amazon search URL (always works, unlike /dp/ links) */
+export function buildAmazonSearchUrl(book: { isbn10?: string | null; isbn13?: string | null; title: string; author: string }): string {
+  const searchTerm = book.isbn13 || book.isbn10 || `${book.title} ${book.author}`;
+  return `https://www.amazon.com/s?k=${encodeURIComponent(searchTerm)}&tag=thebooktimes-20`;
+}
+
 /** Normalized book data ready for DB insertion */
 export interface NormalizedBook {
   googleBooksId: string;
@@ -68,6 +90,8 @@ export interface NormalizedBook {
   title: string;
   subtitle: string | null;
   author: string;
+  /** Individual author names from Google Books (for multi-author linking) */
+  authors: string[];
   description: string | null;
   coverImage: string;
   publisher: string | null;
@@ -400,12 +424,13 @@ async function normalizeVolume(
   const price = priceInfo?.amount || null;
   const currency = priceInfo?.currencyCode || 'USD';
 
-  // Build Amazon search URL
-  const amazonUrl = isbn10
+  // Build Amazon URL — prefer direct product link for valid ISBN-10,
+  // otherwise use search URL which always shows results
+  const amazonUrl = isbn10 && isValidIsbn10(isbn10)
     ? `https://www.amazon.com/dp/${isbn10}?tag=thebooktimes-20`
     : isbn13
       ? `https://www.amazon.com/s?k=${isbn13}&tag=thebooktimes-20`
-      : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + info.authors[0])}&tag=thebooktimes-20`;
+      : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + (info.authors?.[0] || ''))}&tag=thebooktimes-20`;
 
   // Try to upgrade to HD cover (Open Library → Google zoom=0)
   let finalCoverUrl = validImage.url;
@@ -430,6 +455,7 @@ async function normalizeVolume(
     title: info.title,
     subtitle: info.subtitle || null,
     author: info.authors.join(', '),
+    authors: info.authors,
     description: info.description || null,
     coverImage: finalCoverUrl,
     publisher: info.publisher || null,

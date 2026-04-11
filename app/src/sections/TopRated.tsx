@@ -46,7 +46,7 @@ export function TopRated() {
         >
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-yellow-500">
+              <Badge variant="default" className="bg-primary">
                 <Star className="w-3 h-3 mr-1 fill-current" />
                 {t('topRated.badge')}
               </Badge>

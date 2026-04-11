@@ -51,7 +51,7 @@ export function Blog() {
         >
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-purple-500">
+              <Badge variant="default" className="bg-primary">
                 <Sparkles className="w-3 h-3 mr-1" />
                 {t('blog.aiPowered')}
               </Badge>
@@ -164,8 +164,8 @@ export function Blog() {
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-purple-500/20">
-                <Sparkles className="h-6 w-6 text-purple-600" />
+              <div className="p-3 rounded-full bg-primary/20">
+                <Sparkles className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <h4 className="font-semibold">{t('blog.aiWeekly')}</h4>

@@ -15,8 +15,8 @@ export function Hero() {
   const { t } = useTranslation();
 
   const siteTagline = getSetting('site_tagline', 'Discover Your Next Great Read');
-  const siteDescription = getSetting('site_description', 'Smart recommendations powered by AI. Explore 50,000+ books across every genre, with personalized suggestions tailored just for you.');
-  const heroBadge = getSetting('hero_badge_text', 'AI-Powered Book Discovery');
+  const siteDescription = getSetting('site_description', 'Discover your next great read. Explore 50,000+ books across every genre, with personalized suggestions tailored just for you.');
+  const heroBadge = getSetting('hero_badge_text', 'Smart Book Discovery');
   const popularSearchesSetting = getSetting('popular_searches', 'Atomic Habits,Self Help,Business,Fiction,Technology');
 
   const formatNumber = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`;

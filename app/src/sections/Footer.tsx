@@ -33,7 +33,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   const siteName = getSetting('site_name', 'The Book Times');
-  const siteDescription = getSetting('site_description', 'AI-powered book discovery platform. Find your next great read with personalized recommendations.');
+  const siteDescription = getSetting('site_description', 'Your destination for book discovery. Find your next great read with personalized recommendations.');
   const contactEmail = getSetting('contact_email', 'hello@thebooktimes.com');
   const affiliateDisclosure = getSetting('affiliate_disclosure', '');
 
