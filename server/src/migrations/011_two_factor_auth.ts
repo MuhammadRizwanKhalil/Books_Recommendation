@@ -10,13 +10,13 @@ import type { Migration } from '../lib/migrator.js';
 async function up(): Promise<void> {
   const pool = getPool();
 
-  // Add 2FA columns to users table
-  await pool.query(`
-    ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(255) DEFAULT NULL,
-      ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT DEFAULT NULL
-  `);
+  // Add 2FA columns to users table (MySQL 8.0 doesn't support IF NOT EXISTS for ADD COLUMN)
+  const [columns] = await pool.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'totp_secret'`);
+  if (!(columns as any[]).length) {
+    await pool.query(`ALTER TABLE users ADD COLUMN totp_secret VARCHAR(255) DEFAULT NULL`);
+    await pool.query(`ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT NULL`);
+  }
 
   // Login events audit log
   await pool.query(`
