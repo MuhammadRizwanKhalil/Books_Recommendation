@@ -677,7 +677,7 @@ router.get('/book-of-the-day', async (req: Request, res: Response) => {
   try {
     const book = await getBookOfTheDay();
     if (!book) {
-      res.status(404).json({ error: 'No books available' });
+      res.status(200).json(null);
       return;
     }
     const response = (await buildBookResponses([book]))[0];

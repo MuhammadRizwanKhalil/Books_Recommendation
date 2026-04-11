@@ -17,7 +17,7 @@ export function BookOfTheDay() {
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/books/book-of-the-day`)
       .then(r => r.json())
-      .then(data => setBook(mapBook(data)))
+      .then(data => setBook(data ? mapBook(data) : null))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
