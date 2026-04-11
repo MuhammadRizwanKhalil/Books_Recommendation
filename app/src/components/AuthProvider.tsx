@@ -11,6 +11,7 @@ export interface UserProfile {
   joinedAt: string;
   bio?: string;
   reviewCount?: number;
+  twoFactorEnabled?: boolean;
 }
 
 interface ReadingHistoryEntry {
@@ -32,7 +33,8 @@ interface AuthContextType {
   closeAuthModal: () => void;
   authModalMode: 'signin' | 'signup';
   setAuthModalMode: (mode: 'signin' | 'signup') => void;
-  signIn: (email: string, password: string) => Promise<boolean>;
+  signIn: (email: string, password: string) => Promise<boolean | { requires2FA: true; tempToken: string }>;
+  verify2FA: (tempToken: string, code: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   signOut: () => void;
   readingHistory: ReadingHistoryEntry[];
@@ -108,9 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthModalOpen(false);
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<boolean | { requires2FA: true; tempToken: string }> => {
     try {
       const res = await authApi.login(email, password);
+
+      // Handle 2FA challenge
+      if (res.requires2FA && res.tempToken) {
+        return { requires2FA: true, tempToken: res.tempToken };
+      }
+
       setToken(res.token);
       const profile: UserProfile = {
         id: String(res.user.id),
@@ -127,6 +135,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true;
     } catch (err: any) {
       toast.error(err?.body?.error || 'Sign in failed');
+      return false;
+    }
+  }, []);
+
+  const verify2FA = useCallback(async (tempToken: string, code: string): Promise<boolean> => {
+    try {
+      const res = await authApi.verify2FA(tempToken, code);
+      setToken(res.token);
+      const profile: UserProfile = {
+        id: String(res.user.id),
+        name: res.user.name,
+        email: res.user.email,
+        avatar: res.user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.user.name)}`,
+        role: res.user.role || 'user',
+        joinedAt: new Date().toISOString(),
+        bio: '',
+      };
+      setUser(profile);
+      setIsAuthModalOpen(false);
+      toast.success(`Welcome back, ${profile.name}!`);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.body?.error || 'Invalid verification code');
       return false;
     }
   }, []);
@@ -185,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authModalMode,
         setAuthModalMode,
         signIn,
+        verify2FA,
         signUp,
         signOut,
         readingHistory,

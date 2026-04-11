@@ -47,6 +47,9 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
+  // Skip non-http(s) schemes (e.g. chrome-extension://)
+  if (!url.protocol.startsWith('http')) return;
+
   // Skip admin routes â€” always network
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) return;
 

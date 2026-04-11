@@ -63,6 +63,10 @@ export const config = {
   // Google Books API
   googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY || '',
 
+  // Resend email API
+  resendApiKey: process.env.RESEND_API_KEY || '',
+  emailFrom: process.env.EMAIL_FROM || 'The Book Times <noreply@thebooktimes.com>',
+
   // OpenAI API (for AI blog generation)
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',

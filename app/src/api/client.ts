@@ -68,7 +68,10 @@ export interface AuthUser {
 
 export interface AuthResponse {
   token: string;
+  refreshToken?: string;
   user: AuthUser;
+  requires2FA?: boolean;
+  tempToken?: string;
 }
 
 export const authApi = {
@@ -76,6 +79,12 @@ export const authApi = {
     apiFetch<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+
+  verify2FA: (tempToken: string, code: string) =>
+    apiFetch<AuthResponse>('/auth/verify-2fa', {
+      method: 'POST',
+      body: JSON.stringify({ tempToken, code }),
     }),
 
   register: (name: string, email: string, password: string) =>
@@ -88,6 +97,20 @@ export const authApi = {
 
   updateProfile: (data: { name?: string; currentPassword?: string; newPassword?: string }) =>
     apiFetch<AuthUser>('/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
+
+  get2FAStatus: () => apiFetch<{ enabled: boolean }>('/auth/2fa/status'),
+
+  setup2FA: () => apiFetch<{ secret: string; qrCode: string; otpauthUrl: string }>('/auth/2fa/setup', { method: 'POST' }),
+
+  enable2FA: (code: string) => apiFetch<{ enabled: boolean; backupCodes: string[]; message: string }>('/auth/2fa/enable', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  }),
+
+  disable2FA: (password: string) => apiFetch<{ disabled: boolean; message: string }>('/auth/2fa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  }),
 };
 
 // â”€â”€ Books API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

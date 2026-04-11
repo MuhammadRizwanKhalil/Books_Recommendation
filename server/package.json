@@ -15,6 +15,7 @@
     "setup": "npm install && npm run seed"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -27,8 +28,11 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
     "openai": "^6.25.0",
+    "otpauth": "^9.5.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
+    "qrcode": "^1.5.4",
+    "resend": "^6.10.0",
     "sharp": "^0.34.5",
     "uuid": "^11.1.0",
     "zod": "^4.3.6"

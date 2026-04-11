@@ -3,6 +3,7 @@ import {
   Settings, Save, RefreshCw, Mail, Palette, Globe, Shield,
   Bell, Link2, Loader2, ChevronRight,
   Eye, EyeOff, TestTube, Lock, Copy, ExternalLink, Home,
+  ShieldCheck, ShieldOff, KeyRound, Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { settingsApi } from '@/api/client';
+import { settingsApi, authApi } from '@/api/client';
 
 // Category metadata
 const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; description: string }> = {
@@ -384,6 +385,9 @@ export function AdminSettings() {
                   </div>
                 )}
 
+                {/* 2FA Security Panel — only in security category */}
+                {activeCategory === 'security' && <TwoFactorPanel />}
+
                 {(!settings[activeCategory] || settings[activeCategory].length === 0) ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No settings in this category yet.</p>
@@ -414,6 +418,227 @@ export function AdminSettings() {
             </Card>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Two-Factor Authentication Panel ─────────────────────────────────────────
+
+function TwoFactorPanel() {
+  const [status, setStatus] = useState<'loading' | 'disabled' | 'setup' | 'verify' | 'enabled'>('loading');
+  const [qrCode, setQrCode] = useState('');
+  const [secret, setSecret] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    authApi.get2FAStatus()
+      .then(res => setStatus(res.enabled ? 'enabled' : 'disabled'))
+      .catch(() => setStatus('disabled'));
+  }, []);
+
+  const handleSetup = async () => {
+    setWorking(true);
+    try {
+      const res = await authApi.setup2FA();
+      setQrCode(res.qrCode);
+      setSecret(res.secret);
+      setStatus('setup');
+    } catch (err: any) {
+      toast.error(err?.body?.error || 'Failed to start 2FA setup');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleEnable = async () => {
+    if (!verifyCode) {
+      toast.error('Enter the 6-digit code from your app');
+      return;
+    }
+    setWorking(true);
+    try {
+      const res = await authApi.enable2FA(verifyCode);
+      setBackupCodes(res.backupCodes);
+      setStatus('verify');
+      toast.success('Two-factor authentication enabled!');
+    } catch (err: any) {
+      toast.error(err?.body?.error || 'Invalid code. Try again.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    if (!disablePassword) {
+      toast.error('Enter your current password');
+      return;
+    }
+    setWorking(true);
+    try {
+      await authApi.disable2FA(disablePassword);
+      setStatus('disabled');
+      setDisablePassword('');
+      toast.success('Two-factor authentication disabled');
+    } catch (err: any) {
+      toast.error(err?.body?.error || 'Failed to disable 2FA');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const copyBackupCodes = () => {
+    navigator.clipboard.writeText(backupCodes.join('\n'));
+    toast.success('Backup codes copied to clipboard');
+  };
+
+  if (status === 'loading') {
+    return (
+      <div className="mb-6 p-6 rounded-lg border bg-muted/30 flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-lg border bg-card">
+      <div className="p-4 border-b flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-primary/10">
+          <Smartphone className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-sm">Two-Factor Authentication (2FA)</h3>
+          <p className="text-xs text-muted-foreground">Add an extra layer of security with an authenticator app</p>
+        </div>
+        {status === 'enabled' && (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <ShieldCheck className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        )}
+        {status === 'disabled' && (
+          <Badge variant="secondary">
+            <ShieldOff className="h-3 w-3 mr-1" />
+            Off
+          </Badge>
+        )}
+      </div>
+
+      <div className="p-4">
+        {/* Status: Disabled — show enable button */}
+        {status === 'disabled' && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Protect your admin account by requiring a code from Google Authenticator, Authy, or similar app.
+            </p>
+            <Button onClick={handleSetup} disabled={working} size="sm">
+              {working ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
+              Enable 2FA
+            </Button>
+          </div>
+        )}
+
+        {/* Status: Setup — show QR code */}
+        {status === 'setup' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm font-medium">1. Scan this QR code with your authenticator app:</p>
+                {qrCode && (
+                  <img src={qrCode} alt="2FA QR Code" className="w-48 h-48 rounded-lg border p-1 bg-white" />
+                )}
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Or enter this key manually:</p>
+                  <code className="text-xs font-mono bg-muted px-2 py-1 rounded select-all break-all">
+                    {secret}
+                  </code>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm font-medium">2. Enter the 6-digit code to verify:</p>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    className="pl-9 text-center text-lg tracking-widest font-mono"
+                    value={verifyCode}
+                    onChange={e => setVerifyCode(e.target.value)}
+                    autoComplete="one-time-code"
+                  />
+                </div>
+                <Button onClick={handleEnable} disabled={working || verifyCode.length < 6} className="w-full">
+                  {working ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                  Verify &amp; Enable
+                </Button>
+                <Button variant="ghost" size="sm" className="w-full" onClick={() => setStatus('disabled')}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status: Verify — show backup codes */}
+        {status === 'verify' && backupCodes.length > 0 && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <h4 className="font-semibold text-sm text-amber-800 dark:text-amber-400 mb-2">
+                ⚠️ Save your backup codes NOW
+              </h4>
+              <p className="text-xs text-amber-700 dark:text-amber-500 mb-3">
+                If you lose access to your authenticator app, you can use these one-time backup codes to sign in. Store them somewhere safe — they won't be shown again.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                {backupCodes.map((code, i) => (
+                  <code key={i} className="text-center px-2 py-1.5 bg-white dark:bg-background rounded border font-mono text-sm select-all">
+                    {code}
+                  </code>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={copyBackupCodes}>
+                  <Copy className="h-3.5 w-3.5 mr-1" /> Copy All
+                </Button>
+                <Button size="sm" onClick={() => { setBackupCodes([]); setStatus('enabled'); }}>
+                  I've saved them
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status: Enabled — show disable option */}
+        {status === 'enabled' && backupCodes.length === 0 && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Two-factor authentication is active. You'll need a code from your authenticator app each time you sign in.
+            </p>
+            <Separator />
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <Label className="text-xs text-muted-foreground">Enter your password to disable 2FA</Label>
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={disablePassword}
+                  onChange={e => setDisablePassword(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <Button variant="destructive" size="sm" onClick={handleDisable} disabled={working || !disablePassword}>
+                {working ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldOff className="h-4 w-4 mr-2" />}
+                Disable 2FA
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

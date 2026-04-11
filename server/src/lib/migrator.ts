@@ -37,6 +37,7 @@ import { migration007 } from '../migrations/007_email_digest.js';
 import { migration008 } from '../migrations/008_subscriptions.js';
 import { migration009 } from '../migrations/009_ab_testing.js';
 import { migration010 } from '../migrations/010_webhooks.js';
+import { migration011 } from '../migrations/011_two_factor_auth.js';
 
 const migrations: Migration[] = [
   migration001,
@@ -49,6 +50,7 @@ const migrations: Migration[] = [
   migration008,
   migration009,
   migration010,
+  migration011,
 ];
 
 // ── Runner ──────────────────────────────────────────────────────────────

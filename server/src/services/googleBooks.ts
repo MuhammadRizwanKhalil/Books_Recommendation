@@ -552,6 +552,14 @@ async function fetchWithRetry(url: string, retries = 5): Promise<Response> {
         continue;
       }
 
+      if (response.status === 503 || response.status === 502) {
+        // Transient server error — retry with backoff
+        const backoff = 3000 * Math.pow(2, attempt);
+        logger.warn(`[GoogleBooks] Server error (${response.status}), retrying in ${backoff}ms... (attempt ${attempt}/${retries})`);
+        await delay(backoff);
+        continue;
+      }
+
       if (response.status === 403) {
         // 403 can be rate limiting OR access denied.
         // Try to read the error body to distinguish.

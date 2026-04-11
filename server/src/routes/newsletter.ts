@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../lib/logger.js';
 import { dbGet, dbRun } from '../database.js';
-import { sendEmail, wrapInBaseTemplate, getSiteSetting } from '../services/email.js';
+import { sendEmail, wrapInBaseTemplate, getSiteSetting, buildNewsletterWelcomeEmail } from '../services/email.js';
 import { rateLimit } from '../middleware.js';
 import { validate, newsletterSubscribeSchema } from '../lib/validation.js';
 
@@ -41,14 +41,11 @@ router.post('/subscribe', rateLimit('newsletter', 5, 60 * 60 * 1000), validate(n
 
     // ── Fire-and-forget: Welcome email ──────────────────────────────────
     try {
-      if (await getSiteSetting('welcome_email_enabled', 'false') === 'true') {
-        const subject = await getSiteSetting('welcome_email_subject', 'Welcome to our newsletter!');
-        const content = await getSiteSetting('welcome_email_content', '<h2>Welcome!</h2><p>Thank you for subscribing to our newsletter.</p>');
-        const html = await wrapInBaseTemplate(content, subject);
-        await sendEmail({ to: normalizedEmail, subject, html });
-      }
+      const welcomeEmail = await buildNewsletterWelcomeEmail(name?.trim() || '', normalizedEmail);
+      sendEmail({ to: normalizedEmail, subject: welcomeEmail.subject, html: welcomeEmail.html })
+        .catch(e => logger.error({ err: e }, 'Newsletter welcome email failed'));
     } catch (e) {
-      logger.error({ err: e }, 'Welcome email failed');
+      logger.error({ err: e }, 'Newsletter welcome email build failed');
     }
 
     // ── Fire-and-forget: Admin notification ─────────────────────────────

@@ -53,11 +53,14 @@ export function AuthModal() {
 
     setLoading(true);
     try {
-      const success = isSignUp
+      const result = isSignUp
         ? await signUp(name, email, password)
         : await signIn(email, password);
-      if (success) {
+      if (result === true) {
         resetForm();
+      } else if (result && typeof result === 'object' && 'requires2FA' in result) {
+        // 2FA not applicable in user modal — shouldn't happen but treat as success-pending
+        setError('This account requires 2FA. Please use the admin login page.');
       } else {
         setError(isSignUp ? 'Registration failed. This email may already be in use.' : 'Invalid email or password. Please try again.');
       }
