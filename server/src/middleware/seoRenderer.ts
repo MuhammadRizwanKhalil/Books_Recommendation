@@ -373,7 +373,11 @@ async function getBlogPostMeta(slug: string): Promise<PageMeta | null> {
     }
     // Add tags as article:tag
     if (post.tags) {
-      post.tags.split(',').filter((t: string) => t.trim()).forEach((tag: string) => {
+      let tagsStr = post.tags;
+      if (typeof tagsStr === 'string' && tagsStr.startsWith('[')) {
+        try { const parsed = JSON.parse(tagsStr); if (Array.isArray(parsed)) tagsStr = parsed.join(', '); } catch { /* use as-is */ }
+      }
+      tagsStr.split(',').filter((t: string) => t.trim()).forEach((tag: string) => {
         extraTagsArr.push(`<meta property="article:tag" content="${escapeHtml(tag.trim())}" />`);
       });
     }

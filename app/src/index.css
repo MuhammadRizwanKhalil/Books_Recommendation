@@ -136,3 +136,32 @@ section:not(#hero) {
     @apply bg-background text-foreground;
   }
 }
+
+/* Book recommendation cards inside blog posts */
+.prose .book-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: hsl(var(--card));
+}
+.prose .book-card img {
+  width: 100px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+.prose .book-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+}
+.prose .book-card .book-meta {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+.prose .book-card .book-rating {
+  color: #f59e0b;
+}

@@ -10,6 +10,19 @@ import { authenticate, requireAdmin, optionalAuth } from '../middleware.js';
 
 const router = Router();
 
+// ── Tag normalization ────────────────────────────────────────────────────────
+function normalizeTags(tags: any): string | null {
+  if (!tags) return null;
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean).join(', ');
+  if (typeof tags === 'string' && tags.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(tags);
+      if (Array.isArray(parsed)) return parsed.map((t: any) => String(t).trim()).filter(Boolean).join(', ');
+    } catch { /* not JSON, use as-is */ }
+  }
+  return String(tags);
+}
+
 // ── Upload config ───────────────────────────────────────────────────────────
 const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads', 'blog');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -248,7 +261,7 @@ router.post('/', authenticate, requireAdmin, async (req: Request, res: Response)
     `, [
       id, title.trim(), slug, content, excerpt || null, featuredImage || null,
       metaTitle || null, metaDescription || null, ogImage || null, canonicalUrl || null,
-      focusKeyword || null, seoRobots || 'index, follow', tags || null, category || null,
+      focusKeyword || null, seoRobots || 'index, follow', normalizeTags(tags), category || null,
       customLinkLabel || null, customLinkUrl || null, adminNotes || null,
       allowComments !== false ? 1 : 0, isFeatured ? 1 : 0,
       status || 'DRAFT', status === 'PUBLISHED' ? (publishedAt || new Date().toISOString()) : (publishedAt || null),
@@ -351,7 +364,7 @@ router.put('/:id', authenticate, requireAdmin, async (req: Request, res: Respons
       canonicalUrl !== undefined ? (canonicalUrl || null) : existingPost.canonical_url,
       focusKeyword !== undefined ? (focusKeyword || null) : existingPost.focus_keyword,
       seoRobots ?? null,
-      tags !== undefined ? (tags || null) : existingPost.tags,
+      tags !== undefined ? normalizeTags(tags) : existingPost.tags,
       category !== undefined ? (category || null) : existingPost.category,
       customLinkLabel !== undefined ? (customLinkLabel || null) : existingPost.custom_link_label,
       customLinkUrl !== undefined ? (customLinkUrl || null) : existingPost.custom_link_url,

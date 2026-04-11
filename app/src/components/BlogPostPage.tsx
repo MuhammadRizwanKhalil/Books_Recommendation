@@ -167,7 +167,10 @@ export function BlogPostPage() {
 
   // Render content: support basic HTML or split by paragraphs
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content);
-  const sanitizedHtml = isHtml ? DOMPurify.sanitize(post.content) : '';
+  const sanitizedHtml = isHtml ? DOMPurify.sanitize(post.content, {
+    ADD_ATTR: ['class', 'target', 'rel'],
+    ADD_TAGS: ['iframe'],
+  }) : '';
 
   return (
     <main className="pt-20 pb-16">

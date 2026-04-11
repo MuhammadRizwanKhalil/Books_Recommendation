@@ -79,7 +79,7 @@ services:
       AI_BLOG_ENABLED: ${AI_BLOG_ENABLED:-false}
       AI_BLOG_CRON_SCHEDULE: ${AI_BLOG_CRON_SCHEDULE:-0 9 * * 1}
     volumes:
-      - server-uploads:/app/uploads
+      - server-uploads:/app/data/uploads
     depends_on:
       mysql:
         condition: service_healthy
