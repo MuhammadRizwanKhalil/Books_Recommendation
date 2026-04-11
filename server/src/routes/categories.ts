@@ -223,3 +223,31 @@ router.delete('/:id', authenticate, requireAdmin, async (req: Request, res: Resp
 });
 
 export default router;
+
+// ── Ensure Default Categories Exist ──────────────────────────────────────────
+
+const DEFAULT_CATEGORIES = [
+  { name: 'Fiction', slug: 'fiction', description: 'Explore imaginary worlds and compelling narratives', imageUrl: 'https://images.unsplash.com/photo-1474932430478-367dbb6832c1?w=400&h=300&fit=crop' },
+  { name: 'Business', slug: 'business', description: 'Learn from industry leaders and entrepreneurs', imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop' },
+  { name: 'Technology', slug: 'technology', description: 'Stay ahead with the latest tech insights', imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop' },
+  { name: 'Self-Help', slug: 'self-help', description: 'Transform your life with proven strategies', imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=300&fit=crop' },
+  { name: 'Science', slug: 'science', description: 'Discover the wonders of scientific exploration', imageUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=300&fit=crop' },
+  { name: 'History', slug: 'history', description: 'Journey through time and civilizations', imageUrl: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=400&h=300&fit=crop' },
+  { name: 'Psychology', slug: 'psychology', description: 'Understand the human mind and behavior', imageUrl: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=400&h=300&fit=crop' },
+  { name: 'Biography', slug: 'biography', description: 'Real stories of extraordinary people', imageUrl: 'https://images.unsplash.com/photo-1529473814998-077b4fec6770?w=400&h=300&fit=crop' },
+];
+
+export async function ensureDefaultCategories(): Promise<void> {
+  let inserted = 0;
+  for (const cat of DEFAULT_CATEGORIES) {
+    const result = await dbRun(
+      `INSERT IGNORE INTO categories (id, name, slug, description, image_url, book_count)
+       VALUES (?, ?, ?, ?, ?, 0)`,
+      [uuidv4(), cat.name, cat.slug, cat.description, cat.imageUrl],
+    );
+    if (result.changes > 0) inserted++;
+  }
+  if (inserted > 0) {
+    logger.info(`  📚 Seeded ${inserted} default categories`);
+  }
+}

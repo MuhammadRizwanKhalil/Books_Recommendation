@@ -544,7 +544,7 @@ const CATEGORY_MAP: Record<string, string> = {
   'true crime': 'Biography',
 };
 
-function mapToLocalCategory(rawCategory: string): string | null {
+export function mapToLocalCategory(rawCategory: string): string | null {
   const lower = rawCategory.toLowerCase().trim();
   if (CATEGORY_MAP[lower]) return CATEGORY_MAP[lower];
 

@@ -15,7 +15,6 @@ import { sanitizeInput } from './lib/sanitize.js';
 // Route imports
 import authRoutes from './routes/auth.js';
 import booksRoutes from './routes/books.js';
-import categoriesRoutes from './routes/categories.js';
 import authorsRoutes from './routes/authors.js';
 import blogRoutes from './routes/blog.js';
 import reviewsRoutes from './routes/reviews.js';
@@ -23,6 +22,7 @@ import analyticsRoutes from './routes/analytics.js';
 import newsletterRoutes from './routes/newsletter.js';
 import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes, { seedDefaultSettings } from './routes/settings.js';
+import categoriesRoutes, { ensureDefaultCategories } from './routes/categories.js';
 import campaignsRoutes from './routes/campaigns.js';
 import importRoutes from './routes/import.js';
 import seoRoutes from './routes/seo.js';
@@ -295,6 +295,7 @@ async function bootstrap() {
   await initPool();
   await initDatabase();
   await seedDefaultSettings();
+  await ensureDefaultCategories();
 
   const server = app.listen(config.port, () => {
     logger.info({

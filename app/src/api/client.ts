@@ -943,6 +943,14 @@ export const importApi = {
       method: 'POST',
       body: JSON.stringify({ mode }),
     }),
+
+  getRecategorizeStatus: () =>
+    apiFetch<{ running: boolean }>('/import/recategorize/status'),
+
+  recategorizeBooks: () =>
+    apiFetch<{ started: boolean; totalBooks: number; uncategorizedBooks: number; description: string } | { error: string }>('/import/recategorize', {
+      method: 'POST',
+    }),
 };
 
 // â”€â”€ Session ID helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

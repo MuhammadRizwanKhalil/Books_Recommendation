@@ -12,8 +12,9 @@ import { authenticate, requireAdmin } from '../middleware.js';
 import { logger } from '../lib/logger.js';
 import { runImportJob, getImportJobHistory, isImportRunning, initImportJobsTable, resetImportState } from '../jobs/bookImport.js';
 import { resolveHDCover, resolveAuthorImage } from '../services/coverResolver.js';
-import { isValidIsbn10, buildAmazonSearchUrl } from '../services/googleBooks.js';
-import { dbAll, dbRun } from '../database.js';
+import { isValidIsbn10, buildAmazonSearchUrl, mapToLocalCategory } from '../services/googleBooks.js';
+import { dbAll, dbRun, dbGet } from '../database.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -372,6 +373,133 @@ router.post('/fix-amazon-urls', async (req: Request, res: Response) => {
     logger.error({ err }, '[AmazonFix] Job failed');
   } finally {
     amazonFixRunning = false;
+  }
+});
+
+// ── Re-categorize Books ─────────────────────────────────────────────────────
+// Fetches Google Books data for each book and re-assigns categories
+
+let recategorizeRunning = false;
+
+router.get('/recategorize/status', (_req: Request, res: Response) => {
+  res.json({ running: recategorizeRunning });
+});
+
+router.post('/recategorize', async (_req: Request, res: Response) => {
+  if (recategorizeRunning) {
+    res.status(409).json({ error: 'Re-categorization is already running' });
+    return;
+  }
+
+  // Get all books with their google_books_id
+  const books = await dbAll<any>(
+    `SELECT id, google_books_id, LEFT(title, 80) as title FROM books
+     WHERE status = 'PUBLISHED' AND is_active = 1`,
+  );
+
+  // Get books that are missing category links
+  const uncategorized = await dbAll<any>(
+    `SELECT b.id, b.google_books_id, b.title FROM books b
+     LEFT JOIN book_categories bc ON bc.book_id = b.id
+     WHERE b.status = 'PUBLISHED' AND b.is_active = 1 AND bc.book_id IS NULL`,
+  );
+
+  res.json({
+    started: true,
+    totalBooks: books.length,
+    uncategorizedBooks: uncategorized.length,
+    description: 'Re-fetching Google Books categories for all uncategorized books',
+  });
+
+  recategorizeRunning = true;
+
+  try {
+    let categorized = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    // Process uncategorized books that have a Google Books ID
+    const toProcess = uncategorized.filter(b => b.google_books_id);
+
+    for (const book of toProcess) {
+      try {
+        // Fetch the book's data from Google Books API
+        const resp = await fetch(
+          `https://www.googleapis.com/books/v1/volumes/${book.google_books_id}`,
+        );
+        if (!resp.ok) { skipped++; continue; }
+
+        const data = await resp.json() as any;
+        const info = data.volumeInfo;
+
+        if (!info?.categories?.length) {
+          // No categories from Google — assign 'Fiction' as default
+          let cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', ['Fiction']);
+          if (cat) {
+            await dbRun('INSERT IGNORE INTO book_categories (book_id, category_id) VALUES (?, ?)', [book.id, cat.id]);
+            categorized++;
+          } else {
+            skipped++;
+          }
+          continue;
+        }
+
+        // Map Google categories to local ones
+        const mappedCategories: string[] = [];
+        for (const rawCat of info.categories) {
+          const parts = rawCat.split('/').map((p: string) => p.trim());
+          for (const part of parts) {
+            const mapped = mapToLocalCategory(part);
+            if (mapped && !mappedCategories.includes(mapped)) {
+              mappedCategories.push(mapped);
+            }
+          }
+        }
+
+        if (mappedCategories.length === 0) {
+          mappedCategories.push('Fiction');
+        }
+
+        // Link to categories (auto-create if missing)
+        for (const name of mappedCategories) {
+          let cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', [name]);
+          if (!cat) {
+            const id = uuidv4();
+            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            await dbRun(
+              'INSERT IGNORE INTO categories (id, name, slug, description, book_count) VALUES (?, ?, ?, ?, 0)',
+              [id, name, slug, `Books about ${name}`],
+            );
+            cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', [name]);
+          }
+          if (cat) {
+            await dbRun('INSERT IGNORE INTO book_categories (book_id, category_id) VALUES (?, ?)', [book.id, cat.id]);
+          }
+        }
+        categorized++;
+
+        // Rate limit to avoid hitting Google API too hard
+        await new Promise(r => setTimeout(r, 200));
+      } catch (err: any) {
+        errors++;
+        logger.warn(`[Recategorize] Error for "${book.title}": ${err.message}`);
+      }
+    }
+
+    // Update category book counts
+    await dbRun(`
+      UPDATE categories SET book_count = (
+        SELECT COUNT(*) FROM book_categories bc
+        JOIN books b ON b.id = bc.book_id
+        WHERE bc.category_id = categories.id AND b.status = 'PUBLISHED' AND b.is_active = 1
+      )
+    `);
+
+    logger.info(`[Recategorize] Complete! Categorized: ${categorized}, Skipped: ${skipped}, Errors: ${errors}, Total uncategorized: ${toProcess.length}`);
+  } catch (err: any) {
+    logger.error({ err }, '[Recategorize] Job failed');
+  } finally {
+    recategorizeRunning = false;
   }
 });
 

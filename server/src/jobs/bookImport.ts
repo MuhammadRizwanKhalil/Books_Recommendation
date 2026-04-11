@@ -336,11 +336,27 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
 }
 
 /**
- * Link a book to its categories (creating junctions).
+ * Link a book to its categories (auto-creating missing categories).
  */
 async function linkCategories(bookId: string, categoryNames: string[]) {
   for (const name of categoryNames) {
-    const cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', [name]);
+    let cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', [name]);
+    if (!cat) {
+      // Auto-create the category (like findOrCreateAuthor does for authors)
+      const id = uuidv4();
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      try {
+        await dbRun(
+          'INSERT INTO categories (id, name, slug, description, book_count) VALUES (?, ?, ?, ?, 0)',
+          [id, name, slug, `Books about ${name}`],
+        );
+        cat = { id };
+        logger.info(`  📁 Auto-created category: ${name}`);
+      } catch {
+        // Race condition — try to find again
+        cat = await dbGet<any>('SELECT id FROM categories WHERE name = ?', [name]);
+      }
+    }
     if (cat) {
       await dbRun('INSERT IGNORE INTO book_categories (book_id, category_id) VALUES (?, ?)', [bookId, cat.id]);
     }

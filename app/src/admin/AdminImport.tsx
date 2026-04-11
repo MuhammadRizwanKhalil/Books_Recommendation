@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, Play, Loader2, CheckCircle2, XCircle,
-  Clock, BookOpen, RefreshCw, AlertTriangle, ImageIcon, UserIcon, Link2,
+  Clock, BookOpen, RefreshCw, AlertTriangle, ImageIcon, UserIcon, Link2, FolderSync,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function AdminImport() {
   const [isCoverUpgradeRunning, setIsCoverUpgradeRunning] = useState(false);
   const [isAuthorImageRunning, setIsAuthorImageRunning] = useState(false);
   const [isAmazonFixRunning, setIsAmazonFixRunning] = useState(false);
+  const [isRecategorizeRunning, setIsRecategorizeRunning] = useState(false);
   const [coverLimit, setCoverLimit] = useState(500);
   const [authorImageLimit, setAuthorImageLimit] = useState(200);
   const [amazonFixMode, setAmazonFixMode] = useState<'invalid-isbn' | 'all-dp' | 'missing'>('invalid-isbn');
@@ -38,20 +39,22 @@ export function AdminImport() {
 
   const loadData = useCallback(async () => {
     try {
-      const [statusRes, historyRes, coverStatusRes, authorImageStatusRes, amazonFixStatusRes] = await Promise.all([
+      const [statusRes, historyRes, coverStatusRes, authorImageStatusRes, amazonFixStatusRes, recategorizeStatusRes] = await Promise.all([
         importApi.getStatus(),
         importApi.getHistory(20),
         importApi.getCoverUpgradeStatus(),
         importApi.getAuthorImageUpgradeStatus(),
         importApi.getAmazonFixStatus(),
+        importApi.getRecategorizeStatus(),
       ]);
       setIsRunning(statusRes.running);
       setJobs(historyRes.jobs);
       setIsCoverUpgradeRunning(coverStatusRes.running);
       setIsAuthorImageRunning(authorImageStatusRes.running);
       setIsAmazonFixRunning(amazonFixStatusRes.running);
+      setIsRecategorizeRunning(recategorizeStatusRes.running);
 
-      const anyRunning = statusRes.running || coverStatusRes.running || authorImageStatusRes.running || amazonFixStatusRes.running;
+      const anyRunning = statusRes.running || coverStatusRes.running || authorImageStatusRes.running || amazonFixStatusRes.running || recategorizeStatusRes.running;
       if (anyRunning && !polling) {
         setPolling(true);
       } else if (!anyRunning && polling) {
@@ -123,6 +126,23 @@ export function AdminImport() {
     } catch (err) {
       console.error('Failed to start Amazon URL fix:', err);
       toast.error('Failed to start Amazon URL fix');
+    }
+  };
+
+  const handleRecategorize = async () => {
+    try {
+      const res = await importApi.recategorizeBooks();
+      if ('error' in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Re-categorization started! Processing ${res.uncategorizedBooks} uncategorized books...`);
+      setIsRecategorizeRunning(true);
+      setPolling(true);
+      loadData();
+    } catch (err) {
+      console.error('Failed to start re-categorization:', err);
+      toast.error('Failed to start re-categorization');
     }
   };
 
@@ -459,6 +479,46 @@ export function AdminImport() {
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   Amazon URL fix in progress. Check server logs for detailed progress.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Re-categorize Books */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderSync className="h-5 w-5" />
+            Re-categorize Books
+          </CardTitle>
+          <CardDescription>
+            Fetch categories from Google Books API and assign them to books that are missing category links.
+            This ensures all books appear in the correct category sections.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Button
+              onClick={handleRecategorize}
+              disabled={isRecategorizeRunning || isRunning}
+              className="w-full sm:w-auto"
+            >
+              {isRecategorizeRunning ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FolderSync className="h-4 w-4 mr-2" />
+              )}
+              {isRecategorizeRunning ? 'Re-categorizing...' : 'Re-categorize Uncategorized Books'}
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              <p>This will fetch the original Google Books categories for each uncategorized book and map them to local categories (Fiction, Business, Technology, etc.).</p>
+            </div>
+            {isRecategorizeRunning && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Re-categorization in progress. Check server logs for detailed progress.
                 </p>
               </div>
             )}
