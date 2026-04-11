@@ -11,7 +11,7 @@ router.get('/robots.txt', async (_req: Request, res: Response) => {
   const siteUrl = config.frontendUrl;
   // Read admin URL slug dynamically from settings
   const adminSlug = (await dbGet<any>("SELECT value FROM site_settings WHERE `key` = 'admin_url_slug'", []))?.value || 'ctrl-panel';
-  res.type('text/plain').send(`# BookDiscovery Robots.txt
+  res.type('text/plain').send(`# The Book Times Robots.txt
 User-agent: *
 Allow: /
 Disallow: /${adminSlug}
@@ -367,9 +367,9 @@ router.get('/api/seo/homepage', async (_req: Request, res: Response) => {
   const siteUrl = config.frontendUrl;
   
   // Load site settings
-  let siteName = 'BookDiscovery';
+  let siteName = 'The Book Times';
   let siteDescription = 'Discover your next great read with AI-powered book recommendations.';
-  let contactEmail = 'hello@bookdiscovery.com';
+  let contactEmail = 'hello@thebooktimes.com';
   
   try {
     const settings = await dbAll<any>('SELECT `key`, value FROM site_settings WHERE `key` IN (?, ?, ?)', ['site_name', 'site_description', 'contact_email']);

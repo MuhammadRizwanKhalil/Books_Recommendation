@@ -44,7 +44,7 @@ async function runDigestJob(): Promise<void> {
 
   logger.info({ count: candidates.length }, 'Email digest: processing candidates');
 
-  const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+  const siteName = await getSiteSetting('site_name', 'The Book Times');
   const siteUrl = await getSiteSetting('site_url', 'http://localhost:5173');
   let sent = 0;
   let failed = 0;

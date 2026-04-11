@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+﻿import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSettings } from '@/components/SettingsProvider';
@@ -22,7 +22,7 @@ export function LegalPage({ pageKey, onBack }: LegalPageProps) {
   const { getSetting } = useSettings();
   const content = getSetting(pageKey, '<p>This page is not yet configured. Please check back later.</p>');
   const title = PAGE_TITLES[pageKey] || 'Legal';
-  const siteName = getSetting('site_name', 'BookDiscovery');
+  const siteName = getSetting('site_name', 'The Book Times');
 
   useSEO({
     title: `${title} | ${siteName}`,

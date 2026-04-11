@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+﻿import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { Book } from '@/types';
 import { toast } from 'sonner';
 import { wishlistApi } from '@/api/client';
@@ -20,7 +20,7 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'bookdiscovery-wishlist';
+const STORAGE_KEY = 'thebooktimes-wishlist';
 
 function loadLocalWishlist(): Book[] {
   try {

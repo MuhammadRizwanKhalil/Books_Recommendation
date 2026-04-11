@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — Frontend Dockerfile (Multi-stage)
+# The Book Times — Frontend Dockerfile (Multi-stage)
 # Supports both development and production builds
 # ══════════════════════════════════════════════════════════════════════════════
 

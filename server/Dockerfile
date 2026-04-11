@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — Backend Dockerfile (Multi-stage)
+# The Book Times — Backend Dockerfile (Multi-stage)
 # Supports both development and production builds
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -31,8 +31,8 @@ RUN npx tsc
 
 # ── Production stage: lean runtime image ─────────────────────────────────────
 FROM node:22-alpine AS production
-LABEL maintainer="BookDiscovery" \
-      description="BookDiscovery API Server"
+LABEL maintainer="The Book Times" \
+      description="The Book Times API Server"
 ENV NODE_ENV=production
 WORKDIR /app
 

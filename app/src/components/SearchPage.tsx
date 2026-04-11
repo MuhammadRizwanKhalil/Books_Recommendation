@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, ArrowUpDown, Grid3X3, List, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,9 +54,9 @@ export function SearchPage() {
   const debouncedQuery = useDebounce(query, 300);
 
   useSEO({
-    title: query ? `Search: "${query}" | BookDiscovery` : 'Search Books | BookDiscovery',
+    title: query ? `Search: "${query}" | The Book Times` : 'Search Books | The Book Times',
     description: query
-      ? `Search results for "${query}" on BookDiscovery. Find books by title, author, or keyword.`
+      ? `Search results for "${query}" on The Book Times. Find books by title, author, or keyword.`
       : 'Search 50,000+ books by title, author, or keyword. Filter by category, rating, and more.',
     canonical: `${window.location.origin}/search${query ? `?q=${encodeURIComponent(query)}` : ''}`,
   });

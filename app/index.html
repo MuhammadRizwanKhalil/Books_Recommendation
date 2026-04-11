@@ -3,34 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BookDiscovery - AI-Powered Book Recommendations | Discover Your Next Great Read</title>
+    <title>The Book Times - AI-Powered Book Recommendations | Discover Your Next Great Read</title>
     <meta name="description" content="Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews." />
     <meta name="keywords" content="book recommendations, AI books, book discovery, best books, reading list, book reviews, trending books, new releases, top rated books, fiction, non-fiction, self-help, technology books" />
-    <meta name="author" content="BookDiscovery" />
+    <meta name="author" content="The Book Times" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="BookDiscovery - AI-Powered Book Recommendations" />
+    <meta property="og:title" content="The Book Times - AI-Powered Book Recommendations" />
     <meta property="og:description" content="Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions." />
-    <meta property="og:url" content="https://bookdiscovery.com" />
-    <meta property="og:site_name" content="BookDiscovery" />
+    <meta property="og:url" content="https://thebooktimes.com" />
+    <meta property="og:site_name" content="The Book Times" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:image" content="https://bookdiscovery.com/og-image.png" />
+    <meta property="og:image" content="https://thebooktimes.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="BookDiscovery - AI-Powered Book Recommendations" />
+    <meta property="og:image:alt" content="The Book Times - AI-Powered Book Recommendations" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="BookDiscovery - AI-Powered Book Recommendations" />
+    <meta name="twitter:title" content="The Book Times - AI-Powered Book Recommendations" />
     <meta name="twitter:description" content="Discover your next great read with AI-powered book recommendations." />
-    <meta name="twitter:image" content="https://bookdiscovery.com/og-image.png" />
-    <meta name="twitter:image:alt" content="BookDiscovery - AI-Powered Book Recommendations" />
+    <meta name="twitter:image" content="https://thebooktimes.com/og-image.png" />
+    <meta name="twitter:image:alt" content="The Book Times - AI-Powered Book Recommendations" />
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TDW096P47M"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-TDW096P47M');
+    </script>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
 
@@ -39,16 +48,20 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="BookDiscovery" />
-    <meta name="application-name" content="BookDiscovery" />
+    <meta name="apple-mobile-web-app-title" content="The Book Times" />
+    <meta name="application-name" content="The Book Times" />
     <meta name="msapplication-TileColor" content="#c2631a" />
     <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
 
     <!-- Google Search Console verification (replace with your verification code) -->
     <!-- <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" /> -->
 
+    <!-- Preconnect to Google Analytics for faster loading -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+
     <!-- Canonical -->
-    <link rel="canonical" href="https://bookdiscovery.com" />
+    <link rel="canonical" href="https://thebooktimes.com" />
 
     <!-- Sitemap -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -78,14 +91,14 @@
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "BookDiscovery",
-      "url": "https://bookdiscovery.com",
+      "name": "The Book Times",
+      "url": "https://thebooktimes.com",
       "description": "AI-powered book recommendations platform. Discover your next great read from 50,000+ books.",
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
           "@type": "EntryPoint",
-          "urlTemplate": "https://bookdiscovery.com/?search={search_term_string}"
+          "urlTemplate": "https://thebooktimes.com/?search={search_term_string}"
         },
         "query-input": "required name=search_term_string"
       }
@@ -95,8 +108,8 @@
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "BookDiscovery",
-      "url": "https://bookdiscovery.com",
+      "name": "The Book Times",
+      "url": "https://thebooktimes.com",
       "description": "AI-powered book discovery and recommendation platform",
       "sameAs": []
     }
@@ -110,25 +123,25 @@
           "@type": "ListItem",
           "position": 1,
           "name": "Home",
-          "item": "https://bookdiscovery.com"
+          "item": "https://thebooktimes.com"
         },
         {
           "@type": "ListItem",
           "position": 2,
           "name": "Trending Books",
-          "item": "https://bookdiscovery.com/#trending"
+          "item": "https://thebooktimes.com/#trending"
         },
         {
           "@type": "ListItem",
           "position": 3,
           "name": "Categories",
-          "item": "https://bookdiscovery.com/#categories"
+          "item": "https://thebooktimes.com/#categories"
         },
         {
           "@type": "ListItem",
           "position": 4,
           "name": "Top Rated",
-          "item": "https://bookdiscovery.com/#top-rated"
+          "item": "https://thebooktimes.com/#top-rated"
         }
       ]
     }
@@ -149,7 +162,7 @@
     <!-- Noscript content for crawlers that don't execute JS -->
     <noscript>
       <div class="noscript-content">
-        <h1>BookDiscovery - AI-Powered Book Recommendations</h1>
+        <h1>The Book Times - AI-Powered Book Recommendations</h1>
         <p>Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions tailored just for you.</p>
         <h2>Popular Sections</h2>
         <ul>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense, createContext, useContext } from 'react';
+﻿import { useState, useEffect, useCallback, lazy, Suspense, createContext, useContext } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { ScrollToTop } from '@/components/ScrollToTop';
@@ -20,7 +20,7 @@ import { Navigation } from '@/sections/Navigation';
 import { Hero } from '@/sections/Hero';
 import { Footer } from '@/sections/Footer';
 
-// ── Lazy-loaded below-fold sections (reduces initial bundle) ────────────────
+// â”€â”€ Lazy-loaded below-fold sections (reduces initial bundle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Trending = lazy(() => import('@/sections/Trending').then(m => ({ default: m.Trending })));
 const Categories = lazy(() => import('@/sections/Categories').then(m => ({ default: m.Categories })));
 const NewReleases = lazy(() => import('@/sections/NewReleases').then(m => ({ default: m.NewReleases })));
@@ -43,7 +43,7 @@ import type { Book, Category } from '@/types';
 import { useSEO } from '@/hooks/useSEO';
 import './App.css';
 
-// ── Lazy-loaded admin components ────────────────────────────────────────────
+// â”€â”€ Lazy-loaded admin components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AdminLayout = lazy(() => import('@/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
 const AdminLoginPage = lazy(() => import('@/admin/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })));
 const AdminDashboard = lazy(() => import('@/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
@@ -78,7 +78,7 @@ function SectionFallback() {
   );
 }
 
-// ── AppView type (backward compat) ──────────────────────────────────────────
+// â”€â”€ AppView type (backward compat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export type AppView =
   | { type: 'home' }
   | { type: 'category'; category: Category }
@@ -87,7 +87,7 @@ export type AppView =
   | { type: 'legal'; pageKey: string }
   | { type: 'search' };
 
-// ── Navigation context (wraps React Router) ─────────────────────────────────
+// â”€â”€ Navigation context (wraps React Router) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface AppNavContextType {
   navigate: (view: AppView) => void;
   openBook: (book: Book) => void;
@@ -106,13 +106,13 @@ export function useAppNav() {
   return ctx;
 }
 
-// ── Route components ────────────────────────────────────────────────────────
+// â”€â”€ Route components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function HomePage() {
   useSEO({
-    title: 'BookDiscovery - AI-Powered Book Recommendations | Discover Your Next Great Read',
+    title: 'The Book Times - AI-Powered Book Recommendations | Discover Your Next Great Read',
     description: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews.',
-    ogTitle: 'BookDiscovery - AI-Powered Book Recommendations',
+    ogTitle: 'The Book Times - AI-Powered Book Recommendations',
     ogDescription: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions.',
     ogImage: `${window.location.origin}/og-image.png`,
     ogType: 'website',
@@ -122,7 +122,7 @@ function HomePage() {
       {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        name: 'BookDiscovery',
+        name: 'The Book Times',
         url: window.location.origin,
         description: 'AI-powered book recommendations platform. Discover your next great read from 50,000+ books.',
         potentialAction: {
@@ -134,7 +134,7 @@ function HomePage() {
       {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        name: 'BookDiscovery',
+        name: 'The Book Times',
         url: window.location.origin,
         description: 'AI-powered book discovery and recommendation platform',
       },
@@ -144,26 +144,26 @@ function HomePage() {
         mainEntity: [
           {
             '@type': 'Question',
-            name: 'How does BookDiscovery recommend books?',
+            name: 'How does The Book Times recommend books?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'BookDiscovery uses AI-powered algorithms that analyze your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.',
+              text: 'The Book Times uses AI-powered algorithms that analyze your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Is BookDiscovery free to use?',
+            name: 'Is The Book Times free to use?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Yes! BookDiscovery is completely free to browse, search, and get book recommendations. You can create an account to save wishlists, write reviews, and get personalized suggestions.',
+              text: 'Yes! The Book Times is completely free to browse, search, and get book recommendations. You can create an account to save wishlists, write reviews, and get personalized suggestions.',
             },
           },
           {
             '@type': 'Question',
-            name: 'What genres are available on BookDiscovery?',
+            name: 'What genres are available on The Book Times?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'BookDiscovery covers every major genre including Fiction, Non-Fiction, Science Fiction, Fantasy, Mystery, Romance, Self-Help, Technology, Biography, History, and many more.',
+              text: 'The Book Times covers every major genre including Fiction, Non-Fiction, Science Fiction, Fantasy, Mystery, Romance, Self-Help, Technology, Biography, History, and many more.',
             },
           },
           {
@@ -171,15 +171,15 @@ function HomePage() {
             name: 'How can I write a book review?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Create a free account on BookDiscovery, navigate to any book page, and click the "Write a Review" button. You can rate the book from 1-5 stars and share your thoughts.',
+              text: 'Create a free account on The Book Times, navigate to any book page, and click the "Write a Review" button. You can rate the book from 1-5 stars and share your thoughts.',
             },
           },
           {
             '@type': 'Question',
-            name: 'Can I buy books through BookDiscovery?',
+            name: 'Can I buy books through The Book Times?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'BookDiscovery provides convenient links to purchase books on Amazon. When you find a book you love, simply click the "Buy on Amazon" button to purchase it.',
+              text: 'The Book Times provides convenient links to purchase books on Amazon. When you find a book you love, simply click the "Buy on Amazon" button to purchase it.',
             },
           },
         ],
@@ -445,7 +445,7 @@ function NotFoundPage() {
   );
 }
 
-// ── Main App ────────────────────────────────────────────────────────────────
+// â”€â”€ Main App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function App() {
   const routerNavigate = useNavigate();
@@ -497,7 +497,7 @@ function App() {
     }
   }, [adminSlugVerified, isAdmin, routerNavigate]);
 
-  // ── Backward-compatible nav helpers ───────────────────────────────────────
+  // â”€â”€ Backward-compatible nav helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const navigate = useCallback((v: AppView) => {
     switch (v.type) {
       case 'home': routerNavigate('/'); break;

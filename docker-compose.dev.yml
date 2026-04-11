@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — Docker Compose for DEVELOPMENT
+# The Book Times — Docker Compose for DEVELOPMENT
 # ══════════════════════════════════════════════════════════════════════════════
 #
 # Usage:
@@ -18,20 +18,20 @@ services:
   # ── MySQL Database ────────────────────────────────────────────────────────
   mysql:
     image: mysql:8.0
-    container_name: bookdiscovery-mysql-dev
+    container_name: thebooktimes-mysql-dev
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: bookdiscovery
-      MYSQL_USER: bookdiscovery
-      MYSQL_PASSWORD: bookdiscovery
+      MYSQL_DATABASE: thebooktimes
+      MYSQL_USER: thebooktimes
+      MYSQL_PASSWORD: thebooktimes
     ports:
       - "3308:3306"
     volumes:
       - mysql-data-dev:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "bookdiscovery", "-pbookdiscovery"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "thebooktimes", "-pthebooktimes"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -43,7 +43,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
       target: development
-    container_name: bookdiscovery-server-dev
+    container_name: thebooktimes-server-dev
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -52,12 +52,12 @@ services:
       PORT: "3001"
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
-      MYSQL_USER: bookdiscovery
-      MYSQL_PASSWORD: bookdiscovery
-      MYSQL_DATABASE: bookdiscovery
+      MYSQL_USER: thebooktimes
+      MYSQL_PASSWORD: thebooktimes
+      MYSQL_DATABASE: thebooktimes
       FRONTEND_URL: http://localhost:5173
       JWT_SECRET: dev-docker-secret-change-in-production
-      ADMIN_EMAIL: admin@bookdiscovery.com
+      ADMIN_EMAIL: admin@thebooktimes.com
       ADMIN_PASSWORD: admin123456
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       IMPORT_JOB_ENABLED: "true"
@@ -83,7 +83,7 @@ services:
       context: ./app
       dockerfile: Dockerfile
       target: development
-    container_name: bookdiscovery-app-dev
+    container_name: thebooktimes-app-dev
     restart: unless-stopped
     ports:
       - "5173:5173"
@@ -112,6 +112,6 @@ services:
 # They are only removed with: docker compose down -v  (or docker volume rm)
 volumes:
   mysql-data-dev:
-    name: bookdiscovery-mysql-dev
+    name: thebooktimes-mysql-dev
   server-uploads-dev:
-    name: bookdiscovery-uploads-dev
+    name: thebooktimes-uploads-dev

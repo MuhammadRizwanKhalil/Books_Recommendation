@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PWA Icon & OG Image Generator
  * 
  * Generates real PNG icons for PWA manifest and an OG image (1200x630)
@@ -25,7 +25,7 @@ const BRAND_DARK = '#a8520e';
 const BG_GRADIENT_TOP = '#c2631a';
 const BG_GRADIENT_BOTTOM = '#8B4513';
 
-// ── PWA Icons ─────────────────────────────────────────────────────────────
+// â”€â”€ PWA Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const iconSizes = [72, 96, 128, 144, 152, 192, 384, 512];
 
 function drawIcon(size) {
@@ -106,7 +106,7 @@ function drawIcon(size) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx.fillText('BD', cx, size * 0.82);
+  ctx.fillText('BT', cx, size * 0.82);
 
   return canvas.toBuffer('image/png');
 }
@@ -116,10 +116,10 @@ for (const size of iconSizes) {
   const buf = drawIcon(size);
   const filePath = path.join(iconsDir, `icon-${size}x${size}.png`);
   fs.writeFileSync(filePath, buf);
-  console.log(`  ✓ ${filePath} (${buf.length} bytes)`);
+  console.log(`  âœ“ ${filePath} (${buf.length} bytes)`);
 }
 
-// ── OG Image (1200 x 630) ────────────────────────────────────────────────
+// â”€â”€ OG Image (1200 x 630) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function drawOgImage() {
   const w = 1200, h = 630;
   const canvas = createCanvas(w, h);
@@ -213,14 +213,17 @@ function drawOgImage() {
 
   ctx.restore();
 
-  // Title: "BookDiscovery"
+  // Title: "The Book Times"
   ctx.font = 'bold 72px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('Book', w * 0.42, h * 0.35);
   ctx.fillStyle = BRAND_COLOR;
-  ctx.fillText('Discovery', w * 0.42 + ctx.measureText('Book').width + 10, h * 0.35);
+  ctx.font = '22px "Segoe UI", system-ui, sans-serif';
+  ctx.letterSpacing = '6px';
+  ctx.fillText('THE', w * 0.42, h * 0.28);
+  ctx.font = 'bold 72px Georgia, "Times New Roman", serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Book Times', w * 0.42, h * 0.40);
 
   // Tagline
   ctx.font = '28px "Segoe UI", system-ui, sans-serif';
@@ -230,7 +233,7 @@ function drawOgImage() {
   // Features list
   ctx.font = '20px "Segoe UI", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  const features = ['✦ 50,000+ Books', '✦ Personalized Picks', '✦ Expert Reviews'];
+  const features = ['\u2726 50,000+ Books', '\u2726 Personalized Picks', '\u2726 Expert Reviews'];
   features.forEach((feat, i) => {
     ctx.fillText(feat, w * 0.42, h * 0.62 + i * 32);
   });
@@ -239,7 +242,7 @@ function drawOgImage() {
   ctx.font = '18px "Segoe UI", system-ui, sans-serif';
   ctx.fillStyle = BRAND_COLOR;
   ctx.textAlign = 'center';
-  ctx.fillText('bookdiscovery.com', w / 2, h - 30);
+  ctx.fillText('thebooktimes.com', w / 2, h - 30);
 
   // Bottom accent line
   ctx.fillStyle = BRAND_COLOR;
@@ -252,6 +255,6 @@ console.log('Generating OG image...');
 const ogBuf = drawOgImage();
 const ogPath = path.join(publicDir, 'og-image.png');
 fs.writeFileSync(ogPath, ogBuf);
-console.log(`  ✓ ${ogPath} (${ogBuf.length} bytes)`);
+console.log(`  âœ“ ${ogPath} (${ogBuf.length} bytes)`);
 
-console.log('\n✅ All assets generated successfully!');
+console.log('\nâœ… All assets generated successfully!');

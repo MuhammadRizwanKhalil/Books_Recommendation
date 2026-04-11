@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+﻿import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   ArrowLeft, Save, Eye, Upload, X, Globe, Link2, Tag, FileText,
   BookOpen, Image as ImageIcon, Search, AlertCircle, CheckCircle2,
@@ -27,7 +27,7 @@ import { booksApi, categoriesApi, authorsApi, type BookResponse, type AuthorResp
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface BookForm {
   title: string;
@@ -75,7 +75,7 @@ const emptyForm: BookForm = {
   adminNotes: '', status: 'DRAFT', categoryIds: [],
 };
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function charCount(val: string, max: number) {
   const len = val.length;
@@ -98,7 +98,7 @@ function FieldHint({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AdminBookEditorProps {
   bookSlug?: string; // If provided, we're editing; otherwise creating
@@ -187,7 +187,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
       .finally(() => setLoading(false));
   }, [bookSlug]);
 
-  // Load categories (for new books — editing loads them above)
+  // Load categories (for new books â€” editing loads them above)
   useEffect(() => {
     if (bookSlug) return; // Already loaded in the edit flow above
     categoriesApi.list().then(setCategories).catch(console.error);
@@ -209,7 +209,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     });
   }, []);
 
-  // ── Validation ──────────────────────────────────────────────────────────
+  // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const validate = useCallback((): boolean => {
     const errs: ValidationErrors = {};
@@ -259,11 +259,11 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     return Object.keys(errs).length === 0;
   }, [form]);
 
-  // ── Cover Upload ────────────────────────────────────────────────────────
+  // â”€â”€ Cover Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleCoverUpload = useCallback(async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File too large — max 5MB');
+      toast.error('File too large â€” max 5MB');
       return;
     }
     setUploading(true);
@@ -286,7 +286,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     }
   }, [handleCoverUpload]);
 
-  // ── Save ────────────────────────────────────────────────────────────────
+  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleSave = useCallback(async (publish = false) => {
     if (!validate()) {
@@ -348,15 +348,15 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     }
   }, [form, validate, isEditing, originalBook, categories, navigate]);
 
-  // ── Auto-generate SEO fields ────────────────────────────────────────────
+  // â”€â”€ Auto-generate SEO fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const autoGenerateSEO = useCallback(() => {
     const updates: Partial<BookForm> = {};
 
     if (!form.metaTitle && form.title) {
       const mt = form.author
-        ? `${form.title} by ${form.author} | BookDiscovery`
-        : `${form.title} | BookDiscovery`;
+        ? `${form.title} by ${form.author} | The Book Times`
+        : `${form.title} | The Book Times`;
       updates.metaTitle = mt.slice(0, 70);
     }
 
@@ -376,7 +376,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     toast.success('SEO fields auto-generated');
   }, [form]);
 
-  // ── SEO Score ───────────────────────────────────────────────────────────
+  // â”€â”€ SEO Score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const seoScore = (() => {
     let score = 0;
@@ -392,9 +392,9 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     return { score, max, percent: Math.round((score / max) * 100) };
   })();
 
-  // ── Render helpers ──────────────────────────────────────────────────────
+  // â”€â”€ Render helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  // ── Author Search & Create ───────────────────────────────────────────────
+  // â”€â”€ Author Search & Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const filteredAuthors = useMemo(() => {
     if (!authorSearch.trim()) return authors;
@@ -448,7 +448,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* ── Fixed Header ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Fixed Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="shrink-0 border-b bg-background/95 backdrop-blur-sm px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -461,7 +461,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </h1>
               {isEditing && originalBook && (
                 <p className="text-xs text-muted-foreground">
-                  Last updated: {new Date(originalBook.updatedAt).toLocaleDateString()} · Slug: {originalBook.slug}
+                  Last updated: {new Date(originalBook.updatedAt).toLocaleDateString()} Â· Slug: {originalBook.slug}
                 </p>
               )}
             </div>
@@ -483,7 +483,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
         </div>
       </div>
 
-      {/* ── Scrollable Content ───────────────────────────────────────────── */}
+      {/* â”€â”€ Scrollable Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
           <Tabs defaultValue="general" className="w-full">
@@ -505,7 +505,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </TabsTrigger>
             </TabsList>
 
-            {/* ── TAB: General ──────────────────────────────────────────── */}
+            {/* â”€â”€ TAB: General â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <TabsContent value="general" className="space-y-6 mt-6">
               {/* Basic Info */}
               <Card>
@@ -816,7 +816,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </Card>
             </TabsContent>
 
-            {/* ── TAB: Media ────────────────────────────────────────────── */}
+            {/* â”€â”€ TAB: Media â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <TabsContent value="media" className="space-y-6 mt-6">
               <Card>
                 <CardHeader className="pb-4">
@@ -870,7 +870,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                             <Upload className="h-8 w-8 text-muted-foreground" />
                             <p className="text-sm font-medium">Click to upload or drag & drop</p>
                             <p className="text-xs text-muted-foreground">
-                              JPEG, PNG, WebP, or GIF — Max 5MB
+                              JPEG, PNG, WebP, or GIF â€” Max 5MB
                             </p>
                             <p className="text-xs text-muted-foreground">
                               Images are auto-converted to WebP and optimized
@@ -931,7 +931,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                     id="ogImage"
                     value={form.ogImage}
                     onChange={(e) => updateForm('ogImage', e.target.value)}
-                    placeholder="https://... (optional — defaults to cover image)"
+                    placeholder="https://... (optional â€” defaults to cover image)"
                   />
                   {form.ogImage && (
                     <div className="mt-2 rounded-lg border overflow-hidden max-w-md">
@@ -942,7 +942,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </Card>
             </TabsContent>
 
-            {/* ── TAB: Links ────────────────────────────────────────────── */}
+            {/* â”€â”€ TAB: Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <TabsContent value="links" className="space-y-6 mt-6">
               {/* Purchase Links */}
               <Card>
@@ -972,11 +972,11 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="USD">USD ($)</SelectItem>
-                          <SelectItem value="EUR">EUR (€)</SelectItem>
-                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                          <SelectItem value="EUR">EUR (â‚¬)</SelectItem>
+                          <SelectItem value="GBP">GBP (Â£)</SelectItem>
                           <SelectItem value="CAD">CAD (C$)</SelectItem>
                           <SelectItem value="AUD">AUD (A$)</SelectItem>
-                          <SelectItem value="INR">INR (₹)</SelectItem>
+                          <SelectItem value="INR">INR (â‚¹)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1053,7 +1053,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </Card>
             </TabsContent>
 
-            {/* ── TAB: SEO ──────────────────────────────────────────────── */}
+            {/* â”€â”€ TAB: SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <TabsContent value="seo" className="space-y-6 mt-6">
               {/* SEO Score */}
               <Card className="border-primary/20">
@@ -1072,7 +1072,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                         <p className="text-xs text-muted-foreground">
                           {seoScore.percent >= 80 ? 'Great! Your SEO is well optimized' :
                            seoScore.percent >= 50 ? 'Good, but there\'s room for improvement' :
-                           'Needs attention — fill in more SEO fields'}
+                           'Needs attention â€” fill in more SEO fields'}
                         </p>
                       </div>
                     </div>
@@ -1146,10 +1146,10 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                     <Label>Google Search Preview</Label>
                     <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border space-y-1">
                       <p className="text-[#1a0dab] dark:text-blue-400 text-lg leading-snug truncate cursor-pointer hover:underline">
-                        {form.metaTitle || (form.title ? `${form.title} by ${form.author} | BookDiscovery` : 'Page Title')}
+                        {form.metaTitle || (form.title ? `${form.title} by ${form.author} | The Book Times` : 'Page Title')}
                       </p>
                       <p className="text-[#006621] dark:text-green-400 text-sm truncate">
-                        bookdiscovery.com/book/{originalBook?.slug || 'book-slug'}
+                        The Book Times.com/book/{originalBook?.slug || 'book-slug'}
                       </p>
                       <p className="text-[#545454] dark:text-zinc-400 text-sm line-clamp-2">
                         {form.metaDescription || form.description?.slice(0, 160) || 'Meta description will appear here...'}
@@ -1177,7 +1177,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                         id="canonicalUrl"
                         value={form.canonicalUrl}
                         onChange={(e) => updateForm('canonicalUrl', e.target.value)}
-                        placeholder="https://bookdiscovery.com/book/..."
+                        placeholder="https://The Book Times.com/book/..."
                         className={errors.canonicalUrl ? 'border-destructive' : ''}
                       />
                       <FieldError field="canonicalUrl" />
@@ -1202,7 +1202,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
               </Card>
             </TabsContent>
 
-            {/* ── TAB: Advanced ─────────────────────────────────────────── */}
+            {/* â”€â”€ TAB: Advanced â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <TabsContent value="advanced" className="space-y-6 mt-6">
               <Card>
                 <CardHeader className="pb-4">
@@ -1230,7 +1230,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                       <span className="text-muted-foreground">Slug</span>
                       <span className="font-mono text-xs">{originalBook.slug}</span>
                       <span className="text-muted-foreground">Google Books ID</span>
-                      <span className="font-mono text-xs">{originalBook.googleBooksId || '—'}</span>
+                      <span className="font-mono text-xs">{originalBook.googleBooksId || 'â€”'}</span>
                       <span className="text-muted-foreground">Computed Score</span>
                       <span>{originalBook.computedScore?.toFixed(1) || '0'}</span>
                       <span className="text-muted-foreground">Created</span>
@@ -1248,7 +1248,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
         </div>
       </div>
 
-      {/* ── Fixed Footer ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Fixed Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm px-6 py-3">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-2">

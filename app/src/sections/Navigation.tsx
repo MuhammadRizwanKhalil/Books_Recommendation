@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { BookOpen, Search, Menu, Heart, User } from 'lucide-react';
+import { Search, Menu, Heart, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -12,6 +12,7 @@ import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useTranslation } from '@/lib/i18n';
+import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const sectionLinks = [
@@ -37,7 +38,7 @@ export function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const siteName = getSetting('site_name', 'BookDiscovery');
+  const siteName = getSetting('site_name', 'The Book Times');
   const logoUrl = getSetting('site_logo_url', '');
 
   useEffect(() => {
@@ -98,10 +99,10 @@ export function Navigation() {
               <img src={logoUrl} alt={siteName} className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-contain" />
             ) : (
               <div className="p-1.5 sm:p-2 rounded-xl bg-primary shadow-sm transition-all group-hover:shadow-md group-hover:scale-105">
-                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
+                <LogoMark size={20} className="text-primary-foreground" />
               </div>
             )}
-            <span className="text-base sm:text-lg font-bold tracking-tight">{siteName}</span>
+            <span className="text-base sm:text-lg font-serif font-bold tracking-tight">{siteName}</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -198,9 +199,9 @@ export function Navigation() {
                 {/* Mobile brand header */}
                 <div className="flex items-center gap-2.5 pb-4 mb-2 border-b">
                   <div className="p-2 rounded-xl bg-primary">
-                    <BookOpen className="h-5 w-5 text-primary-foreground" />
+                    <LogoMark size={20} className="text-primary-foreground" />
                   </div>
-                  <span className="text-lg font-bold tracking-tight">{siteName}</span>
+                  <span className="text-lg font-serif font-bold tracking-tight">{siteName}</span>
                 </div>
                 <div className="flex flex-col gap-6 mt-4">
                   {/* Mobile Search */}

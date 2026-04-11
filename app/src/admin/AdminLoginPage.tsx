@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
+import { LogoMark } from '@/components/ui/Logo';
 
 interface AdminLoginPageProps {
   onSuccess: () => void;
@@ -15,7 +16,7 @@ interface AdminLoginPageProps {
 export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
   const { signIn, signOut, isAdmin, isAuthenticated, user } = useAuth();
   const { getSetting } = useSettings();
-  const siteName = getSetting('site_name', 'BookDiscovery');
+  const siteName = getSetting('site_name', 'The Book Times');
   const logoUrl = getSetting('site_logo_url', '');
 
   const [email, setEmail] = useState('');
@@ -43,10 +44,10 @@ export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
     try {
       const success = await signIn(email, password);
       if (success) {
-        // Check role after sign-in — the auth provider updates user state
+        // Check role after sign-in â€” the auth provider updates user state
         // We need a small delay for state to propagate
         setTimeout(() => {
-          const storedUser = localStorage.getItem('bookdiscovery-user');
+          const storedUser = localStorage.getItem('thebooktimes-user');
           if (storedUser) {
             const user = JSON.parse(storedUser);
             if (user.role === 'admin') {
@@ -80,7 +81,7 @@ export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
               {logoUrl ? (
                 <img src={logoUrl} alt={siteName} className="h-10 w-10 rounded object-contain" />
               ) : (
-                <ShieldCheck className="h-10 w-10 text-primary" />
+                <LogoMark size={40} className="text-primary" />
               )}
             </div>
           </div>
@@ -138,7 +139,7 @@ export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
                 <Input
                   id="admin-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   className="pl-9 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

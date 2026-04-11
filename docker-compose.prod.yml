@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — Docker Compose for PRODUCTION
+# The Book Times — Docker Compose for PRODUCTION
 # ══════════════════════════════════════════════════════════════════════════════
 #
 # Usage:
@@ -21,12 +21,12 @@ services:
   # ── MySQL Database ────────────────────────────────────────────────────────
   mysql:
     image: mysql:8.0
-    container_name: bookdiscovery-mysql
+    container_name: thebooktimes-mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-bookdiscovery}
-      MYSQL_USER: ${MYSQL_USER:-bookdiscovery}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-thebooktimes}
+      MYSQL_USER: ${MYSQL_USER:-thebooktimes}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
     volumes:
       - mysql-data:/var/lib/mysql
@@ -54,7 +54,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
       target: production
-    container_name: bookdiscovery-server
+    container_name: thebooktimes-server
     restart: always
     expose:
       - "3001"
@@ -63,12 +63,12 @@ services:
       PORT: "3001"
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
-      MYSQL_USER: ${MYSQL_USER:-bookdiscovery}
+      MYSQL_USER: ${MYSQL_USER:-thebooktimes}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-bookdiscovery}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-thebooktimes}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in production}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@bookdiscovery.com}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@thebooktimes.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in production}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       IMPORT_JOB_ENABLED: ${IMPORT_JOB_ENABLED:-true}
@@ -111,10 +111,10 @@ services:
       target: production
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: bookdiscovery-app
+    container_name: thebooktimes-app
     restart: always
     ports:
-      - "${APP_PORT:-80}:80"
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     depends_on:
       server:
         condition: service_healthy
@@ -136,6 +136,6 @@ services:
 
 volumes:
   mysql-data:
-    name: bookdiscovery-mysql
+    name: thebooktimes-mysql
   server-uploads:
-    name: bookdiscovery-uploads
+    name: thebooktimes-uploads

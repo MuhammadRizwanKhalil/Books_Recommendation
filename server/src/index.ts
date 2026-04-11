@@ -81,7 +81,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Support comma-separated CORS origins (e.g. "http://localhost:5173,https://bookdiscovery.com")
+// Support comma-separated CORS origins (e.g. "http://localhost:5173,https://thebooktimes.com")
 const allowedOrigins = config.frontendUrl.split(',').map(o => o.trim()).filter(Boolean);
 
 app.use(cors({
@@ -301,7 +301,7 @@ async function bootstrap() {
       env: config.nodeEnv,
       db: `${config.mysql.host}:${config.mysql.port}/${config.mysql.database}`,
       cors: config.frontendUrl,
-    }, '🚀 BookDiscovery API Server started');
+    }, '🚀 The Book Times API Server started');
 
     // Start the daily book import cron job
     if (config.importJob.enabled) {

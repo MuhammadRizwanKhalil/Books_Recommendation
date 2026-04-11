@@ -150,7 +150,7 @@ const en: Record<string, string> = {
   'footer.privacy': 'Privacy Policy',
   'footer.terms': 'Terms of Service',
   'footer.contact': 'Contact',
-  'footer.copyright': '© {year} BookDiscovery. All rights reserved.',
+  'footer.copyright': '© {year} The Book Times. All rights reserved.',
 
   // Newsletter
   'newsletter.title': 'Stay Updated',
@@ -312,7 +312,7 @@ const localeLoaders: Record<Locale, () => Record<string, string>> = {
     'footer.discover': 'Descubrir',
     'footer.resources': 'Recursos',
     'footer.legal': 'Legal',
-    'footer.copyright': '© {year} BookDiscovery. Todos los derechos reservados.',
+    'footer.copyright': '© {year} The Book Times. Todos los derechos reservados.',
   }),
   fr: () => ({
     ...en,
@@ -364,7 +364,7 @@ const localeLoaders: Record<Locale, () => Record<string, string>> = {
     'footer.discover': 'Découvrir',
     'footer.resources': 'Ressources',
     'footer.legal': 'Mentions Légales',
-    'footer.copyright': '© {year} BookDiscovery. Tous droits réservés.',
+    'footer.copyright': '© {year} The Book Times. Tous droits réservés.',
   }),
   de: () => ({
     ...en,
@@ -413,7 +413,7 @@ const localeLoaders: Record<Locale, () => Record<string, string>> = {
     'footer.discover': 'Entdecken',
     'footer.resources': 'Ressourcen',
     'footer.legal': 'Rechtliches',
-    'footer.copyright': '© {year} BookDiscovery. Alle Rechte vorbehalten.',
+    'footer.copyright': '© {year} The Book Times. Alle Rechte vorbehalten.',
   }),
   ar: () => ({
     ...en,
@@ -462,7 +462,7 @@ const localeLoaders: Record<Locale, () => Record<string, string>> = {
     'footer.discover': 'اكتشف',
     'footer.resources': 'الموارد',
     'footer.legal': 'قانوني',
-    'footer.copyright': '© {year} BookDiscovery. جميع الحقوق محفوظة.',
+    'footer.copyright': '© {year} The Book Times. جميع الحقوق محفوظة.',
   }),
   zh: () => ({
     ...en,
@@ -511,7 +511,7 @@ const localeLoaders: Record<Locale, () => Record<string, string>> = {
     'footer.discover': '发现',
     'footer.resources': '资源',
     'footer.legal': '法律信息',
-    'footer.copyright': '© {year} BookDiscovery. 版权所有。',
+    'footer.copyright': '© {year} The Book Times. 版权所有。',
   }),
 };
 
@@ -550,7 +550,7 @@ export function useTranslation() {
 // ── Detect browser locale ───────────────────────────────────────────────────
 
 function detectLocale(): Locale {
-  const stored = localStorage.getItem('bookdiscovery-locale') as Locale | null;
+  const stored = localStorage.getItem('thebooktimes-locale') as Locale | null;
   if (stored && AVAILABLE_LOCALES.some(l => l.code === stored)) return stored;
 
   const browserLang = navigator.language.split('-')[0] as Locale;
@@ -572,7 +572,7 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
-    localStorage.setItem('bookdiscovery-locale', newLocale);
+    localStorage.setItem('thebooktimes-locale', newLocale);
     document.documentElement.lang = newLocale;
     document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? 'rtl' : 'ltr';
   }, []);

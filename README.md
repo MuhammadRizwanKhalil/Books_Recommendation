@@ -1,18 +1,18 @@
-# BookDiscovery — Production Deployment Guide
+﻿# The Book Times â€” Production Deployment Guide
 
 ## Architecture Overview
 
 ```
-┌──────────────┐     ┌─────────────────┐     ┌──────────────┐
-│   Nginx      │────▶│  Express API    │────▶│   MySQL 8.0  │
-│  (Frontend)  │     │  (Node.js 22)   │     │  (InnoDB)    │
-│  Port 80/443 │     │  Port 3001      │     │  Port 3306   │
-└──────────────┘     └─────────────────┘     └──────────────┘
-                            │
-                     ┌──────┴──────┐
-                     │  OpenAI API │
-                     │ (AI Blogs)  │
-                     └─────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   Nginx      â”‚â”€â”€â”€â”€â–¶â”‚  Express API    â”‚â”€â”€â”€â”€â–¶â”‚   MySQL 8.0  â”‚
+â”‚  (Frontend)  â”‚     â”‚  (Node.js 22)   â”‚     â”‚  (InnoDB)    â”‚
+â”‚  Port 80/443 â”‚     â”‚  Port 3001      â”‚     â”‚  Port 3306   â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                            â”‚
+                     â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+                     â”‚  OpenAI API â”‚
+                     â”‚ (AI Blogs)  â”‚
+                     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Frontend**: React 19 + Vite + TypeScript + Tailwind CSS + shadcn/ui  
@@ -63,7 +63,7 @@ cp .env.example .env
 | `ADMIN_PASSWORD` | Strong admin password |
 | `MYSQL_PASSWORD` | Database password |
 | `MYSQL_ROOT_PASSWORD` | MySQL root password |
-| `FRONTEND_URL` | Your domain (e.g., `https://bookdiscovery.com`) |
+| `FRONTEND_URL` | Your domain (e.g., `https://The Book Times.com`) |
 
 ### Step 2: Deploy
 
@@ -96,7 +96,7 @@ docker compose -f docker-compose.prod.yml exec server npm run seed
 
 ### Manual Backup
 ```bash
-docker compose exec mysql mysqldump -u bookdiscovery -p bookdiscovery | gzip > backup.sql.gz
+docker compose exec mysql mysqldump -u The Book Times -p The Book Times | gzip > backup.sql.gz
 ```
 
 ### Restore

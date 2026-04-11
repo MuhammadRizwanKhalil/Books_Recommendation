@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/SettingsProvider';
+import { LogoMark } from '@/components/ui/Logo';
 
 export type AdminPage = 'dashboard' | 'books' | 'authors' | 'categories' | 'blog' | 'reviews' | 'users' | 'analytics' | 'newsletter' | 'campaigns' | 'email-marketing' | 'import' | 'settings';
 
@@ -39,7 +40,7 @@ export function AdminLayout({ activePage, onNavigate, onExit, children }: AdminL
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { getSetting } = useSettings();
-  const siteName = getSetting('site_name', 'BookDiscovery');
+  const siteName = getSetting('site_name', 'The Book Times');
   const logoUrl = getSetting('site_logo_url', '');
 
   const handleNavigate = (page: AdminPage) => {
@@ -56,7 +57,7 @@ export function AdminLayout({ activePage, onNavigate, onExit, children }: AdminL
             {logoUrl ? (
               <img src={logoUrl} alt={siteName} className="h-6 w-6 rounded object-contain shrink-0" />
             ) : (
-              <BookOpen className="h-6 w-6 text-primary shrink-0" />
+              <LogoMark size={24} className="text-primary shrink-0" />
             )}
             <span className="font-bold text-lg truncate">{siteName} Admin</span>
           </div>

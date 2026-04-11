@@ -1,15 +1,15 @@
-/**
+﻿/**
  * Webhook Routes
- * ──────────────
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * CRUD for webhook endpoints, delivery log, and a test ping.
  *
- * POST   /api/webhooks                — Create webhook
- * GET    /api/webhooks                — List user's webhooks
- * GET    /api/webhooks/:id            — Get webhook details + recent deliveries
- * PUT    /api/webhooks/:id            — Update webhook
- * DELETE /api/webhooks/:id            — Delete webhook
- * POST   /api/webhooks/:id/test       — Send test ping
- * GET    /api/webhooks/:id/deliveries — Delivery log
+ * POST   /api/webhooks                â€” Create webhook
+ * GET    /api/webhooks                â€” List user's webhooks
+ * GET    /api/webhooks/:id            â€” Get webhook details + recent deliveries
+ * PUT    /api/webhooks/:id            â€” Update webhook
+ * DELETE /api/webhooks/:id            â€” Delete webhook
+ * POST   /api/webhooks/:id/test       â€” Send test ping
+ * GET    /api/webhooks/:id/deliveries â€” Delivery log
  */
 
 import { Router, Request, Response } from 'express';
@@ -22,7 +22,7 @@ import { logger } from '../lib/logger.js';
 const router = Router();
 router.use(authenticate);
 
-// ── List webhooks ───────────────────────────────────────────────────────────
+// â”€â”€ List webhooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// ── Create webhook ──────────────────────────────────────────────────────────
+// â”€â”€ Create webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -73,7 +73,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json({
       id,
       secret,
-      message: 'Webhook created. Store the secret securely — it won\'t be shown again.',
+      message: 'Webhook created. Store the secret securely â€” it won\'t be shown again.',
     });
   } catch (err) {
     logger.error({ err }, 'Failed to create webhook');
@@ -81,7 +81,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// ── Get webhook ─────────────────────────────────────────────────────────────
+// â”€â”€ Get webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -125,7 +125,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// ── Update webhook ──────────────────────────────────────────────────────────
+// â”€â”€ Update webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -147,7 +147,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// ── Delete webhook ──────────────────────────────────────────────────────────
+// â”€â”€ Delete webhook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -159,7 +159,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// ── Test ping ───────────────────────────────────────────────────────────────
+// â”€â”€ Test ping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/:id/test', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -189,7 +189,7 @@ router.post('/:id/test', async (req: Request, res: Response) => {
   }
 });
 
-// ── Delivery log ────────────────────────────────────────────────────────────
+// â”€â”€ Delivery log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/:id/deliveries', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
@@ -227,7 +227,7 @@ router.get('/:id/deliveries', async (req: Request, res: Response) => {
   }
 });
 
-// ── Webhook Delivery Engine ─────────────────────────────────────────────────
+// â”€â”€ Webhook Delivery Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function deliverWebhook(
   webhook: any,
@@ -256,7 +256,7 @@ export async function deliverWebhook(
         'X-Webhook-Signature': `sha256=${signature}`,
         'X-Webhook-Event': eventType,
         'X-Webhook-Delivery': deliveryId,
-        'User-Agent': 'BookDiscovery-Webhook/1.0',
+        'User-Agent': 'TheBookTimes-Webhook/1.0',
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -300,7 +300,7 @@ export async function deliverWebhook(
   return { success, responseStatus, durationMs };
 }
 
-// ── Fire webhook event (called from other services) ─────────────────────────
+// â”€â”€ Fire webhook event (called from other services) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function fireWebhookEvent(eventType: string, payload: any): Promise<void> {
   try {

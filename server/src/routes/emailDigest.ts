@@ -116,7 +116,7 @@ router.post('/send-test', async (req: Request, res: Response) => {
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
 
     const digestHtml = await buildDigestHtml(userId);
-    const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+    const siteName = await getSiteSetting('site_name', 'The Book Times');
     const subject = `[Test] Your ${siteName} Weekly Digest`;
 
     const html = await wrapInBaseTemplate(digestHtml, subject);

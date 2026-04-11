@@ -20,14 +20,14 @@ interface SEOOptions {
 
 // Default meta values to restore on cleanup
 const DEFAULTS = {
-  title: 'BookDiscovery - AI-Powered Book Recommendations | Discover Your Next Great Read',
+  title: 'The Book Times - AI-Powered Book Recommendations | Discover Your Next Great Read',
   description: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews.',
-  ogTitle: 'BookDiscovery - AI-Powered Book Recommendations',
+  ogTitle: 'The Book Times - AI-Powered Book Recommendations',
   ogDescription: 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions.',
-  ogImage: 'https://bookdiscovery.com/og-image.png',
+  ogImage: 'https://thebooktimes.com/og-image.png',
   ogType: 'website',
-  ogUrl: 'https://bookdiscovery.com',
-  canonical: 'https://bookdiscovery.com',
+  ogUrl: 'https://thebooktimes.com',
+  canonical: 'https://thebooktimes.com',
 };
 
 /**

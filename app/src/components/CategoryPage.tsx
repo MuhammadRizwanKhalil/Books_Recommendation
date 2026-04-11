@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import {
   Star,
   Heart,
@@ -34,10 +34,10 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
 
   useSEO({
-    title: category.metaTitle || `${category.name} Books | BookDiscovery`,
+    title: category.metaTitle || `${category.name} Books | The Book Times`,
     description: category.metaDescription || `Discover the best ${category.name} books. Browse ${category.bookCount}+ titles with ratings and reviews.`,
     ogTitle: `${category.name} Books`,
-    ogDescription: `Explore top ${category.name} books on BookDiscovery`,
+    ogDescription: `Explore top ${category.name} books on The Book Times`,
     ogUrl: `${window.location.origin}/category/${category.slug}`,
     canonical: `${window.location.origin}/category/${category.slug}`,
   });
@@ -211,7 +211,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
           <div>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              All Books — Ranked by Rating
+              All Books â€” Ranked by Rating
             </h2>
             <div className="space-y-3">
               {remainingBooks.map((book, index) => {

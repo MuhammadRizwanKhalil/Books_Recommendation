@@ -1,6 +1,6 @@
 {
-  "name": "BookDiscovery - AI-Powered Book Recommendations",
-  "short_name": "BookDiscovery",
+  "name": "The Book Times - AI-Powered Book Recommendations",
+  "short_name": "The Book Times",
   "description": "Discover your next great read with AI-powered book recommendations. Explore 50,000+ books with personalized suggestions.",
   "start_url": "/",
   "scope": "/",
@@ -66,14 +66,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "BookDiscovery Homepage"
+      "label": "The Book Times Homepage"
     },
     {
       "src": "/screenshots/mobile.png",
       "sizes": "360x640",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "BookDiscovery Mobile"
+      "label": "The Book Times Mobile"
     }
   ],
   "shortcuts": [

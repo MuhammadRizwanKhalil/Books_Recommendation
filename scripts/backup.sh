@@ -1,6 +1,6 @@
 #!/bin/bash
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — MySQL Backup Script
+# The Book Times — MySQL Backup Script
 # Run via cron: 0 2 * * * /path/to/backup.sh
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -9,9 +9,9 @@ set -euo pipefail
 # Configuration (override via environment)
 MYSQL_HOST="${MYSQL_HOST:-mysql}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
-MYSQL_USER="${MYSQL_BACKUP_USER:-${MYSQL_USER:-bookdiscovery}}"
+MYSQL_USER="${MYSQL_BACKUP_USER:-${MYSQL_USER:-thebooktimes}}"
 MYSQL_PASSWORD="${MYSQL_BACKUP_PASSWORD:-${MYSQL_PASSWORD:-}}"
-MYSQL_DATABASE="${MYSQL_DATABASE:-bookdiscovery}"
+MYSQL_DATABASE="${MYSQL_DATABASE:-thebooktimes}"
 BACKUP_DIR="${BACKUP_DIR:-/backups/mysql}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 S3_BUCKET="${BACKUP_S3_BUCKET:-}"

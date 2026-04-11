@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Save, Eye, Upload, X, Globe, Link2, Tag, FileText,
   Image as ImageIcon, Search, AlertCircle, CheckCircle2,
@@ -24,7 +24,7 @@ import { blogApi, type BlogPostResponse } from '@/api/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// ── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface BlogForm {
   title: string;
@@ -65,7 +65,7 @@ const BLOG_CATEGORIES = [
   'Interviews', 'Industry Insights', 'Seasonal Picks', 'General',
 ];
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function charCount(val: string, max: number) {
   const len = val.length;
@@ -103,7 +103,7 @@ function computeSeoScore(form: BlogForm): number {
   return Math.min(10, score);
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AdminBlogEditorProps {
   postSlug?: string; // If provided, we're editing; otherwise creating
@@ -123,7 +123,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!postSlug;
 
-  // ── Load existing post ────────────────────────────────────────────────
+  // â”€â”€ Load existing post â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!postSlug) return;
     setLoading(true);
@@ -163,7 +163,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
 
   const hasChanges = JSON.stringify(form) !== JSON.stringify(originalForm);
 
-  // ── Validation ────────────────────────────────────────────────────────
+  // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const validate = useCallback((): boolean => {
     const e: ValidationErrors = {};
     if (!form.title.trim()) e.title = 'Title is required';
@@ -180,7 +180,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
     return Object.keys(e).length === 0;
   }, [form]);
 
-  // ── Save ──────────────────────────────────────────────────────────────
+  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const save = useCallback(async (statusOverride?: string) => {
     if (!validate()) {
       toast.error('Please fix validation errors');
@@ -229,7 +229,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
     }
   }, [form, validate, isEditing, postId, navigate]);
 
-  // ── Image upload ──────────────────────────────────────────────────────
+  // â”€â”€ Image upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleImageUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
@@ -263,11 +263,11 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [handleImageUpload]);
 
-  // ── Auto-generate SEO ─────────────────────────────────────────────────
+  // â”€â”€ Auto-generate SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const autoGenerateSEO = useCallback(() => {
     const updates: Partial<BlogForm> = {};
     if (!form.metaTitle && form.title) {
-      updates.metaTitle = `${form.title} | BookDiscovery Blog`.slice(0, 60);
+      updates.metaTitle = `${form.title} | The Book Times Blog`.slice(0, 60);
     }
     if (!form.metaDescription && form.content) {
       const cleanContent = form.content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -292,20 +292,20 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
 
   const seoScore = computeSeoScore(form);
 
-  // ── UI ────────────────────────────────────────────────────────────────
+  // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-muted-foreground">Loading post…</span>
+        <span className="text-muted-foreground">Loading postâ€¦</span>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
-      {/* ── Fixed Header ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Fixed Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -341,7 +341,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
         </div>
       </div>
 
-      {/* ── Scrollable Content ────────────────────────────────────────── */}
+      {/* â”€â”€ Scrollable Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5 mb-6">
@@ -362,7 +362,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
             </TabsTrigger>
           </TabsList>
 
-          {/* ━━ GENERAL TAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* â”â” GENERAL TAB â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” */}
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Post Content</CardTitle></CardHeader>
@@ -507,7 +507,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
             </Card>
           </TabsContent>
 
-          {/* ━━ MEDIA TAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* â”â” MEDIA TAB â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” */}
           <TabsContent value="media" className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Featured Image</CardTitle></CardHeader>
@@ -546,7 +546,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                   {uploading ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      <p className="text-sm text-muted-foreground">Uploading & converting to WebP…</p>
+                      <p className="text-sm text-muted-foreground">Uploading & converting to WebPâ€¦</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
@@ -561,7 +561,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                           browse
                         </button>
                       </p>
-                      <p className="text-xs text-muted-foreground">Max 10 MB · Auto-converted to WebP · Max 1200×800</p>
+                      <p className="text-xs text-muted-foreground">Max 10 MB Â· Auto-converted to WebP Â· Max 1200Ã—800</p>
                     </div>
                   )}
                 </div>
@@ -619,7 +619,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
             </Card>
           </TabsContent>
 
-          {/* ━━ LINKS TAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* â”â” LINKS TAB â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” */}
           <TabsContent value="links" className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Custom Link</CardTitle></CardHeader>
@@ -684,7 +684,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
             </Card>
           </TabsContent>
 
-          {/* ━━ SEO TAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* â”â” SEO TAB â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” */}
           <TabsContent value="seo" className="space-y-6">
             {/* SEO Score */}
             <Card>
@@ -706,25 +706,25 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                 </div>
                 <ul className="text-xs text-muted-foreground space-y-1">
                   <li className={form.metaTitle && form.metaTitle.length >= 20 && form.metaTitle.length <= 60 ? 'text-green-600' : ''}>
-                    {form.metaTitle && form.metaTitle.length >= 20 && form.metaTitle.length <= 60 ? '✓' : '○'} Meta title 20-60 characters
+                    {form.metaTitle && form.metaTitle.length >= 20 && form.metaTitle.length <= 60 ? 'âœ“' : 'â—‹'} Meta title 20-60 characters
                   </li>
                   <li className={form.metaDescription && form.metaDescription.length >= 70 && form.metaDescription.length <= 160 ? 'text-green-600' : ''}>
-                    {form.metaDescription && form.metaDescription.length >= 70 && form.metaDescription.length <= 160 ? '✓' : '○'} Meta description 70-160 characters
+                    {form.metaDescription && form.metaDescription.length >= 70 && form.metaDescription.length <= 160 ? 'âœ“' : 'â—‹'} Meta description 70-160 characters
                   </li>
                   <li className={form.focusKeyword ? 'text-green-600' : ''}>
-                    {form.focusKeyword ? '✓' : '○'} Focus keyword defined
+                    {form.focusKeyword ? 'âœ“' : 'â—‹'} Focus keyword defined
                   </li>
                   <li className={form.focusKeyword && form.metaTitle?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? 'text-green-600' : ''}>
-                    {form.focusKeyword && form.metaTitle?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? '✓' : '○'} Keyword in meta title
+                    {form.focusKeyword && form.metaTitle?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? 'âœ“' : 'â—‹'} Keyword in meta title
                   </li>
                   <li className={form.focusKeyword && form.metaDescription?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? 'text-green-600' : ''}>
-                    {form.focusKeyword && form.metaDescription?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? '✓' : '○'} Keyword in meta description
+                    {form.focusKeyword && form.metaDescription?.toLowerCase().includes(form.focusKeyword.toLowerCase()) ? 'âœ“' : 'â—‹'} Keyword in meta description
                   </li>
                   <li className={form.featuredImage || form.ogImage ? 'text-green-600' : ''}>
-                    {form.featuredImage || form.ogImage ? '✓' : '○'} Featured or OG image set
+                    {form.featuredImage || form.ogImage ? 'âœ“' : 'â—‹'} Featured or OG image set
                   </li>
                   <li className={form.excerpt && form.excerpt.length >= 50 ? 'text-green-600' : ''}>
-                    {form.excerpt && form.excerpt.length >= 50 ? '✓' : '○'} Excerpt ≥ 50 characters
+                    {form.excerpt && form.excerpt.length >= 50 ? 'âœ“' : 'â—‹'} Excerpt â‰¥ 50 characters
                   </li>
                 </ul>
                 <Button variant="outline" size="sm" className="mt-4" onClick={autoGenerateSEO}>
@@ -746,7 +746,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                     id="metaTitle"
                     value={form.metaTitle}
                     onChange={(e) => set('metaTitle', e.target.value)}
-                    placeholder={form.title ? `${form.title} | BookDiscovery Blog` : 'Your Post Title | BookDiscovery Blog'}
+                    placeholder={form.title ? `${form.title} | The Book Times Blog` : 'Your Post Title | The Book Times Blog'}
                     className={errors.metaTitle ? 'border-destructive' : ''}
                   />
                   <div className="flex justify-between">
@@ -799,10 +799,10 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                   </p>
                   <div className="bg-white dark:bg-zinc-900 rounded-lg border p-4 max-w-xl">
                     <p className="text-sm text-blue-700 dark:text-blue-400 font-medium truncate">
-                      {form.metaTitle || form.title || 'Post Title'} | BookDiscovery Blog
+                      {form.metaTitle || form.title || 'Post Title'} | The Book Times Blog
                     </p>
                     <p className="text-xs text-green-700 dark:text-green-400 truncate mt-0.5">
-                      {form.canonicalUrl || `bookdiscovery.com/blog/${form.title ? form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'your-post'}`}
+                      {form.canonicalUrl || `The Book Times.com/blog/${form.title ? form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'your-post'}`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {form.metaDescription || form.excerpt || 'Add a meta description to improve search appearance...'}
@@ -830,7 +830,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
             </Card>
           </TabsContent>
 
-          {/* ━━ ADVANCED TAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {/* â”â” ADVANCED TAB â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” */}
           <TabsContent value="advanced" className="space-y-6">
             <Card>
               <CardHeader><CardTitle>Admin Notes</CardTitle></CardHeader>
@@ -869,11 +869,11 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Created</p>
-                      <p>{postData.createdAt ? new Date(postData.createdAt).toLocaleString() : '—'}</p>
+                      <p>{postData.createdAt ? new Date(postData.createdAt).toLocaleString() : 'â€”'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Last Updated</p>
-                      <p>{postData.updatedAt ? new Date(postData.updatedAt).toLocaleString() : '—'}</p>
+                      <p>{postData.updatedAt ? new Date(postData.updatedAt).toLocaleString() : 'â€”'}</p>
                     </div>
                     {postData.publishedAt && (
                       <div>
@@ -889,7 +889,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
         </Tabs>
       </div>
 
-      {/* ── Fixed Footer ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Fixed Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-none border-t bg-background px-6 py-3">
         <div className="flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate('/admin/blog')}>Cancel</Button>

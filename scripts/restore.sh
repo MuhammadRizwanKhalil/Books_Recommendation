@@ -1,6 +1,6 @@
 #!/bin/bash
 # ══════════════════════════════════════════════════════════════════════════════
-# BookDiscovery — Database Restore Script
+# The Book Times — Database Restore Script
 # Usage: ./restore.sh /path/to/backup.sql.gz
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -8,16 +8,16 @@ set -euo pipefail
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <backup-file.sql.gz>"
-  echo "Example: $0 /backups/mysql/bookdiscovery_20260226_020000.sql.gz"
+  echo "Example: $0 /backups/mysql/thebooktimes_20260226_020000.sql.gz"
   exit 1
 fi
 
 BACKUP_FILE="$1"
 MYSQL_HOST="${MYSQL_HOST:-mysql}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
-MYSQL_USER="${MYSQL_USER:-bookdiscovery}"
+MYSQL_USER="${MYSQL_USER:-thebooktimes}"
 MYSQL_PASSWORD="${MYSQL_PASSWORD:-}"
-MYSQL_DATABASE="${MYSQL_DATABASE:-bookdiscovery}"
+MYSQL_DATABASE="${MYSQL_DATABASE:-thebooktimes}"
 
 if [ ! -f "${BACKUP_FILE}" ]; then
   echo "ERROR: Backup file not found: ${BACKUP_FILE}"

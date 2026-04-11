@@ -1,23 +1,23 @@
-// BookDiscovery Service Worker
+﻿// The Book Times Service Worker
 // Provides offline caching, asset pre-caching, and API cache-first strategies
 
-const CACHE_VERSION = 'bookdiscovery-v1';
+const CACHE_VERSION = 'thebooktimes-v1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;
 
-// ── Assets to pre-cache on install ──────────────────────────────────────────
+// â”€â”€ Assets to pre-cache on install â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
 ];
 
-// ── Cache size limits ───────────────────────────────────────────────────────
+// â”€â”€ Cache size limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const API_CACHE_MAX = 100;     // Max API responses to cache
 const IMAGE_CACHE_MAX = 200;   // Max images to cache
 const API_CACHE_TTL = 5 * 60 * 1000;  // 5 minutes for API data
 
-// ── Install: pre-cache shell ────────────────────────────────────────────────
+// â”€â”€ Install: pre-cache shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
@@ -26,20 +26,20 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// ── Activate: clean old caches ──────────────────────────────────────────────
+// â”€â”€ Activate: clean old caches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys
-          .filter((key) => key.startsWith('bookdiscovery-') && key !== STATIC_CACHE && key !== API_CACHE && key !== IMAGE_CACHE)
+          .filter((key) => key.startsWith('thebooktimes-') && key !== STATIC_CACHE && key !== API_CACHE && key !== IMAGE_CACHE)
           .map((key) => caches.delete(key))
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// ── Fetch strategies ────────────────────────────────────────────────────────
+// â”€â”€ Fetch strategies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -47,31 +47,31 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip admin routes — always network
+  // Skip admin routes â€” always network
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) return;
 
   // Skip auth-related API calls
   if (url.pathname.startsWith('/api/auth')) return;
 
-  // Strategy 1: API requests — Network-first with cache fallback
+  // Strategy 1: API requests â€” Network-first with cache fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirstWithCache(request, API_CACHE, API_CACHE_TTL));
     return;
   }
 
-  // Strategy 2: Image requests — Cache-first with network fallback
+  // Strategy 2: Image requests â€” Cache-first with network fallback
   if (isImageRequest(request)) {
     event.respondWith(cacheFirstWithNetwork(request, IMAGE_CACHE));
     return;
   }
 
-  // Strategy 3: Static assets (JS, CSS) — Cache-first (hashed filenames = immutable)
+  // Strategy 3: Static assets (JS, CSS) â€” Cache-first (hashed filenames = immutable)
   if (isStaticAsset(url.pathname)) {
     event.respondWith(cacheFirstWithNetwork(request, STATIC_CACHE));
     return;
   }
 
-  // Strategy 4: Navigation (SPA pages) — Network-first, fallback to cached index.html
+  // Strategy 4: Navigation (SPA pages) â€” Network-first, fallback to cached index.html
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -86,7 +86,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 5: Everything else — Network with cache fallback
+  // Strategy 5: Everything else â€” Network with cache fallback
   event.respondWith(
     fetch(request)
       .then((response) => {
@@ -100,7 +100,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ── Helper: Network-first with timed cache ──────────────────────────────────
+// â”€â”€ Helper: Network-first with timed cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function networkFirstWithCache(request, cacheName, ttl) {
   try {
     const response = await fetch(request);
@@ -120,7 +120,7 @@ async function networkFirstWithCache(request, cacheName, ttl) {
     }
     return response;
   } catch {
-    // Network failed — try cache
+    // Network failed â€” try cache
     const cached = await caches.match(request);
     if (cached) {
       // Check TTL
@@ -131,7 +131,7 @@ async function networkFirstWithCache(request, cacheName, ttl) {
       // Expired but still return as offline fallback
       return cached;
     }
-    // No cache — return offline response
+    // No cache â€” return offline response
     return new Response(JSON.stringify({ error: 'You are offline', offline: true }), {
       status: 503,
       headers: { 'Content-Type': 'application/json' },
@@ -139,7 +139,7 @@ async function networkFirstWithCache(request, cacheName, ttl) {
   }
 }
 
-// ── Helper: Cache-first with network fallback ───────────────────────────────
+// â”€â”€ Helper: Cache-first with network fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function cacheFirstWithNetwork(request, cacheName) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -168,7 +168,7 @@ async function cacheFirstWithNetwork(request, cacheName) {
   }
 }
 
-// ── Helper: Check if request is for an image ────────────────────────────────
+// â”€â”€ Helper: Check if request is for an image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function isImageRequest(request) {
   const accept = request.headers.get('accept') || '';
   const url = request.url;
@@ -178,13 +178,13 @@ function isImageRequest(request) {
     url.includes('books.googleusercontent.com');
 }
 
-// ── Helper: Check if pathname is a static asset ─────────────────────────────
+// â”€â”€ Helper: Check if pathname is a static asset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function isStaticAsset(pathname) {
   return /\.(js|css|woff2?|ttf|eot)(\?|$)/i.test(pathname) ||
     pathname.startsWith('/assets/');
 }
 
-// ── Helper: Trim cache to max entries ───────────────────────────────────────
+// â”€â”€ Helper: Trim cache to max entries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function trimCache(cacheName, maxItems) {
   const cache = await caches.open(cacheName);
   const keys = await cache.keys();
@@ -195,7 +195,7 @@ async function trimCache(cacheName, maxItems) {
   }
 }
 
-// ── Background sync placeholder for offline reviews ─────────────────────────
+// â”€â”€ Background sync placeholder for offline reviews â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -207,9 +207,9 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// ── Offline queue for mutating requests ─────────────────────────────────────
+// â”€â”€ Offline queue for mutating requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // When the user makes a POST/PUT/DELETE while offline, queue it for replay.
-const OFFLINE_QUEUE_KEY = 'bookdiscovery-offline-queue';
+const OFFLINE_QUEUE_KEY = 'thebooktimes-offline-queue';
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -218,7 +218,7 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(request.clone()).catch(async () => {
-      // Network failed — queue the request
+      // Network failed â€” queue the request
       try {
         const body = await request.clone().text();
         const queued = {
@@ -243,7 +243,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ── Replay offline queue when back online ───────────────────────────────────
+// â”€â”€ Replay offline queue when back online â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('sync', (event) => {
   if (event.tag === 'replay-offline-queue') {
     event.waitUntil(replayOfflineQueue());
@@ -268,14 +268,14 @@ async function replayOfflineQueue() {
         });
         await cache.delete(key);
       } catch {
-        // Still offline — keep in queue
+        // Still offline â€” keep in queue
         break;
       }
     }
   } catch { /* ignore errors during replay */ }
 }
 
-// ── Periodic background sync (check for new content) ────────────────────────
+// â”€â”€ Periodic background sync (check for new content) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'refresh-trending') {
     event.waitUntil(

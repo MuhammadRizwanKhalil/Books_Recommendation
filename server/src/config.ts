@@ -17,12 +17,12 @@ export const config = {
       if (!s && process.env.NODE_ENV === 'production') {
         throw new Error('JWT_SECRET environment variable is required in production');
       }
-      return s || 'dev-bookdiscovery-jwt-secret-do-not-use-in-production';
+      return s || 'dev-thebooktimes-jwt-secret-do-not-use-in-production';
     })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   admin: {
-    email: process.env.ADMIN_EMAIL || 'admin@bookdiscovery.com',
+    email: process.env.ADMIN_EMAIL || 'admin@thebooktimes.com',
     password: (() => {
       const p = process.env.ADMIN_PASSWORD;
       if (!p && process.env.NODE_ENV === 'production') {
@@ -48,15 +48,15 @@ export const config = {
   mysql: {
     host: process.env.MYSQL_HOST || 'localhost',
     port: parseInt(process.env.MYSQL_PORT || '3306', 10),
-    user: process.env.MYSQL_USER || 'bookdiscovery',
+    user: process.env.MYSQL_USER || 'thebooktimes',
     password: (() => {
       const p = process.env.MYSQL_PASSWORD;
       if (!p && process.env.NODE_ENV === 'production') {
         throw new Error('MYSQL_PASSWORD environment variable is required in production');
       }
-      return p || 'bookdiscovery';
+      return p || 'thebooktimes';
     })(),
-    database: process.env.MYSQL_DATABASE || 'bookdiscovery',
+    database: process.env.MYSQL_DATABASE || 'thebooktimes',
     connectionLimit: parseInt(process.env.MYSQL_POOL_SIZE || '10', 10),
   },
 

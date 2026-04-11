@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Star, BookOpen, ArrowLeft, Globe, Award, TrendingUp, Calendar, ExternalLink, MapPin, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,8 +16,8 @@ export function AuthorPage() {
   const [error, setError] = useState<string | null>(null);
 
   useSEO({
-    title: author ? `${author.name} — Books & Biography | BookDiscovery` : 'Author | BookDiscovery',
-    description: author?.bio || (author ? `Explore all books by ${author.name} on BookDiscovery.` : ''),
+    title: author ? `${author.name} â€” Books & Biography | The Book Times` : 'Author | The Book Times',
+    description: author?.bio || (author ? `Explore all books by ${author.name} on The Book Times.` : ''),
     ...(author && {
       ogType: 'profile',
       ogImage: author.imageUrl,
@@ -131,7 +131,7 @@ export function AuthorPage() {
 
   return (
     <div className="min-h-screen">
-      {/* ── Hero Section ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="bg-gradient-to-b from-primary/5 via-primary/3 to-background border-b">
         <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24 md:pb-16">
           <div className="max-w-5xl mx-auto">
@@ -205,7 +205,7 @@ export function AuthorPage() {
                     <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur rounded-full px-3 py-1.5 shadow-sm border">
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">
-                        {author.bornDate}{author.diedDate ? ` — ${author.diedDate}` : ''}
+                        {author.bornDate}{author.diedDate ? ` â€” ${author.diedDate}` : ''}
                       </span>
                     </div>
                   )}
@@ -214,14 +214,14 @@ export function AuthorPage() {
                 {/* Social Links */}
                 {(() => {
                   const socials = [
-                    { url: author.twitterUrl, label: 'Twitter / X', icon: '𝕏' },
-                    { url: author.instagramUrl, label: 'Instagram', icon: '📷' },
-                    { url: author.facebookUrl, label: 'Facebook', icon: '📘' },
-                    { url: author.youtubeUrl, label: 'YouTube', icon: '▶️' },
-                    { url: author.tiktokUrl, label: 'TikTok', icon: '🎵' },
-                    { url: author.goodreadsUrl, label: 'Goodreads', icon: '📚' },
-                    { url: author.amazonUrl, label: 'Amazon', icon: '🛒' },
-                    { url: author.wikipediaUrl, label: 'Wikipedia', icon: '📖' },
+                    { url: author.twitterUrl, label: 'Twitter / X', icon: 'ð•' },
+                    { url: author.instagramUrl, label: 'Instagram', icon: 'ðŸ“·' },
+                    { url: author.facebookUrl, label: 'Facebook', icon: 'ðŸ“˜' },
+                    { url: author.youtubeUrl, label: 'YouTube', icon: 'â–¶ï¸' },
+                    { url: author.tiktokUrl, label: 'TikTok', icon: 'ðŸŽµ' },
+                    { url: author.goodreadsUrl, label: 'Goodreads', icon: 'ðŸ“š' },
+                    { url: author.amazonUrl, label: 'Amazon', icon: 'ðŸ›’' },
+                    { url: author.wikipediaUrl, label: 'Wikipedia', icon: 'ðŸ“–' },
                   ].filter(s => s.url);
                   if (!socials.length) return null;
                   return (
@@ -289,7 +289,7 @@ export function AuthorPage() {
         </div>
       </div>
 
-      {/* ── Top Rated Books ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Top Rated Books â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {topRated.length > 0 && (
         <section className="container mx-auto px-4 py-10 md:py-14">
           <div className="max-w-5xl mx-auto">
@@ -401,7 +401,7 @@ export function AuthorPage() {
         </section>
       )}
 
-      {/* ── All Books Grid ───────────────────────────────────────────────── */}
+      {/* â”€â”€ All Books Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {otherBooks.length > 0 && (
         <section className="bg-muted/30">
           <div className="container mx-auto px-4 py-10 md:py-14">

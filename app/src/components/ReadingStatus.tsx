@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, CheckCircle2, BookMarked, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -13,7 +13,7 @@ const STATUS_CONFIG: Record<ReadingStatus, { label: string; icon: typeof BookOpe
   'finished': { label: 'Finished', icon: CheckCircle2, color: 'text-green-600 bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' },
 };
 
-const STORAGE_KEY = 'bookdiscovery-reading-status';
+const STORAGE_KEY = 'thebooktimes-reading-status';
 
 function getStatuses(): Record<string, ReadingStatus> {
   try {

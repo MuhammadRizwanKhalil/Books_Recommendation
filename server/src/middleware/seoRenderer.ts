@@ -38,7 +38,7 @@ interface PageMeta {
 
 // ── Defaults ───────────────────────────────────────────────────────────────
 
-const SITE_NAME = 'BookDiscovery';
+const SITE_NAME = 'The Book Times';
 const DEFAULT_DESCRIPTION = 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews.';
 const DEFAULT_OG_IMAGE = '/og-image.png';
 
@@ -124,28 +124,28 @@ async function getHomeMeta(): Promise<PageMeta> {
         mainEntity: [
           {
             '@type': 'Question',
-            name: 'How does BookDiscovery recommend books?',
-            acceptedAnswer: { '@type': 'Answer', text: 'BookDiscovery uses AI-powered algorithms that analyze your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.' },
+            name: 'How does The Book Times recommend books?',
+            acceptedAnswer: { '@type': 'Answer', text: 'The Book Times uses AI-powered algorithms that analyze your reading preferences, ratings, and browsing behavior to suggest personalized book recommendations across 50,000+ titles.' },
           },
           {
             '@type': 'Question',
-            name: 'Is BookDiscovery free to use?',
-            acceptedAnswer: { '@type': 'Answer', text: 'Yes! BookDiscovery is completely free to browse, search, and get book recommendations. You can create an account to save wishlists, write reviews, and get personalized suggestions.' },
+            name: 'Is The Book Times free to use?',
+            acceptedAnswer: { '@type': 'Answer', text: 'Yes! The Book Times is completely free to browse, search, and get book recommendations. You can create an account to save wishlists, write reviews, and get personalized suggestions.' },
           },
           {
             '@type': 'Question',
-            name: 'What genres are available on BookDiscovery?',
-            acceptedAnswer: { '@type': 'Answer', text: 'BookDiscovery covers every major genre including Fiction, Non-Fiction, Science Fiction, Fantasy, Mystery, Romance, Self-Help, Technology, Biography, History, and many more.' },
+            name: 'What genres are available on The Book Times?',
+            acceptedAnswer: { '@type': 'Answer', text: 'The Book Times covers every major genre including Fiction, Non-Fiction, Science Fiction, Fantasy, Mystery, Romance, Self-Help, Technology, Biography, History, and many more.' },
           },
           {
             '@type': 'Question',
             name: 'How can I write a book review?',
-            acceptedAnswer: { '@type': 'Answer', text: 'Create a free account on BookDiscovery, navigate to any book page, and click the Write a Review button. You can rate the book from 1-5 stars and share your thoughts.' },
+            acceptedAnswer: { '@type': 'Answer', text: 'Create a free account on The Book Times, navigate to any book page, and click the Write a Review button. You can rate the book from 1-5 stars and share your thoughts.' },
           },
           {
             '@type': 'Question',
-            name: 'Can I buy books through BookDiscovery?',
-            acceptedAnswer: { '@type': 'Answer', text: 'BookDiscovery provides convenient links to purchase books on Amazon. When you find a book you love, simply click the Buy on Amazon button to purchase it.' },
+            name: 'Can I buy books through The Book Times?',
+            acceptedAnswer: { '@type': 'Answer', text: 'The Book Times provides convenient links to purchase books on Amazon. When you find a book you love, simply click the Buy on Amazon button to purchase it.' },
           },
         ],
       },

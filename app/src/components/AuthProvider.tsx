@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+﻿import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { authApi, setToken } from '@/api/client';
 
@@ -41,8 +41,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'bookdiscovery-user';
-const HISTORY_STORAGE_KEY = 'bookdiscovery-reading-history';
+const USER_STORAGE_KEY = 'thebooktimes-user';
+const HISTORY_STORAGE_KEY = 'thebooktimes-reading-history';
 
 function loadUser(): UserProfile | null {
   try {
@@ -71,14 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Validate stored token on app load
   useEffect(() => {
-    const storedToken = localStorage.getItem('bookdiscovery-token');
+    const storedToken = localStorage.getItem('thebooktimes-token');
     if (storedToken && user) {
       setIsLoading(true);
       authApi.getMe().then((res) => {
-        // Token valid — refresh user data
+        // Token valid â€” refresh user data
         setUser(prev => ({ id: res.id, email: res.email, name: res.name, avatar: res.avatarUrl || '', role: res.role as 'user' | 'admin', joinedAt: prev?.joinedAt || new Date().toISOString(), reviewCount: res.reviewCount || 0 }));
       }).catch(() => {
-        // Token expired or invalid — sign out
+        // Token expired or invalid â€” sign out
         setUser(null);
         setToken(null);
       }).finally(() => setIsLoading(false));
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(profile);
       setIsAuthModalOpen(false);
-      toast.success(`Welcome to BookDiscovery, ${name}!`, {
+      toast.success(`Welcome to The Book Times, ${name}!`, {
         description: 'Your account has been created.',
       });
       return true;

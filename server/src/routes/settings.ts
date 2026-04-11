@@ -11,12 +11,12 @@ const router = Router();
 
 const DEFAULT_SETTINGS = [
   // General
-  { key: 'site_name', value: 'BookDiscovery', category: 'general', label: 'Site Name', description: 'Name of the website', field_type: 'text', sort_order: 1 },
+  { key: 'site_name', value: 'The Book Times', category: 'general', label: 'Site Name', description: 'Name of the website', field_type: 'text', sort_order: 1 },
   { key: 'site_url', value: 'http://localhost:5173', category: 'general', label: 'Site URL', description: 'Public URL of the website', field_type: 'url', sort_order: 2 },
   { key: 'site_tagline', value: 'Discover your next favorite book', category: 'general', label: 'Site Tagline', description: 'Short tagline or slogan', field_type: 'text', sort_order: 3 },
-  { key: 'site_description', value: 'BookDiscovery is a curated platform for book lovers to find, review, and discover new books.', category: 'general', label: 'Site Description', description: 'Short description of the website', field_type: 'textarea', sort_order: 4 },
-  { key: 'admin_email', value: 'admin@bookdiscovery.com', category: 'general', label: 'Admin Email', description: 'Primary admin email for receiving notifications', field_type: 'email', sort_order: 5 },
-  { key: 'contact_email', value: 'contact@bookdiscovery.com', category: 'general', label: 'Contact Email', description: 'Public contact email', field_type: 'email', sort_order: 6 },
+  { key: 'site_description', value: 'The Book Times is a curated platform for book lovers to find, review, and discover new books.', category: 'general', label: 'Site Description', description: 'Short description of the website', field_type: 'textarea', sort_order: 4 },
+  { key: 'admin_email', value: 'admin@thebooktimes.com', category: 'general', label: 'Admin Email', description: 'Primary admin email for receiving notifications', field_type: 'email', sort_order: 5 },
+  { key: 'contact_email', value: 'contact@thebooktimes.com', category: 'general', label: 'Contact Email', description: 'Public contact email', field_type: 'email', sort_order: 6 },
   { key: 'items_per_page', value: '20', category: 'general', label: 'Items Per Page', description: 'Default number of items per page', field_type: 'number', sort_order: 7 },
   { key: 'maintenance_mode', value: 'false', category: 'general', label: 'Maintenance Mode', description: 'Enable maintenance mode (disables public access)', field_type: 'boolean', sort_order: 8 },
 
@@ -26,8 +26,8 @@ const DEFAULT_SETTINGS = [
   { key: 'smtp_secure', value: 'false', category: 'smtp', label: 'SMTP Secure (SSL)', description: 'Use SSL (true for port 465)', field_type: 'boolean', sort_order: 3 },
   { key: 'smtp_user', value: '', category: 'smtp', label: 'SMTP Username', description: 'SMTP login username / email', field_type: 'email', sort_order: 4 },
   { key: 'smtp_pass', value: '', category: 'smtp', label: 'SMTP Password', description: 'App password or SMTP password', field_type: 'password', sort_order: 5 },
-  { key: 'smtp_from_name', value: 'BookDiscovery', category: 'smtp', label: 'From Name', description: 'Display name in sent emails', field_type: 'text', sort_order: 6 },
-  { key: 'smtp_from_email', value: 'noreply@bookdiscovery.com', category: 'smtp', label: 'From Email', description: 'Sender email address', field_type: 'email', sort_order: 7 },
+  { key: 'smtp_from_name', value: 'The Book Times', category: 'smtp', label: 'From Name', description: 'Display name in sent emails', field_type: 'text', sort_order: 6 },
+  { key: 'smtp_from_email', value: 'noreply@thebooktimes.com', category: 'smtp', label: 'From Email', description: 'Sender email address', field_type: 'email', sort_order: 7 },
 
   // Branding
   { key: 'site_logo_url', value: '', category: 'branding', label: 'Logo URL', description: 'URL to site logo (leave empty for text logo)', field_type: 'url', sort_order: 1 },
@@ -58,14 +58,14 @@ const DEFAULT_SETTINGS = [
   { key: 'notify_new_subscriber', value: 'true', category: 'notifications', label: 'New Subscriber Notification', description: 'Email admin when someone subscribes to newsletter', field_type: 'boolean', sort_order: 3 },
   { key: 'notify_contact_form', value: 'true', category: 'notifications', label: 'Contact Form Notification', description: 'Email admin on contact form submissions', field_type: 'boolean', sort_order: 4 },
   { key: 'welcome_email_enabled', value: 'true', category: 'notifications', label: 'Welcome Email', description: 'Send welcome email to new subscribers', field_type: 'boolean', sort_order: 5 },
-  { key: 'welcome_email_subject', value: 'Welcome to BookDiscovery! 📚', category: 'notifications', label: 'Welcome Email Subject', description: 'Subject line for welcome email', field_type: 'text', sort_order: 6 },
-  { key: 'welcome_email_content', value: '<h2>Welcome, {{subscriber_name}}!</h2><p>Thank you for subscribing to BookDiscovery newsletter. You\'ll receive curated book recommendations, exclusive deals, and reading tips straight to your inbox.</p><p>Happy reading! 📖</p>', category: 'notifications', label: 'Welcome Email Content', description: 'HTML content for welcome email', field_type: 'richtext', sort_order: 7 },
+  { key: 'welcome_email_subject', value: 'Welcome to The Book Times! 📚', category: 'notifications', label: 'Welcome Email Subject', description: 'Subject line for welcome email', field_type: 'text', sort_order: 6 },
+  { key: 'welcome_email_content', value: '<h2>Welcome, {{subscriber_name}}!</h2><p>Thank you for subscribing to The Book Times newsletter. You\'ll receive curated book recommendations, exclusive deals, and reading tips straight to your inbox.</p><p>Happy reading! 📖</p>', category: 'notifications', label: 'Welcome Email Content', description: 'HTML content for welcome email', field_type: 'richtext', sort_order: 7 },
 
   // Security
   { key: 'admin_url_slug', value: 'ctrl-panel', category: 'security', label: 'Admin URL Slug', description: 'Secret URL slug to access admin dashboard (e.g. yoursite.com/ctrl-panel). Change this to any custom string.', field_type: 'text', sort_order: 1 },
 
   // Affiliate
-  { key: 'affiliate_disclosure', value: '<h2>Affiliate Disclosure</h2><p>BookDiscovery participates in affiliate programs. When you click on links and make purchases, we may earn a commission at no extra cost to you. This helps us maintain and improve the platform.</p>', category: 'affiliate', label: 'Affiliate Disclosure', description: 'Affiliate disclosure statement (HTML)', field_type: 'richtext', sort_order: 1 },
+  { key: 'affiliate_disclosure', value: '<h2>Affiliate Disclosure</h2><p>The Book Times participates in affiliate programs. When you click on links and make purchases, we may earn a commission at no extra cost to you. This helps us maintain and improve the platform.</p>', category: 'affiliate', label: 'Affiliate Disclosure', description: 'Affiliate disclosure statement (HTML)', field_type: 'richtext', sort_order: 1 },
   { key: 'affiliate_amazon_tag', value: '', category: 'affiliate', label: 'Amazon Affiliate Tag', description: 'Your Amazon Associates tag', field_type: 'text', sort_order: 2 },
   { key: 'affiliate_default_commission', value: '4.5', category: 'affiliate', label: 'Default Commission %', description: 'Default affiliate commission percentage', field_type: 'number', sort_order: 3 },
   { key: 'affiliate_cookie_days', value: '30', category: 'affiliate', label: 'Cookie Duration (days)', description: 'Affiliate cookie duration in days', field_type: 'number', sort_order: 4 },

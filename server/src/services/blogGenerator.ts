@@ -252,7 +252,7 @@ export async function generateBlogPost(
   const contentMessages: ChatMessage[] = [
     {
       role: 'system',
-      content: `You are a professional book blogger writing for BookDiscovery. 
+      content: `You are a professional book blogger writing for The Book Times. 
 Write in a warm, knowledgeable, engaging tone. 
 Return ONLY the HTML content (no <html>, <head>, <body> wrapping — just the article content).
 Start with an engaging introduction paragraph.

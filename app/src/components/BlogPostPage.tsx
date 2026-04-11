@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, Sparkles, FileText, BookOpen, ArrowLeft, Share2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -68,14 +68,14 @@ export function BlogPostPage() {
       image: post.featuredImage || undefined,
       datePublished: post.publishedAt || post.createdAt,
       dateModified: post.updatedAt || post.createdAt,
-      author: { '@type': 'Organization', name: 'BookDiscovery' },
-      publisher: { '@type': 'Organization', name: 'BookDiscovery' },
+      author: { '@type': 'Organization', name: 'The Book Times' },
+      publisher: { '@type': 'Organization', name: 'The Book Times' },
       mainEntityOfPage: { '@type': 'WebPage', '@id': `${window.location.origin}/blog/${slug}` },
     };
   }, [post, slug]);
 
   useSEO({
-    title: post ? (post.metaTitle || `${post.title} | BookDiscovery Blog`) : 'Loading... | BookDiscovery Blog',
+    title: post ? (post.metaTitle || `${post.title} | The Book Times Blog`) : 'Loading... | The Book Times Blog',
     description: post ? (post.metaDescription || post.excerpt || post.content?.slice(0, 160)) : undefined,
     ogTitle: post?.metaTitle || post?.title,
     ogDescription: post ? (post.metaDescription || post.excerpt || post.content?.slice(0, 160)) : undefined,
@@ -88,7 +88,7 @@ export function BlogPostPage() {
     extraMeta: post?.publishedAt ? [
       { attr: 'property', key: 'article:published_time', content: post.publishedAt },
       ...(post.updatedAt ? [{ attr: 'property' as const, key: 'article:modified_time', content: post.updatedAt }] : []),
-      { attr: 'property', key: 'article:author', content: 'BookDiscovery' },
+      { attr: 'property', key: 'article:author', content: 'The Book Times' },
       { attr: 'property', key: 'article:section', content: 'Books' },
     ] : undefined,
   });

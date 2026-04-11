@@ -138,7 +138,7 @@ router.post('/ai-generate', authenticate, requireAdmin, async (req: Request, res
       VALUES (?, ?, 'built-in', 'generating', ?)
     `, [logId, prompt, req.user!.userId]);
 
-    const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+    const siteName = await getSiteSetting('site_name', 'The Book Times');
 
     const recentBooks = await dbAll<any>(`
       SELECT title, author, description, cover_image, computed_score

@@ -56,7 +56,7 @@ router.post('/subscribe', rateLimit('newsletter', 5, 60 * 60 * 1000), validate(n
       if (await getSiteSetting('notify_new_subscriber', 'true') === 'true') {
         const adminEmail = await getSiteSetting('admin_email', '');
         if (adminEmail) {
-          const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+          const siteName = await getSiteSetting('site_name', 'The Book Times');
           const html = await wrapInBaseTemplate(
             `<h2>New Newsletter Subscriber</h2><p>A new user subscribed to the newsletter:</p><p><strong>Email:</strong> ${escapeHtml(normalizedEmail)}</p><p><strong>Name:</strong> ${name?.trim() ? escapeHtml(name.trim()) : 'Not provided'}</p>`,
             `New Subscriber - ${siteName}`,

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Eye, EyeOff, BookOpen, Mail, Lock, UserIcon, Loader2 } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Eye, EyeOff, Mail, Lock, UserIcon, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { LogoMark } from '@/components/ui/Logo';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -83,14 +84,14 @@ export function AuthModal() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="text-center space-y-3">
           <div className="mx-auto p-3 rounded-xl bg-primary/10">
-            <BookOpen className="h-8 w-8 text-primary" />
+            <LogoMark size={32} className="text-primary" />
           </div>
           <DialogTitle className="text-2xl font-bold">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </DialogTitle>
           <DialogDescription>
             {isSignUp
-              ? 'Join BookDiscovery to save favorites and get personalized recommendations.'
+              ? 'Join The Book Times to save favorites and get personalized recommendations.'
               : 'Sign in to access your wishlist, reviews, and reading history.'}
           </DialogDescription>
         </DialogHeader>
@@ -135,7 +136,7 @@ export function AuthModal() {
               <Input
                 id="auth-password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 className="pl-9 pr-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

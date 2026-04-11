@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,21 +57,21 @@ export function BlogPage() {
 
   useSEO({
     title: page > 1
-      ? `Blog - Page ${page} | BookDiscovery`
-      : 'Blog | BookDiscovery - Reading Lists, Reviews & Literary Insights',
-    description: `Explore reading lists, book reviews, and literary insights on the BookDiscovery blog.${total > 0 ? ` Browse ${total} articles.` : ''}`,
-    ogTitle: 'BookDiscovery Blog - Reading Lists & Literary Insights',
-    ogDescription: 'Discover curated reading lists, in-depth book reviews, and literary insights from BookDiscovery.',
+      ? `Blog - Page ${page} | The Book Times`
+      : 'Blog | The Book Times - Reading Lists, Reviews & Literary Insights',
+    description: `Explore reading lists, book reviews, and literary insights on the The Book Times blog.${total > 0 ? ` Browse ${total} articles.` : ''}`,
+    ogTitle: 'The Book Times Blog - Reading Lists & Literary Insights',
+    ogDescription: 'Discover curated reading lists, in-depth book reviews, and literary insights from The Book Times.',
     ogType: 'website',
     ogUrl: `${window.location.origin}/blog${page > 1 ? `?page=${page}` : ''}`,
     canonical: `${window.location.origin}/blog${page > 1 ? `?page=${page}` : ''}`,
     jsonLd: {
       '@context': 'https://schema.org',
       '@type': 'Blog',
-      name: 'BookDiscovery Blog',
+      name: 'The Book Times Blog',
       description: 'Reading lists, book reviews, and literary insights',
       url: `${window.location.origin}/blog`,
-      publisher: { '@type': 'Organization', name: 'BookDiscovery' },
+      publisher: { '@type': 'Organization', name: 'The Book Times' },
     },
   });
 
@@ -182,7 +182,7 @@ export function BlogPage() {
                           <Calendar className="h-3.5 w-3.5" />
                           {post.publishedAt && formatDate(post.publishedAt)}
                         </div>
-                        <span className="text-muted-foreground/40">·</span>
+                        <span className="text-muted-foreground/40">Â·</span>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
                           {calculateReadingTime(post.content.split(/\s+/).length)}
@@ -205,7 +205,7 @@ export function BlogPage() {
                           {post.featuredBookIds.length} books featured
                         </span>
                         <span className="text-sm font-medium text-primary group-hover:underline">
-                          Read More →
+                          Read More â†’
                         </span>
                       </div>
                     </CardContent>

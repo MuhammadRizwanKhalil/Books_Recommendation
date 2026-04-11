@@ -401,10 +401,10 @@ async function normalizeVolume(
 
   // Build Amazon search URL
   const amazonUrl = isbn10
-    ? `https://www.amazon.com/dp/${isbn10}?tag=bookdiscovery-20`
+    ? `https://www.amazon.com/dp/${isbn10}?tag=thebooktimes-20`
     : isbn13
-      ? `https://www.amazon.com/s?k=${isbn13}&tag=bookdiscovery-20`
-      : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + info.authors[0])}&tag=bookdiscovery-20`;
+      ? `https://www.amazon.com/s?k=${isbn13}&tag=thebooktimes-20`
+      : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + info.authors[0])}&tag=thebooktimes-20`;
 
   return {
     googleBooksId: volume.id,

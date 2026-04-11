@@ -1,0 +1,54 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "=== Deploying The Book Times ==="
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Pull latest code
+            echo "Pulling latest code..."
+            git pull origin main
+
+            # Build and restart containers
+            echo "Building and starting containers..."
+            docker compose -f docker-compose.prod.yml up --build -d
+
+            # Clean up old images to save disk space
+            echo "Pruning unused Docker images..."
+            docker image prune -f
+
+            # Wait for health checks
+            echo "Waiting for services to be healthy..."
+            sleep 15
+
+            # Verify services are running
+            echo "=== Container Status ==="
+            docker compose -f docker-compose.prod.yml ps
+
+            # Health checks
+            echo "=== Health Checks ==="
+            curl -sf http://localhost:8080/ > /dev/null && echo "Frontend: OK" || echo "WARNING: Frontend check failed"
+            curl -sf http://localhost:8080/api/health > /dev/null && echo "API: OK" || echo "WARNING: API health check failed"
+
+            echo "=== Deployment Complete ==="

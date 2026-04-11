@@ -1,9 +1,10 @@
-import { BookOpen, Mail, ExternalLink } from 'lucide-react';
+import { Mail, ExternalLink } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import { useSettings } from '@/components/SettingsProvider';
 import { useAppNav } from '@/App';
 import { useTranslation } from '@/lib/i18n';
+import { LogoMark } from '@/components/ui/Logo';
 import { sanitizeHtml } from '@/lib/utils';
 
 // SVG icons for social platforms
@@ -31,9 +32,9 @@ export function Footer() {
   const location = useLocation();
   const currentYear = new Date().getFullYear();
 
-  const siteName = getSetting('site_name', 'BookDiscovery');
+  const siteName = getSetting('site_name', 'The Book Times');
   const siteDescription = getSetting('site_description', 'AI-powered book discovery platform. Find your next great read with personalized recommendations.');
-  const contactEmail = getSetting('contact_email', 'hello@bookdiscovery.com');
+  const contactEmail = getSetting('contact_email', 'hello@thebooktimes.com');
   const affiliateDisclosure = getSetting('affiliate_disclosure', '');
 
   // Build active social links from settings
@@ -84,7 +85,7 @@ export function Footer() {
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="p-2 rounded-xl bg-primary shadow-sm">
-                <BookOpen className="h-6 w-6 text-primary-foreground" />
+                <LogoMark size={24} className="text-primary-foreground" />
               </div>
               <span className="text-xl font-bold font-serif">{siteName}</span>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   BookOpen, Plus, Trash2, Globe, Lock, ArrowLeft,
@@ -24,9 +24,9 @@ import { useSEO } from '@/hooks/useSEO';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// My Reading Lists — overview page
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// My Reading Lists â€” overview page
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function ReadingListsPage() {
   const { user } = useAuth();
@@ -39,7 +39,7 @@ export function ReadingListsPage() {
   const [creating, setCreating] = useState(false);
 
   useSEO({
-    title: 'My Reading Lists | BookDiscovery',
+    title: 'My Reading Lists | The Book Times',
     description: 'Create and manage your personal book reading lists and share them with the community.',
   });
 
@@ -241,9 +241,9 @@ export function ReadingListsPage() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Reading List Detail — view & manage one list
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Reading List Detail â€” view & manage one list
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function ReadingListDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -256,8 +256,8 @@ export function ReadingListDetailPage() {
   const [editDesc, setEditDesc] = useState('');
 
   useSEO({
-    title: list ? `${list.name} — Reading List | BookDiscovery` : 'Reading List | BookDiscovery',
-    description: list?.description || 'A curated reading list on BookDiscovery.',
+    title: list ? `${list.name} â€” Reading List | The Book Times` : 'Reading List | The Book Times',
+    description: list?.description || 'A curated reading list on The Book Times.',
   });
 
   const fetchList = useCallback(async () => {
@@ -507,9 +507,9 @@ export function ReadingListDetailPage() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Public Reading List — shared view (no auth needed)
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Public Reading List â€” shared view (no auth needed)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function PublicReadingListPage() {
   const { userId, slug } = useParams<{ userId: string; slug: string }>();
@@ -518,8 +518,8 @@ export function PublicReadingListPage() {
   const [error, setError] = useState<string | null>(null);
 
   useSEO({
-    title: list ? `${list.name} by ${list.userName} — Reading List | BookDiscovery` : 'Reading List | BookDiscovery',
-    description: list?.description || 'A curated reading list on BookDiscovery.',
+    title: list ? `${list.name} by ${list.userName} â€” Reading List | The Book Times` : 'Reading List | The Book Times',
+    description: list?.description || 'A curated reading list on The Book Times.',
     ...(list && {
       ogType: 'website',
       canonical: `/lists/public/${userId}/${slug}`,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   BookOpen, Star, Calendar, FileText, Globe2, DollarSign,
@@ -26,8 +26,8 @@ export function BookComparePage() {
   const [addingSlot, setAddingSlot] = useState<number | null>(null);
 
   useSEO({
-    title: 'Compare Books | BookDiscovery',
-    description: 'Compare books side-by-side — ratings, page count, price, publish date, and more.',
+    title: 'Compare Books | The Book Times',
+    description: 'Compare books side-by-side â€” ratings, page count, price, publish date, and more.',
   });
 
   // Load books from URL params on mount
@@ -198,7 +198,7 @@ export function BookComparePage() {
                           label="Rating"
                           value={
                             book.googleRating
-                              ? `${book.googleRating} ★ (${book.ratingsCount.toLocaleString()})`
+                              ? `${book.googleRating} â˜… (${book.ratingsCount.toLocaleString()})`
                               : 'N/A'
                           }
                           highlight={bestRated?.id === book.id}
@@ -254,7 +254,7 @@ export function BookComparePage() {
                             rel="noopener noreferrer"
                             className="text-xs text-primary hover:underline"
                           >
-                            View on Amazon →
+                            View on Amazon â†’
                           </a>
                         </div>
                       )}
@@ -374,7 +374,7 @@ function CompareRow({ icon, label, value, highlight }: {
       </div>
       <span className={`text-xs font-medium ${highlight ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
         {value}
-        {highlight && ' 👑'}
+        {highlight && ' ðŸ‘‘'}
       </span>
     </div>
   );

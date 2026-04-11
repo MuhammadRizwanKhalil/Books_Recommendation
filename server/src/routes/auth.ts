@@ -55,7 +55,7 @@ router.post('/register', rateLimit('register', 5, 60 * 60 * 1000), validate(regi
       if (await getSiteSetting('notify_new_user', 'true') === 'true') {
         const adminEmail = await getSiteSetting('admin_email', '');
         if (adminEmail) {
-          const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+          const siteName = await getSiteSetting('site_name', 'The Book Times');
           const html = await wrapInBaseTemplate(
             `<h2>New User Registration</h2><p>A new user has registered:</p><p><strong>Name:</strong> ${escapeHtml(name.trim())}</p><p><strong>Email:</strong> ${escapeHtml(email.toLowerCase().trim())}</p>`,
             `New User - ${siteName}`,

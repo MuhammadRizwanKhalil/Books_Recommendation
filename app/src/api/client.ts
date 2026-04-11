@@ -1,24 +1,24 @@
-// ── API Client ───────────────────────────────────────────────────────────────
+﻿// â”€â”€ API Client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Central API client for all backend calls. Handles auth tokens, errors, and
 // provides typed wrappers for every endpoint.
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// ── Token management ────────────────────────────────────────────────────────
+// â”€â”€ Token management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-let authToken: string | null = localStorage.getItem('bookdiscovery-token');
+let authToken: string | null = localStorage.getItem('thebooktimes-token');
 
 export function setToken(token: string | null) {
   authToken = token;
-  if (token) localStorage.setItem('bookdiscovery-token', token);
-  else localStorage.removeItem('bookdiscovery-token');
+  if (token) localStorage.setItem('thebooktimes-token', token);
+  else localStorage.removeItem('thebooktimes-token');
 }
 
 export function getToken() {
   return authToken;
 }
 
-// ── Fetch wrapper ───────────────────────────────────────────────────────────
+// â”€â”€ Fetch wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -55,7 +55,7 @@ export class ApiError extends Error {
   }
 }
 
-// ── Auth API ────────────────────────────────────────────────────────────────
+// â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AuthUser {
   id: string;
@@ -90,7 +90,7 @@ export const authApi = {
     apiFetch<AuthUser>('/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
-// ── Books API ───────────────────────────────────────────────────────────────
+// â”€â”€ Books API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface BookResponse {
   id: string;
@@ -220,7 +220,7 @@ export const booksApi = {
   },
 };
 
-// ── Categories API ──────────────────────────────────────────────────────────
+// â”€â”€ Categories API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface CategoryResponse {
   id: string;
@@ -255,7 +255,7 @@ export const categoriesApi = {
     apiFetch<{ success: boolean }>(`/categories/${id}`, { method: 'DELETE' }),
 };
 
-// ── Authors API ─────────────────────────────────────────────────────────────
+// â”€â”€ Authors API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AuthorResponse {
   id: string;
@@ -346,7 +346,7 @@ export const authorsApi = {
     apiFetch<{ authors: AuthorResponse[] }>('/authors/following/list'),
 };
 
-// ── Blog API ────────────────────────────────────────────────────────────────
+// â”€â”€ Blog API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface BlogPostResponse {
   id: string;
@@ -415,7 +415,7 @@ export const blogApi = {
   },
 };
 
-// ── Reviews API ─────────────────────────────────────────────────────────────
+// â”€â”€ Reviews API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReviewResponse {
   id: string;
@@ -474,7 +474,7 @@ export const reviewsApi = {
     apiFetch<{ success: boolean }>(`/reviews/${id}`, { method: 'DELETE' }),
 };
 
-// ── Analytics API ───────────────────────────────────────────────────────────
+// â”€â”€ Analytics API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const analyticsApi = {
   // Public stats (cached, no auth required)
@@ -516,7 +516,7 @@ export const analyticsApi = {
   googleAnalytics: () => apiFetch<any>('/analytics/google'),
 };
 
-// ── Wishlist API ────────────────────────────────────────────────────────────
+// â”€â”€ Wishlist API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface WishlistItem {
   id: string;
@@ -539,7 +539,7 @@ export const wishlistApi = {
   check: (bookId: string) => apiFetch<{ inWishlist: boolean }>(`/wishlist/check/${bookId}`),
 };
 
-// ── Reading Lists API ───────────────────────────────────────────────────────
+// â”€â”€ Reading Lists API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReadingListResponse {
   id: string;
@@ -634,7 +634,7 @@ export const readingListsApi = {
     apiFetch<ReadingListDetailResponse>(`/reading-lists/public/${userId}/${slug}`),
 };
 
-// ── Reading Progress API ────────────────────────────────────────────────────
+// â”€â”€ Reading Progress API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ReadingProgressResponse {
   id: string;
@@ -703,7 +703,7 @@ export const readingProgressApi = {
     apiFetch<{ success: boolean }>(`/reading-progress/${bookId}`, { method: 'DELETE' }),
 };
 
-// ── Testimonials API ────────────────────────────────────────────────────────
+// â”€â”€ Testimonials API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface TestimonialResponse {
   id: string;
@@ -728,7 +728,7 @@ export const testimonialsApi = {
     apiFetch<{ message: string }>(`/testimonials/${id}`, { method: 'DELETE' }),
 };
 
-// ── Newsletter API ──────────────────────────────────────────────────────────
+// â”€â”€ Newsletter API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const newsletterApi = {
   subscribe: (email: string, name?: string) =>
@@ -742,7 +742,7 @@ export const newsletterApi = {
     }),
 };
 
-// ── Admin API ───────────────────────────────────────────────────────────────
+// â”€â”€ Admin API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const adminApi = {
   dashboard: () => apiFetch<any>('/admin/dashboard'),
@@ -772,7 +772,7 @@ export const adminApi = {
     }),
 };
 
-// ── Settings API ────────────────────────────────────────────────────────────
+// â”€â”€ Settings API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const settingsApi = {
   getPublic: () => apiFetch<{ settings: Record<string, any[]> }>('/settings'),
@@ -797,7 +797,7 @@ export const settingsApi = {
     apiFetch<{ valid: boolean }>(`/settings/verify-admin-access/${encodeURIComponent(slug)}`),
 };
 
-// ── Campaigns API ───────────────────────────────────────────────────────────
+// â”€â”€ Campaigns API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface CampaignResponse {
   id: string;
@@ -868,7 +868,7 @@ export const campaignsApi = {
     }),
 };
 
-// ── Import Job API ──────────────────────────────────────────────────────────
+// â”€â”€ Import Job API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const importApi = {
   getStatus: () =>
@@ -895,18 +895,18 @@ export const importApi = {
     }),
 };
 
-// ── Session ID helper ───────────────────────────────────────────────────────
+// â”€â”€ Session ID helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getSessionId(): string {
-  let sid = sessionStorage.getItem('bookdiscovery-session');
+  let sid = sessionStorage.getItem('thebooktimes-session');
   if (!sid) {
     sid = `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    sessionStorage.setItem('bookdiscovery-session', sid);
+    sessionStorage.setItem('thebooktimes-session', sid);
   }
   return sid;
 }
 
-// ── Email Digest API ────────────────────────────────────────────────────────
+// â”€â”€ Email Digest API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface DigestPreferences {
   enabled: boolean;
@@ -937,7 +937,7 @@ export const emailDigestApi = {
     apiFetch<{ history: Array<{ id: string; sentAt: string; bookCount: number; sections: string[]; status: string; errorMessage?: string }> }>('/email-digest/history'),
 };
 
-// ── Subscriptions API ───────────────────────────────────────────────────────
+// â”€â”€ Subscriptions API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface TierInfo {
   id: string;
@@ -984,7 +984,7 @@ export const subscriptionsApi = {
     apiFetch<{ feature: string; tier: string; value: string; allowed: boolean }>(`/subscriptions/check/${feature}`),
 };
 
-// ── Experiments / A/B Testing API ───────────────────────────────────────────
+// â”€â”€ Experiments / A/B Testing API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ExperimentAssignment {
   experimentId: string;
@@ -1007,7 +1007,7 @@ export const experimentsApi = {
     }),
 };
 
-// ── Webhooks API ────────────────────────────────────────────────────────────
+// â”€â”€ Webhooks API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface WebhookResponse {
   id: string;
@@ -1056,7 +1056,7 @@ export const webhooksApi = {
     apiFetch<{ deliveries: WebhookDelivery[] }>(`/webhooks/${id}/deliveries?page=${page}`),
 };
 
-// ── Personalized Recommendations API ────────────────────────────────────────
+// â”€â”€ Personalized Recommendations API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const personalizedApi = {
   forYou: (limit = 12) =>

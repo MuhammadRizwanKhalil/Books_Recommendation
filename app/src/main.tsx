@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary section="App">
       <BrowserRouter>
         <I18nProvider>
-          <ThemeProvider defaultTheme="system" storageKey="bookdiscovery-ui-theme">
+          <ThemeProvider defaultTheme="system" storageKey="thebooktimes-ui-theme">
             <SettingsProvider>
               <AuthProvider>
                 <WishlistProvider>

@@ -27,8 +27,8 @@ async function getSmtpConfig(): Promise<SmtpConfig> {
     secure: (await getSetting('smtp_secure', 'false')) === 'true',
     user: await getSetting('smtp_user', ''),
     pass: await getSetting('smtp_pass', ''),
-    fromName: await getSetting('smtp_from_name', 'BookDiscovery'),
-    fromEmail: await getSetting('smtp_from_email', 'noreply@bookdiscovery.com'),
+    fromName: await getSetting('smtp_from_name', 'The Book Times'),
+    fromEmail: await getSetting('smtp_from_email', 'noreply@thebooktimes.com'),
   };
 }
 
@@ -156,7 +156,7 @@ export async function testSmtpConnection(): Promise<{ success: boolean; error?: 
 
 export async function getBaseEmailTemplate(): Promise<string> {
   const logo = await getSiteSetting('site_logo_url', '');
-  const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+  const siteName = await getSiteSetting('site_name', 'The Book Times');
   const primaryColor = await getSiteSetting('brand_primary_color', '#c2631a');
   const siteUrl = await getSiteSetting('site_url', 'http://localhost:5173');
 

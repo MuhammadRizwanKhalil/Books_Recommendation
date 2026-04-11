@@ -225,7 +225,7 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
   const slug = await generateUniqueSlug(book.title, book.author);
 
   // Auto-generate SEO metadata from Google Books data
-  const metaTitle = `${book.title} by ${book.author} | BookDiscovery`.slice(0, 70);
+  const metaTitle = `${book.title} by ${book.author} | The Book Times`.slice(0, 70);
   const descText = (book.description || '').replace(/<[^>]*>/g, '').trim();
   const metaDescription = descText
     ? descText.slice(0, 160)

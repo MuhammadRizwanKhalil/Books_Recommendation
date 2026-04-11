@@ -160,7 +160,7 @@ router.post('/', authenticate, rateLimit('create-review', 10, 60 * 60 * 1000), v
       if (await getSiteSetting('notify_new_review', 'true') === 'true') {
         const adminEmail = await getSiteSetting('admin_email', '');
         if (adminEmail) {
-          const siteName = await getSiteSetting('site_name', 'BookDiscovery');
+          const siteName = await getSiteSetting('site_name', 'The Book Times');
           const html = await wrapInBaseTemplate(
             `<h2>New Book Review</h2><p>A new review has been posted:</p><p><strong>User:</strong> ${escapeHtml(user.name)}</p><p><strong>Book ID:</strong> ${escapeHtml(bookId)}</p><p><strong>Rating:</strong> ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</p>${title ? `<p><strong>Title:</strong> ${escapeHtml(title)}</p>` : ''}<p><strong>Content:</strong> ${escapeHtml(content.substring(0, 200))}${content.length > 200 ? '...' : ''}</p>`,
             `New Review - ${siteName}`,

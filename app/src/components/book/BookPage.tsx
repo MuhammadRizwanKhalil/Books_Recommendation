@@ -1,4 +1,4 @@
-import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil } from 'lucide-react';
+﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -42,10 +42,10 @@ export function BookPage({ book, onBack }: BookPageProps) {
   };
 
   useSEO({
-    title: book.metaTitle || `${book.title} by ${book.author} | BookDiscovery`,
+    title: book.metaTitle || `${book.title} by ${book.author} | The Book Times`,
     description: book.metaDescription || `Read ${book.title} by ${book.author}. ${book.description?.slice(0, 150)}...`,
     ogTitle: book.title,
-    ogDescription: `${book.title} by ${book.author} — Rating: ${book.googleRating}/5`,
+    ogDescription: `${book.title} by ${book.author} â€” Rating: ${book.googleRating}/5`,
     ogImage: book.ogImage || book.coverImage,
     ogType: 'book',
     ogUrl: `${window.location.origin}/book/${book.slug}`,
@@ -116,7 +116,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
         {/* ====== MAIN LAYOUT ====== */}
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
-          {/* LEFT COLUMN — Image + Affiliate */}
+          {/* LEFT COLUMN â€” Image + Affiliate */}
           <div className="space-y-5 max-w-[320px] mx-auto lg:max-w-none">
             {/* Cover */}
             <motion.div
@@ -176,7 +176,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
                     </a>
                   </Button>
                   <p className="text-[11px] text-center text-muted-foreground">
-                    Affiliate link — we may earn a commission
+                    Affiliate link â€” we may earn a commission
                   </p>
                 </>
               ) : (
@@ -245,7 +245,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
           </div>
 
-          {/* RIGHT COLUMN — Description, Ratings, Reviews */}
+          {/* RIGHT COLUMN â€” Description, Ratings, Reviews */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

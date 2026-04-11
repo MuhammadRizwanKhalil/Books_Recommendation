@@ -71,7 +71,7 @@ router.get('/image', rateLimit('image-proxy', 60, 60 * 1000), async (req: Reques
     // Fetch the original image
     const response = await fetch(imageUrl, {
       headers: {
-        'User-Agent': 'BookDiscovery/1.0 Image Proxy',
+        'User-Agent': 'TheBookTimes/1.0 Image Proxy',
         'Accept': 'image/*',
       },
       signal: AbortSignal.timeout(10000), // 10s timeout
