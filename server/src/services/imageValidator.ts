@@ -53,6 +53,18 @@ export async function validateImageUrl(url: string): Promise<ImageValidationResu
 
   // Quick pattern check for known placeholders
   const lowerUrl = url.toLowerCase();
+
+  // Trust Google Books image URLs — their image server blocks HEAD requests from servers
+  // but images render fine in browsers. Skip full validation for these.
+  if (lowerUrl.includes('books.google.com/') || lowerUrl.includes('googleapis.com/books/')) {
+    // Just check it's not a known placeholder
+    for (const pattern of PLACEHOLDER_PATTERNS) {
+      if (lowerUrl.includes(pattern)) {
+        return { valid: false, url, reason: `URL matches placeholder pattern: ${pattern}` };
+      }
+    }
+    return { valid: true, url, contentType: 'image/jpeg' };
+  }
   for (const pattern of PLACEHOLDER_PATTERNS) {
     if (lowerUrl.includes(pattern)) {
       return { valid: false, url, reason: `URL matches placeholder pattern: ${pattern}` };
