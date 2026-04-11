@@ -10,6 +10,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireAdmin } from '../middleware.js';
 import { logger } from '../lib/logger.js';
+import { config } from '../config.js';
 import { runImportJob, getImportJobHistory, isImportRunning, initImportJobsTable, resetImportState } from '../jobs/bookImport.js';
 import { resolveHDCover, resolveAuthorImage } from '../services/coverResolver.js';
 import { isValidIsbn10, buildAmazonSearchUrl, mapToLocalCategory } from '../services/googleBooks.js';
@@ -423,10 +424,12 @@ router.post('/recategorize', async (_req: Request, res: Response) => {
 
     for (const book of toProcess) {
       try {
-        // Fetch the book's data from Google Books API
-        const resp = await fetch(
-          `https://www.googleapis.com/books/v1/volumes/${book.google_books_id}`,
-        );
+        // Fetch the book's data from Google Books API (with API key if available)
+        const apiKey = config.googleBooksApiKey;
+        const url = apiKey
+          ? `https://www.googleapis.com/books/v1/volumes/${book.google_books_id}?key=${apiKey}`
+          : `https://www.googleapis.com/books/v1/volumes/${book.google_books_id}`;
+        const resp = await fetch(url);
         if (!resp.ok) { skipped++; continue; }
 
         const data = await resp.json() as any;
