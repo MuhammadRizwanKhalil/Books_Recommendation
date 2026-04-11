@@ -58,9 +58,11 @@ export function AuthModal() {
         : await signIn(email, password);
       if (success) {
         resetForm();
+      } else {
+        setError(isSignUp ? 'Registration failed. This email may already be in use.' : 'Invalid email or password. Please try again.');
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      setError(err?.body?.error || err?.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

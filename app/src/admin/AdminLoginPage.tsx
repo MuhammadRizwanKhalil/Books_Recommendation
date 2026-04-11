@@ -44,8 +44,7 @@ export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
     try {
       const success = await signIn(email, password);
       if (success) {
-        // Check role after sign-in â€” the auth provider updates user state
-        // We need a small delay for state to propagate
+        // Check if user has admin role
         setTimeout(() => {
           const storedUser = localStorage.getItem('thebooktimes-user');
           if (storedUser) {
@@ -57,9 +56,11 @@ export function AdminLoginPage({ onSuccess, onCancel }: AdminLoginPageProps) {
             }
           }
         }, 100);
+      } else {
+        setError('Invalid email or password. Please try again.');
       }
-    } catch {
-      setError('Login failed. Please check your credentials.');
+    } catch (err: any) {
+      setError(err?.body?.error || err?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

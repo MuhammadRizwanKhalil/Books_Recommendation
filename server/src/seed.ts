@@ -210,11 +210,11 @@ const DEFAULT_SETTINGS = [
   { key: 'social_tiktok', value: '', category: 'social', label: 'TikTok URL', description: 'TikTok profile URL', field_type: 'url', sort_order: 6 },
   { key: 'social_pinterest', value: '', category: 'social', label: 'Pinterest URL', description: 'Pinterest profile URL', field_type: 'url', sort_order: 7 },
   { key: 'social_goodreads', value: '', category: 'social', label: 'Goodreads URL', description: 'Goodreads profile URL', field_type: 'url', sort_order: 8 },
-  // Legal
-  { key: 'privacy_policy', value: '<h2>Privacy Policy</h2><p>Your privacy policy content goes here.</p>', category: 'legal', label: 'Privacy Policy', description: 'Privacy policy content (HTML)', field_type: 'richtext', sort_order: 1 },
-  { key: 'terms_conditions', value: '<h2>Terms & Conditions</h2><p>Your terms and conditions content goes here.</p>', category: 'legal', label: 'Terms & Conditions', description: 'Terms and conditions content (HTML)', field_type: 'richtext', sort_order: 2 },
-  { key: 'cookie_policy', value: '<h2>Cookie Policy</h2><p>Your cookie policy content goes here.</p>', category: 'legal', label: 'Cookie Policy', description: 'Cookie policy content (HTML)', field_type: 'richtext', sort_order: 3 },
-  { key: 'refund_policy', value: '<h2>Refund Policy</h2><p>Your refund policy content goes here.</p>', category: 'legal', label: 'Refund Policy', description: 'Refund policy (HTML)', field_type: 'richtext', sort_order: 4 },
+  // Legal (placeholder — full content in settings.ts defaults)
+  { key: 'privacy_policy', value: '<h2>Privacy Policy</h2><p>Please visit our <a href="/legal/privacy_policy">privacy policy page</a> for the full policy.</p>', category: 'legal', label: 'Privacy Policy', description: 'Privacy policy content (HTML)', field_type: 'richtext', sort_order: 1 },
+  { key: 'terms_conditions', value: '<h2>Terms & Conditions</h2><p>Please visit our <a href="/legal/terms_conditions">terms page</a> for the full terms.</p>', category: 'legal', label: 'Terms & Conditions', description: 'Terms and conditions content (HTML)', field_type: 'richtext', sort_order: 2 },
+  { key: 'cookie_policy', value: '<h2>Cookie Policy</h2><p>Please visit our <a href="/legal/cookie_policy">cookie policy page</a> for details.</p>', category: 'legal', label: 'Cookie Policy', description: 'Cookie policy content (HTML)', field_type: 'richtext', sort_order: 3 },
+  { key: 'refund_policy', value: '<h2>Refund Policy</h2><p>Please visit our <a href="/legal/refund_policy">refund policy page</a> for details.</p>', category: 'legal', label: 'Refund Policy', description: 'Refund policy (HTML)', field_type: 'richtext', sort_order: 4 },
   // Notifications
   { key: 'notify_new_user', value: 'true', category: 'notifications', label: 'New User Notification', description: 'Email admin when a new user registers', field_type: 'boolean', sort_order: 1 },
   { key: 'notify_new_review', value: 'true', category: 'notifications', label: 'New Review Notification', description: 'Email admin when a new review is submitted', field_type: 'boolean', sort_order: 2 },

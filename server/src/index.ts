@@ -22,7 +22,7 @@ import reviewsRoutes from './routes/reviews.js';
 import analyticsRoutes from './routes/analytics.js';
 import newsletterRoutes from './routes/newsletter.js';
 import dashboardRoutes from './routes/dashboard.js';
-import settingsRoutes from './routes/settings.js';
+import settingsRoutes, { seedDefaultSettings } from './routes/settings.js';
 import campaignsRoutes from './routes/campaigns.js';
 import importRoutes from './routes/import.js';
 import seoRoutes from './routes/seo.js';
@@ -294,6 +294,7 @@ async function bootstrap() {
   // Initialize MySQL pool + schema
   await initPool();
   await initDatabase();
+  await seedDefaultSettings();
 
   const server = app.listen(config.port, () => {
     logger.info({

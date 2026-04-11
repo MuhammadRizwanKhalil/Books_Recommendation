@@ -1,5 +1,6 @@
 import mysql, { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { config } from './config.js';
 import { runMigrations } from './lib/migrator.js';
 import { logger } from './lib/logger.js';
@@ -178,4 +179,55 @@ export async function initDatabase(): Promise<void> {
   }
 
   logger.info('✅ Database schema initialized');
+
+  // ── Ensure admin user exists ──────────────────────────────────────────────
+  await ensureAdminUser();
+}
+
+/**
+ * Ensure at least one admin user exists, creating from env vars if needed.
+ */
+async function ensureAdminUser(): Promise<void> {
+  try {
+    // Check if any admin user exists
+    const existingAdmin = await dbGet<any>("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+    
+    if (existingAdmin) {
+      logger.info(`  👤 Admin user exists (id: ${existingAdmin.id})`);
+      return;
+    }
+
+    // No admin exists — create one from environment variables
+    const adminEmail = config.admin.email;
+    const adminPassword = config.admin.password;
+
+    if (!adminEmail || !adminPassword) {
+      logger.warn('  ⚠️  No admin user exists and ADMIN_EMAIL/ADMIN_PASSWORD not set');
+      return;
+    }
+
+    // Check if user with this email exists (upgrade to admin)
+    const existingUser = await dbGet<any>('SELECT id FROM users WHERE email = ?', [adminEmail.toLowerCase()]);
+
+    if (existingUser) {
+      // Upgrade existing user to admin
+      await dbRun("UPDATE users SET role = 'admin' WHERE id = ?", [existingUser.id]);
+      logger.info(`  👤 Upgraded existing user to admin: ${adminEmail}`);
+      return;
+    }
+
+    // Create new admin user
+    const id = uuidv4();
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(adminEmail)}`;
+
+    await dbRun(`
+      INSERT INTO users (id, email, name, password_hash, avatar_url, role, is_active)
+      VALUES (?, ?, ?, ?, ?, 'admin', 1)
+    `, [id, adminEmail.toLowerCase(), 'Admin', passwordHash, avatarUrl]);
+
+    logger.info(`  👤 Created admin user: ${adminEmail}`);
+  } catch (err) {
+    logger.error({ err }, '⚠️ Failed to ensure admin user');
+  }
 }
