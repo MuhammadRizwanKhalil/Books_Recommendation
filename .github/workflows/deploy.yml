@@ -2,7 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
   # Allow manual trigger
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
 
             # Pull latest code
             echo "Pulling latest code..."
-            git pull origin main
+            git pull origin master
 
             # Build and restart containers
             echo "Building and starting containers..."
