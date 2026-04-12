@@ -1,5 +1,6 @@
-import { BookOpen, BookMarked, CheckCircle2, Target } from 'lucide-react';
+import { BookOpen, BookMarked, CheckCircle2, Target, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useReadingShelf } from '@/components/ReadingStatus';
 import { useAuth } from '@/components/AuthProvider';
@@ -21,39 +22,50 @@ export function ReadingStats() {
       value: wantToRead.length,
       icon: BookMarked,
       color: 'text-blue-500 bg-blue-50 dark:bg-blue-950',
+      gradient: 'from-blue-500/10 to-blue-500/5',
     },
     {
       label: 'Reading',
       value: reading.length,
       icon: BookOpen,
       color: 'text-amber-500 bg-amber-50 dark:bg-amber-950',
+      gradient: 'from-amber-500/10 to-amber-500/5',
     },
     {
       label: 'Finished',
       value: finished.length,
       icon: CheckCircle2,
       color: 'text-green-500 bg-green-50 dark:bg-green-950',
+      gradient: 'from-green-500/10 to-green-500/5',
     },
     {
       label: 'Books Viewed',
       value: readingHistory.length,
       icon: Target,
       color: 'text-purple-500 bg-purple-50 dark:bg-purple-950',
+      gradient: 'from-purple-500/10 to-purple-500/5',
     },
   ];
 
   return (
-    <section className="py-8 sm:py-10">
+    <section className="py-10 sm:py-14">
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Target className="h-5 w-5 text-primary" />
+        <motion.div
+          className="space-y-2 mb-6"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+        >
+          <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-0 text-xs px-3 py-1">
+            <Target className="w-3 h-3 mr-1" />
+            Personal Tracker
+          </Badge>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl sm:text-3xl font-bold font-serif">Your Reading Journey</h2>
           </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold">Your Reading Journey</h2>
-            <p className="text-sm text-muted-foreground">Track your progress and build your shelf</p>
-          </div>
-        </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">Track your progress and build your personal shelf</p>
+        </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {stats.map((stat, idx) => (
@@ -64,8 +76,8 @@ export function ReadingStats() {
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
             >
-              <Card className="text-center">
-                <CardContent className="pt-6 pb-4">
+              <Card className="text-center border-0 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                <CardContent className={`pt-6 pb-4 bg-gradient-to-b ${stat.gradient} rounded-lg`}>
                   <div className={`inline-flex p-3 rounded-full mb-3 ${stat.color}`}>
                     <stat.icon className="h-5 w-5" />
                   </div>
@@ -79,20 +91,30 @@ export function ReadingStats() {
 
         {/* Annual reading goal */}
         {finished.length > 0 && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Annual Reading Goal</span>
-                <span className="text-sm text-muted-foreground">{finished.length} / {yearGoal} books</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-2">
-                {finished.length >= yearGoal
-                  ? '🎉 Congratulations! You\'ve reached your reading goal!'
-                  : `${yearGoal - finished.length} more books to reach your goal`}
-              </p>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="border-0 shadow-md">
+              <CardContent className="py-5 px-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-semibold">Annual Reading Goal</span>
+                  </div>
+                  <span className="text-sm font-medium text-primary">{finished.length} / {yearGoal} books</span>
+                </div>
+                <Progress value={progress} className="h-2.5" />
+                <p className="text-xs text-muted-foreground mt-2">
+                  {finished.length >= yearGoal
+                    ? '🎉 Congratulations! You\'ve reached your reading goal!'
+                    : `${yearGoal - finished.length} more books to reach your goal`}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </div>
     </section>

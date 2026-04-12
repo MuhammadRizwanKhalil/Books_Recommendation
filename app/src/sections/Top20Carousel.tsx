@@ -1,9 +1,13 @@
 import { useRef, useEffect } from 'react';
-import { TrendingUp, Star } from 'lucide-react';
+import { TrendingUp, Star, Crown, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTopRated } from '@/hooks/useBooks';
 import { useAppNav } from '@/App';
 import { formatRating, formatPrice } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import type { Book } from '@/types';
 
 export function Top20Carousel() {
@@ -38,15 +42,15 @@ export function Top20Carousel() {
 
   if (loading) {
     return (
-      <section className="py-6 sm:py-8">
+      <section className="py-8 sm:py-10 md:py-12">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-5">
             <TrendingUp className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-bold">Top 20 Books</h2>
           </div>
           <div className="flex gap-3 overflow-hidden">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="shrink-0 w-[120px] sm:w-[140px]">
+              <div key={i} className="shrink-0 w-[130px] sm:w-[150px]">
                 <Skeleton className="aspect-[2/3] rounded-lg" />
               </div>
             ))}
@@ -59,21 +63,40 @@ export function Top20Carousel() {
   if (books.length === 0) return null;
 
   return (
-    <section className="py-6 sm:py-8 md:py-10">
+    <section className="py-8 sm:py-10 md:py-14 bg-gradient-to-b from-background via-muted/20 to-background">
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <div>
-            <h2 className="text-xl font-bold">Top 20 Books</h2>
-            <p className="text-xs text-muted-foreground">Highest rated across all categories</p>
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 text-xs px-3 py-1">
+                <Crown className="w-3 h-3 mr-1" />
+                Editor's Choice
+              </Badge>
+            </div>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-serif flex items-center gap-2">
+              <TrendingUp className="h-7 w-7 text-primary" />
+              Top 20 Books
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-lg leading-relaxed">Highest rated across all categories — hover to reveal details</p>
           </div>
-        </div>
+          <Button variant="default" size="sm" asChild className="shadow-md shadow-primary/20">
+            <Link to="/search?sort=rating">
+              View All Rated <ChevronRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </motion.div>
       </div>
 
       {/* Full-width auto-scrolling carousel */}
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide px-4"
+        className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4"
         onMouseEnter={() => { isPausedRef.current = true; }}
         onMouseLeave={() => { isPausedRef.current = false; }}
         onTouchStart={() => { isPausedRef.current = true; }}
@@ -81,41 +104,54 @@ export function Top20Carousel() {
         style={{ scrollBehavior: 'auto' }}
       >
         {displayBooks.map((book, idx) => (
-          <FlipCard key={`${book.id}-${idx}`} book={book} onBookClick={openBook} />
+          <FlipCard key={`${book.id}-${idx}`} book={book} onBookClick={openBook} rank={idx < books.length ? idx + 1 : undefined} />
         ))}
       </div>
     </section>
   );
 }
 
-function FlipCard({ book, onBookClick }: { book: Book; onBookClick: (b: Book) => void }) {
+function FlipCard({ book, onBookClick, rank }: { book: Book; onBookClick: (b: Book) => void; rank?: number }) {
   return (
     <div
-      className="shrink-0 w-[120px] sm:w-[140px] cursor-pointer group/flip"
+      className="shrink-0 w-[130px] sm:w-[150px] cursor-pointer group/flip"
       style={{ perspective: '800px' }}
       onClick={() => onBookClick(book)}
     >
       <div className="relative w-full aspect-[2/3] transition-transform duration-500 [transform-style:preserve-3d] group-hover/flip:[transform:rotateY(180deg)]">
         {/* Front */}
-        <div className="absolute inset-0 rounded-lg overflow-hidden shadow-md [backface-visibility:hidden]">
+        <div className="absolute inset-0 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow [backface-visibility:hidden]">
           <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" loading="lazy" />
+          {rank && rank <= 3 && (
+            <div className="absolute top-2 left-2">
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md ${
+                rank === 1 ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white' :
+                rank === 2 ? 'bg-white/90 text-gray-700' :
+                'bg-amber-600/90 text-white'
+              }`}>
+                #{rank}
+              </div>
+            </div>
+          )}
         </div>
         {/* Back */}
-        <div className="absolute inset-0 rounded-lg overflow-hidden bg-card border shadow-md p-2.5 flex flex-col justify-between [backface-visibility:hidden] [transform:rotateY(180deg)]">
-          <div className="space-y-1 overflow-hidden">
-            <h4 className="font-bold text-[11px] line-clamp-2 leading-tight">{book.title}</h4>
-            <p className="text-[10px] text-muted-foreground">{book.author}</p>
+        <div className="absolute inset-0 rounded-xl overflow-hidden bg-card border shadow-lg p-3 flex flex-col justify-between [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <div className="space-y-1.5 overflow-hidden">
+            <h4 className="font-bold text-xs line-clamp-2 leading-tight">{book.title}</h4>
+            <p className="text-[10px] text-primary font-medium">{book.author}</p>
             <div className="flex items-center gap-0.5">
-              <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-              <span className="text-[10px] font-medium">{formatRating(book.googleRating)}</span>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} className={`h-2.5 w-2.5 ${s <= Math.round(book.googleRating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground/30'}`} />
+              ))}
+              <span className="text-[10px] font-medium ml-0.5">{formatRating(book.googleRating)}</span>
             </div>
-            <p className="text-[9px] text-muted-foreground line-clamp-3 leading-relaxed">{book.description}</p>
+            <p className="text-[9px] text-muted-foreground line-clamp-4 leading-relaxed">{book.description}</p>
           </div>
-          <div className="flex items-center justify-between pt-1 border-t mt-1">
+          <div className="flex items-center justify-between pt-1.5 border-t mt-1">
             {book.price ? (
               <span className="text-[10px] font-bold text-primary">{formatPrice(book.price, book.currency)}</span>
             ) : <span />}
-            <span className="text-[9px] text-primary font-medium">View →</span>
+            <span className="text-[9px] text-primary font-semibold">View →</span>
           </div>
         </div>
       </div>

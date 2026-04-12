@@ -39,11 +39,11 @@ export function Blog() {
   };
 
   return (
-    <section id="blog" className="py-8 sm:py-10 md:py-14">
+    <section id="blog" className="py-10 sm:py-14 md:py-16">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div 
-          className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-6"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -51,20 +51,24 @@ export function Blog() {
         >
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-primary">
+              <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 px-3 py-1">
                 <Sparkles className="w-3 h-3 mr-1" />
                 {t('blog.aiPowered')}
               </Badge>
+              <Badge variant="outline" className="text-xs text-purple-600 border-purple-500/30 bg-purple-500/5">
+                <Clock className="w-3 h-3 mr-1" />
+                Updated Weekly
+              </Badge>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold font-serif flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-serif flex items-center gap-2">
+              <FileText className="h-7 w-7 text-primary" />
               {t('sections.blog')}
             </h2>
-            <p className="text-muted-foreground max-w-xl">
+            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
               {t('blog.subtitle')}
             </p>
           </div>
-          <Button variant="outline" asChild>
+          <Button variant="default" asChild className="shadow-md shadow-primary/20">
             <Link to="/blog">
               {t('blog.viewAllPosts')}
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -73,7 +77,7 @@ export function Blog() {
         </motion.div>
 
         {/* Blog Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="h-96">
@@ -96,7 +100,7 @@ export function Blog() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
-                <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 h-full flex flex-col relative">
+                <Card className="group overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col relative border-0 shadow-md">
                   {isAdmin && (
                     <Button
                       size="icon"
@@ -113,14 +117,16 @@ export function Blog() {
                     </Button>
                   )}
                   <Link to={`/blog/${post.slug}`} className="flex flex-col flex-1">
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-52 overflow-hidden">
                     <img
                       src={post.featuredImage}
                       alt={post.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                     <div className="absolute top-4 left-4">
-                      <Badge variant="secondary" className="bg-white/90 text-foreground">
+                      <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-foreground shadow-sm">
                         {getGeneratedByIcon(post.generatedBy)}
                         <span className="ml-1">{getGeneratedByLabel(post.generatedBy)}</span>
                       </Badge>
@@ -131,14 +137,14 @@ export function Blog() {
                       <Calendar className="h-4 w-4" />
                       {post.publishedAt && formatDate(post.publishedAt)}
                     </div>
-                    <h3 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                       {post.title}
                     </h3>
-                    <p className="text-muted-foreground line-clamp-3 flex-1">
+                    <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed">
                       {post.excerpt || truncateText(post.content, 150)}
                     </p>
                     <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {post.featuredBookIds.length} {t('blog.booksFeatured')}
                       </span>
                       <span className="text-sm font-medium text-primary group-hover:underline flex items-center">

@@ -49,7 +49,7 @@ export function Newsletter() {
   ];
 
   return (
-    <section id="newsletter" className="py-8 sm:py-10 md:py-14 bg-muted/40">
+    <section id="newsletter" className="py-10 sm:py-14 md:py-16 bg-gradient-to-b from-muted/50 via-muted/30 to-background">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -57,20 +57,25 @@ export function Newsletter() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-xl border-0">
             <div className="grid lg:grid-cols-2">
               {/* Content Side */}
-              <CardContent className="p-5 sm:p-8 lg:p-12 flex flex-col justify-center">
+              <CardContent className="p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
                 <div className="space-y-6">
                   <div>
-                    <Badge variant="default" className="mb-4">
-                      <Mail className="w-3 h-3 mr-1" />
-                      {t('sections.newsletter')}
-                    </Badge>
-                    <h2 className="text-2xl md:text-3xl font-bold font-serif mb-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant="default" className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 px-3 py-1">
+                        <Mail className="w-3 h-3 mr-1" />
+                        {t('sections.newsletter')}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs text-blue-600 border-blue-500/30 bg-blue-500/5">
+                        Free Forever
+                      </Badge>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-serif mb-3 leading-tight">
                       {newsletterHeading}
                     </h2>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground text-sm leading-relaxed">
                       {newsletterDescription}
                     </p>
                   </div>
