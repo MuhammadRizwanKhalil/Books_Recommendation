@@ -16,6 +16,8 @@ import { WebhooksPage } from '@/components/WebhooksPage';
 import { SearchPage } from '@/components/SearchPage';
 import { BlogPage } from '@/components/BlogPage';
 import { BlogPostPage } from '@/components/BlogPostPage';
+import { TrendingPage } from '@/components/TrendingPage';
+import { CategoriesPage } from '@/components/CategoriesPage';
 import { Navigation } from '@/sections/Navigation';
 import { Hero } from '@/sections/Hero';
 import { Footer } from '@/sections/Footer';
@@ -78,7 +80,15 @@ function SectionFallback() {
   );
 }
 
-// â”€â”€ AppView type (backward compat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function SectionDivider() {
+  return (
+    <div className="container mx-auto px-4" aria-hidden="true">
+      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+    </div>
+  );
+}
+
+// ── AppView type (backward compat) ──────────────────────────────────────────
 export type AppView =
   | { type: 'home' }
   | { type: 'category'; category: Category }
@@ -196,24 +206,28 @@ function HomePage() {
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Trending"><Trending /></ErrorBoundary>
       </Suspense>
+      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Book of the Day"><BookOfTheDay /></ErrorBoundary>
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Categories"><Categories /></ErrorBoundary>
       </Suspense>
+      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="New Releases"><NewReleases /></ErrorBoundary>
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Top Rated"><TopRated /></ErrorBoundary>
       </Suspense>
+      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Featured Authors"><FeaturedAuthors /></ErrorBoundary>
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Testimonials"><Testimonials /></ErrorBoundary>
       </Suspense>
+      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Reading Stats"><ReadingStats /></ErrorBoundary>
       </Suspense>
@@ -223,6 +237,7 @@ function HomePage() {
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
       </Suspense>
+      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
       </Suspense>
@@ -535,6 +550,8 @@ function App() {
 
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/trending" element={<TrendingPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />

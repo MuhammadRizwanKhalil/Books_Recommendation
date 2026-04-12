@@ -72,33 +72,33 @@ section:not(#hero) {
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
+    --background: 38 35% 93%;
     --foreground: 20 20% 10%;
-    --card: 0 0% 100%;
+    --card: 40 30% 97%;
     --card-foreground: 20 20% 10%;
-    --popover: 0 0% 100%;
+    --popover: 40 30% 97%;
     --popover-foreground: 20 20% 10%;
     --primary: 24 72% 44%;
     --primary-foreground: 60 9.1% 97.8%;
-    --secondary: 30 18% 93%;
+    --secondary: 36 22% 89%;
     --secondary-foreground: 24 9.8% 20%;
-    --muted: 30 18% 95%;
+    --muted: 36 22% 91%;
     --muted-foreground: 20 8% 42%;
     --accent: 36 50% 90%;
     --accent-foreground: 24 9.8% 20%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 14% 89%;
-    --input: 30 14% 89%;
+    --border: 34 18% 85%;
+    --input: 34 18% 85%;
     --ring: 24 72% 44%;
     --radius: 0.625rem;
-    --sidebar-background: 30 20% 97%;
+    --sidebar-background: 38 28% 92%;
     --sidebar-foreground: 20 20% 10%;
     --sidebar-primary: 24 72% 44%;
     --sidebar-primary-foreground: 60 9.1% 97.8%;
     --sidebar-accent: 36 50% 90%;
     --sidebar-accent-foreground: 24 9.8% 20%;
-    --sidebar-border: 30 14% 89%;
+    --sidebar-border: 34 18% 85%;
     --sidebar-ring: 24 72% 44%;
   }
 

@@ -20,8 +20,8 @@ export function Newsletter() {
   const { getSetting } = useSettings();
   const { stats } = usePublicStats();
   const { t } = useTranslation();
-  const newsletterHeading = getSetting('newsletter_heading', 'Never Miss a Great Read');
-  const newsletterDescription = getSetting('newsletter_description', 'Subscribe to our newsletter and get personalized book recommendations, new release alerts, and curated reading lists delivered to your inbox.');
+  const newsletterHeading = getSetting('newsletter_heading', 'Get Your Weekly Reading Digest');
+  const newsletterDescription = getSetting('newsletter_description', 'Curated book picks delivered every Sunday morning. Join our growing community of passionate readers.');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +94,7 @@ export function Newsletter() {
                   </div>
 
                   {/* Subscriber Count */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground bg-primary/5 rounded-lg p-3">
                     <div className="flex -space-x-2">
                       {[1, 2, 3, 4].map((i) => (
                         <div
@@ -105,7 +105,10 @@ export function Newsletter() {
                         </div>
                       ))}
                     </div>
-                    <span>Join {stats ? `${stats.totalSubscribers.toLocaleString()}+` : ''} {t('newsletter.joinBookLovers').replace(/^Join \{count\}\+ /, '').replace('Join {count}+ ', '')}</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-foreground">{stats ? `${stats.totalSubscribers.toLocaleString()}+ readers` : 'Growing community'}</span>
+                      <span className="text-xs">and counting — join them every Sunday</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -156,6 +159,11 @@ export function Newsletter() {
                         {t('newsletter.noSpam')}{' '}
                         <button onClick={() => openLegal('privacy_policy')} className="underline hover:text-white">{t('footer.privacy')}</button>.
                       </p>
+                      <div className="flex items-center justify-center gap-4 text-white/70 text-xs pt-1">
+                        <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> No spam</span>
+                        <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Unsubscribe anytime</span>
+                        <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Free forever</span>
+                      </div>
                     </form>
                   ) : (
                     <motion.div

@@ -17,15 +17,16 @@ import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const sectionLinks = [
-  { labelKey: 'sections.trending', href: '/#trending' },
-  { labelKey: 'sections.categories', href: '/#categories' },
-  { labelKey: 'sections.newReleases', href: '/#new-releases' },
-  { labelKey: 'sections.topRated', href: '/#top-rated' },
-  { labelKey: 'sections.featuredAuthors', href: '/#authors' },
+  { labelKey: 'sections.trending', href: '/trending', isPage: true },
+  { labelKey: 'sections.categories', href: '/categories', isPage: true },
+  { labelKey: 'sections.newReleases', href: '/#new-releases', isPage: false },
+  { labelKey: 'sections.topRated', href: '/#top-rated', isPage: false },
+  { labelKey: 'sections.featuredAuthors', href: '/#authors', isPage: false },
 ];
 
 const pageLinks = [
   { labelKey: 'nav.blog', href: '/blog' },
+  { labelKey: 'nav.forYou', href: '/for-you' },
 ];
 
 export function Navigation() {
@@ -113,14 +114,29 @@ export function Navigation() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1" aria-label="Main navigation">
             {sectionLinks.map((link) => (
-              <a
-                key={link.labelKey}
-                href={link.href}
-                onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                className="inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-200"
-              >
-                {t(link.labelKey)}
-              </a>
+              link.isPage ? (
+                <Link
+                  key={link.labelKey}
+                  to={link.href}
+                  className={cn(
+                    'inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                    location.pathname === link.href
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/80'
+                  )}
+                >
+                  {t(link.labelKey)}
+                </Link>
+              ) : (
+                <a
+                  key={link.labelKey}
+                  href={link.href}
+                  onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
+                  className="inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-200"
+                >
+                  {t(link.labelKey)}
+                </a>
+              )
             ))}
             {pageLinks.map((link) => (
               <Link
@@ -217,14 +233,25 @@ export function Navigation() {
                   {/* Mobile Nav Links */}
                   <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
                     {sectionLinks.map((link) => (
-                      <a
-                        key={link.labelKey}
-                        href={link.href}
-                        onClick={(e) => { e.preventDefault(); setIsMobileOpen(false); setTimeout(() => scrollToSection(link.href), 300); }}
-                        className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
-                      >
-                        {t(link.labelKey)}
-                      </a>
+                      link.isPage ? (
+                        <Link
+                          key={link.labelKey}
+                          to={link.href}
+                          onClick={() => setIsMobileOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
+                        >
+                          {t(link.labelKey)}
+                        </Link>
+                      ) : (
+                        <a
+                          key={link.labelKey}
+                          href={link.href}
+                          onClick={(e) => { e.preventDefault(); setIsMobileOpen(false); setTimeout(() => scrollToSection(link.href), 300); }}
+                          className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
+                        >
+                          {t(link.labelKey)}
+                        </a>
+                      )
                     ))}
                     {pageLinks.map((link) => (
                       <Link

@@ -49,13 +49,16 @@ export function Footer() {
 
   const footerLinks = {
     discover: [
-      { label: t('footer.trendingBooks'), href: '/#trending', isRoute: false },
+      { label: t('footer.trendingBooks'), href: '/trending', isRoute: true },
       { label: t('sections.newReleases'), href: '/#new-releases', isRoute: false },
       { label: t('sections.topRated'), href: '/#top-rated', isRoute: false },
-      { label: t('nav.categories'), href: '/#categories', isRoute: false },
+      { label: t('nav.categories'), href: '/categories', isRoute: true },
     ],
     company: [
       { label: t('nav.blog'), href: '/blog', isRoute: true },
+      { label: t('nav.forYou'), href: '/for-you', isRoute: true },
+      { label: t('nav.lists'), href: '/lists', isRoute: true },
+      { label: t('nav.compare'), href: '/compare', isRoute: true },
       { label: t('sections.newsletter'), href: '/#newsletter', isRoute: false },
     ],
   };
@@ -129,13 +132,19 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.discover.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                  </a>
+                  {link.isRoute ? (
+                    <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
