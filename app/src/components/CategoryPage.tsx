@@ -155,17 +155,17 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
               </div>
             </div>
 
-            {/* Right: Featured book floating */}
+            {/* Right: Featured book */}
             {featuredBook && (
               <div
-                className="relative shrink-0 cursor-pointer group"
+                className="relative shrink-0 cursor-pointer group mr-4 md:mr-8"
                 onClick={() => onBookClick(featuredBook)}
               >
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="relative w-44 md:w-52"
+                  className="relative w-40 sm:w-48 md:w-56"
                 >
                   <img
                     src={featuredBook.coverImage}
@@ -173,11 +173,11 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
                     className="w-full rounded-2xl shadow-2xl group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-all duration-500 group-hover:-translate-y-1"
                     loading="eager"
                   />
-                  <Badge className="absolute -top-3 -right-3 bg-yellow-500 text-black font-bold shadow-lg">
+                  <Badge className="absolute -top-3 right-2 bg-yellow-500 text-black font-bold shadow-lg">
                     <Sparkles className="h-3 w-3 mr-0.5" /> Featured
                   </Badge>
                   {/* Small detail box */}
-                  <div className="absolute -bottom-5 -left-4 right-4 bg-card/95 backdrop-blur-sm border rounded-xl p-3 shadow-xl">
+                  <div className="absolute -bottom-5 left-0 right-0 bg-card/95 backdrop-blur-sm border rounded-xl p-3 shadow-xl">
                     <p className="font-bold text-sm line-clamp-1">{featuredBook.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{featuredBook.author}</p>
                     <div className="flex items-center justify-between mt-1.5">
@@ -562,7 +562,7 @@ function HorizontalBookCard({
   const stars = getStarRating(book.googleRating);
 
   return (
-    <div className="group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div className="relative group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {/* Main Card: horizontal rectangle */}
       <div
         className="flex items-center gap-3 p-2.5 rounded-xl border bg-card cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-300"
@@ -608,17 +608,17 @@ function HorizontalBookCard({
         </Button>
       </div>
 
-      {/* Expanded details below the card */}
+      {/* Expanded details — overlay on top of other cards */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute left-0 right-0 top-full z-30 mt-1"
           >
-            <div className="mt-1.5 p-3 rounded-xl border bg-card/80 backdrop-blur-sm space-y-2">
+            <div className="p-3 rounded-xl border bg-card shadow-xl space-y-2">
               {book.subtitle && (
                 <p className="text-xs text-muted-foreground italic">{book.subtitle}</p>
               )}
