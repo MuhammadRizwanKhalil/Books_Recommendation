@@ -144,6 +144,15 @@ export function BookComparePage() {
             </div>
           </div>
 
+          {/* Hint when no books are selected */}
+          {activeBooks.length === 0 && addingSlot === null && (
+            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                Click a slot below to search and add books. Compare ratings, page count, price, and more side-by-side.
+              </p>
+            </div>
+          )}
+
           {/* Comparison Grid */}
           <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${books.length}, minmax(0, 1fr))` }}>
             {books.map((book, index) => (

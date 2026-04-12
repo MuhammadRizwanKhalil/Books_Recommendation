@@ -41,10 +41,35 @@ export function ForYouPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <Sparkles className="h-16 w-16 mx-auto text-primary mb-4" />
-        <h1 className="text-3xl font-bold mb-2">Personalized For You</h1>
-        <p className="text-muted-foreground mb-6">Sign in to get personalized book recommendations tailored to your reading taste.</p>
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
+            <div className="relative p-5 rounded-full bg-primary/10">
+              <Sparkles className="h-12 w-12 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold font-serif mb-3">Personalized For You</h1>
+          <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
+            Our AI analyzes your reading history, ratings, and preferences to recommend books you'll actually love.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-left">
+            {[
+              { icon: Users, title: 'Similar Readers', desc: 'Find books loved by readers with your taste' },
+              { icon: Brain, title: 'Smart Matching', desc: 'AI matches themes, writing style & mood' },
+              { icon: TrendingUp, title: 'Always Fresh', desc: 'Recommendations improve as you read more' },
+            ].map((item) => (
+              <div key={item.title} className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                <item.icon className="h-5 w-5 text-primary mb-2" />
+                <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Create a free account to unlock personalized recommendations.
+          </p>
+        </div>
       </div>
     );
   }

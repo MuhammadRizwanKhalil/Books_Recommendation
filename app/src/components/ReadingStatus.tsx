@@ -3,6 +3,8 @@ import { BookOpen, CheckCircle2, BookMarked, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
+import { readingProgressApi } from '@/api/client';
 
 type ReadingStatus = 'none' | 'want-to-read' | 'reading' | 'finished';
 
@@ -23,7 +25,7 @@ function getStatuses(): Record<string, ReadingStatus> {
   }
 }
 
-function saveStatus(bookId: string, status: ReadingStatus) {
+function saveStatusLocal(bookId: string, status: ReadingStatus) {
   const all = getStatuses();
   if (status === 'none') {
     delete all[bookId];
@@ -41,16 +43,38 @@ interface ReadingStatusButtonProps {
 
 export function ReadingStatusButton({ bookId, size = 'default', className }: ReadingStatusButtonProps) {
   const [status, setStatus] = useState<ReadingStatus>('none');
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const statuses = getStatuses();
-    setStatus(statuses[bookId] || 'none');
-  }, [bookId]);
+    if (isAuthenticated) {
+      readingProgressApi.get(bookId).then(res => {
+        setStatus(res.progress?.status as ReadingStatus || 'none');
+      }).catch(() => {
+        // Fallback to localStorage
+        setStatus(getStatuses()[bookId] || 'none');
+      });
+    } else {
+      setStatus(getStatuses()[bookId] || 'none');
+    }
+  }, [bookId, isAuthenticated]);
 
-  const handleChange = useCallback((newStatus: ReadingStatus) => {
+  const handleChange = useCallback(async (newStatus: ReadingStatus) => {
     setStatus(newStatus);
-    saveStatus(bookId, newStatus);
-  }, [bookId]);
+    // Always save to localStorage as cache
+    saveStatusLocal(bookId, newStatus);
+
+    if (isAuthenticated) {
+      try {
+        if (newStatus === 'none') {
+          await readingProgressApi.remove(bookId);
+        } else {
+          await readingProgressApi.update(bookId, { status: newStatus });
+        }
+      } catch {
+        // localStorage already updated as fallback
+      }
+    }
+  }, [bookId, isAuthenticated]);
 
   const current = STATUS_CONFIG[status];
 
@@ -119,10 +143,24 @@ export function ReadingStatusButton({ bookId, size = 'default', className }: Rea
  */
 export function useReadingShelf() {
   const [statuses, setStatuses] = useState<Record<string, ReadingStatus>>({});
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    setStatuses(getStatuses());
-    // Listen for changes from other tabs
+    if (isAuthenticated) {
+      readingProgressApi.list(undefined, 1, 500).then(res => {
+        const map: Record<string, ReadingStatus> = {};
+        for (const item of res.items) {
+          map[String(item.bookId)] = item.status as ReadingStatus;
+        }
+        setStatuses(map);
+      }).catch(() => {
+        setStatuses(getStatuses());
+      });
+    } else {
+      setStatuses(getStatuses());
+    }
+
+    // Listen for changes from other tabs (localStorage fallback)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) {
         setStatuses(getStatuses());
@@ -130,7 +168,7 @@ export function useReadingShelf() {
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  }, [isAuthenticated]);
 
   return {
     statuses,

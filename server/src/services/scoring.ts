@@ -634,6 +634,7 @@ export async function getTrending(limit: number = 8): Promise<any[]> {
   const last30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Get all active books with any recent engagement
+  // Filter: must have cover image and at least some ratings signal
   const candidates = await dbAll<any>(`
     SELECT b.*,
       COALESCE(v7.cnt, 0) as views_7d,
@@ -668,6 +669,9 @@ export async function getTrending(limit: number = 8): Promise<any[]> {
       GROUP BY book_id
     ) ac7 ON ac7.book_id = b.id
     WHERE b.status = 'PUBLISHED' AND b.is_active = 1
+      AND b.cover_image IS NOT NULL AND b.cover_image != ''
+      AND b.ratings_count >= 2
+      AND b.google_rating >= 3.5
     ORDER BY b.computed_score DESC
     LIMIT 200
   `, [last7, last30, last7, last7, last7]);
@@ -681,8 +685,11 @@ export async function getTrending(limit: number = 8): Promise<any[]> {
       b.wishlists_7d * 3.0 +
       b.clicks_7d * 2.0;
 
+    // Boost for books with more ratings (popular books rank higher)
+    const popularityBoost = Math.log1p(b.ratings_count) * 2;
+
     const engagementNormalized = Math.min(100, Math.log1p(recentEngagement) * 15);
-    const trendingScore = engagementNormalized * 0.6 + b.computed_score * 0.4;
+    const trendingScore = engagementNormalized * 0.5 + b.computed_score * 0.3 + popularityBoost * 0.2;
 
     return { ...b, trendingScore: Math.round(trendingScore * 10) / 10 };
   });

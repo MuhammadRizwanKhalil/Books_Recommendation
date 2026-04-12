@@ -385,13 +385,33 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
     const countRow = await dbGet<any>(`SELECT COUNT(*) as total FROM books b ${whereClause}`, params);
     const total = countRow.total;
 
+    // Build relevance-boosted ORDER BY when searching
+    let orderClause: string;
+    const queryParams = [...params];
+
+    if (search && sort === 'computed_score') {
+      // Boost exact and partial title/author matches for better search relevance
+      const searchStr = String(search).slice(0, 200).toLowerCase();
+      orderClause = `ORDER BY
+        (CASE WHEN LOWER(b.title) = ? THEN 100
+              WHEN LOWER(b.title) LIKE ? THEN 50
+              WHEN LOWER(b.author) = ? THEN 40
+              WHEN LOWER(b.author) LIKE ? THEN 20
+              ELSE 0 END
+         + LOG(1 + b.ratings_count) * 2
+         + b.computed_score * 0.5) DESC`;
+      queryParams.push(searchStr, `${searchStr}%`, searchStr, `${searchStr}%`);
+    } else {
+      orderClause = `ORDER BY b.${sortCol} ${sortOrder}`;
+    }
+
     // Fetch books
     const books = await dbAll<any>(`
       SELECT b.* FROM books b
       ${whereClause}
-      ORDER BY b.${sortCol} ${sortOrder}
+      ${orderClause}
       LIMIT ? OFFSET ?
-    `, [...params, limitNum, offset]);
+    `, [...queryParams, limitNum, offset]);
 
     res.json({
       books: await buildBookResponses(books),

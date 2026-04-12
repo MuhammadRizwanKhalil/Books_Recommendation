@@ -222,6 +222,10 @@ function HomePage() {
       </Suspense>
       <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
+      </Suspense>
+      <SectionDivider />
+      <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Featured Authors"><FeaturedAuthors /></ErrorBoundary>
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
@@ -229,17 +233,13 @@ function HomePage() {
       </Suspense>
       <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Reading Stats"><ReadingStats /></ErrorBoundary>
-      </Suspense>
-      <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Blog"><Blog /></ErrorBoundary>
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
+        <ErrorBoundary section="Reading Stats"><ReadingStats /></ErrorBoundary>
       </Suspense>
-      <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
+        <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
       </Suspense>
     </main>
   );
@@ -452,10 +452,38 @@ function AdminBlogEditorRoute() {
 function NotFoundPage() {
   const routerNavigate = useNavigate();
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
-      <p className="text-xl text-muted-foreground">Page not found</p>
-      <button onClick={() => routerNavigate('/')} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Go Home</button>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-4 text-center">
+      <div className="relative">
+        <span className="text-[10rem] leading-none font-bold text-muted-foreground/10 select-none">404</span>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+          </svg>
+        </div>
+      </div>
+      <div>
+        <h1 className="text-2xl font-serif font-bold mb-2">This page got lost in the stacks</h1>
+        <p className="text-muted-foreground max-w-md">The page you're looking for doesn't exist or may have been moved. Try searching for what you need, or head back home.</p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button onClick={() => routerNavigate('/')} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors">
+          Browse Books
+        </button>
+        <button onClick={() => routerNavigate('/search')} className="px-6 py-2.5 border border-border rounded-lg hover:bg-accent font-medium transition-colors">
+          Search
+        </button>
+      </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {['Trending', 'Categories', 'Blog'].map(label => (
+          <button
+            key={label}
+            onClick={() => routerNavigate(`/${label.toLowerCase()}`)}
+            className="px-3 py-1 text-xs rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

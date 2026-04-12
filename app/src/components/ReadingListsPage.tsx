@@ -93,10 +93,29 @@ export function ReadingListsPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-24 text-center">
-        <BookOpen className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Reading Lists</h1>
-        <p className="text-muted-foreground mb-6">Sign in to create and manage your reading lists.</p>
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
+            <div className="relative p-5 rounded-full bg-primary/10">
+              <BookOpen className="h-12 w-12 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold font-serif mb-3">Reading Lists</h1>
+          <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
+            Create curated collections of books — track what you want to read, share recommendations with friends, or organize by mood and genre.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {['Summer 2026 Reads', 'Book Club Picks', 'Sci-Fi Essentials', 'Must-Read Non-Fiction'].map((name) => (
+              <span key={name} className="px-4 py-2 rounded-full bg-muted/60 border border-border/50 text-sm text-muted-foreground">
+                {name}
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Sign in to start building your reading lists.
+          </p>
+        </div>
       </div>
     );
   }

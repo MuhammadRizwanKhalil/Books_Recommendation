@@ -21,11 +21,13 @@ export function Hero() {
 
   const formatNumber = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`;
 
-  const stats = [
-    { icon: BookOpen, label: t('hero.booksIndexed'), value: publicStats ? formatNumber(publicStats.totalBooks) : '...', color: 'text-blue-500 bg-blue-500/10' },
-    { icon: TrendingUp, label: t('hero.totalReviews'), value: publicStats ? formatNumber(publicStats.totalReviews) : '...', color: 'text-emerald-500 bg-emerald-500/10' },
-    { icon: Star, label: t('hero.avgRating'), value: publicStats ? `${publicStats.avgRating}/5` : '...', color: 'text-amber-500 bg-amber-500/10' },
+  // Only show stats that have reached credible thresholds
+  const allStats = [
+    publicStats && publicStats.totalBooks >= 100 ? { icon: BookOpen, label: t('hero.booksIndexed'), value: formatNumber(publicStats.totalBooks), color: 'text-blue-500 bg-blue-500/10' } : null,
+    publicStats && publicStats.totalReviews >= 10 ? { icon: TrendingUp, label: t('hero.totalReviews'), value: formatNumber(publicStats.totalReviews), color: 'text-emerald-500 bg-emerald-500/10' } : null,
+    publicStats && publicStats.totalReviews >= 10 ? { icon: Star, label: t('hero.avgRating'), value: `${publicStats.avgRating}/5`, color: 'text-amber-500 bg-amber-500/10' } : null,
   ];
+  const stats = allStats.filter(Boolean) as { icon: typeof BookOpen; label: string; value: string; color: string }[];
 
   const popularSearches = popularSearchesSetting.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -93,7 +95,8 @@ export function Hero() {
             </nav>
           </div>
 
-          {/* Stats */}
+          {/* Stats — only show when numbers are credible */}
+          {stats.length > 0 && (
           <div className="flex flex-wrap justify-center gap-6 sm:gap-8 md:gap-12 pt-8">
             {stats.map((stat) => (
               <div key={stat.label} className="flex items-center gap-3 group">
@@ -107,6 +110,7 @@ export function Hero() {
               </div>
             ))}
           </div>
+          )}
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 pt-2">
