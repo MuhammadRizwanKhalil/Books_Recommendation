@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 /** Highlights matching portions of text */
 function HighlightMatch({ text, query }: { text: string; query: string }) {
   if (!query || query.length < 2) return <>{text}</>;
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Escape special regex characters
+  const escaped = query.replace(/[.*+?^${}()|\\[\]]/g, '\\$&');
   const regex = new RegExp(`(${escaped})`, 'gi');
   const parts = text.split(regex);
   return (

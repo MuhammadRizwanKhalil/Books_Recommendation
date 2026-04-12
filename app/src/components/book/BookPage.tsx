@@ -135,7 +135,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        {/* ====== MAIN LAYOUT ====== */
+        {/* ====== MAIN LAYOUT ====== */}
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
           {/* LEFT COLUMN â€” Image + Affiliate */}
