@@ -49,6 +49,15 @@ section:not(#hero) {
   background: hsl(var(--muted-foreground) / 0.5);
 }
 
+/* Hide scrollbar for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Horizontal scroll containers */
 .scroll-fade {
   mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);

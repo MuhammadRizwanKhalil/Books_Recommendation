@@ -37,6 +37,7 @@ const BookOfTheDay = lazy(() => import('@/sections/BookOfTheDay').then(m => ({ d
 const RecentlyViewed = lazy(() => import('@/sections/RecentlyViewed').then(m => ({ default: m.RecentlyViewed })));
 const PopularSearches = lazy(() => import('@/sections/PopularSearches').then(m => ({ default: m.PopularSearches })));
 const ReadingStats = lazy(() => import('@/sections/ReadingStats').then(m => ({ default: m.ReadingStats })));
+const Top20Carousel = lazy(() => import('@/sections/Top20Carousel').then(m => ({ default: m.Top20Carousel })));
 import type { AdminPage } from '@/admin/AdminLayout';
 import { LegalPage } from '@/components/LegalPage';
 import { AdminBar } from '@/components/AdminBar';
@@ -221,6 +222,9 @@ function HomePage() {
       </Suspense>
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Top Rated"><TopRated /></ErrorBoundary>
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Top 20 Carousel"><Top20Carousel /></ErrorBoundary>
       </Suspense>
       <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
