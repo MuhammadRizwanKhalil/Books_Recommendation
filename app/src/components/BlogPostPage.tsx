@@ -1,10 +1,11 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, Sparkles, FileText, BookOpen, ArrowLeft, Share2, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Sparkles, FileText, BookOpen, ArrowLeft, Share2, ChevronRight, Tag, Heart, Eye, Quote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
 import { blogApi } from '@/api/client';
 import { formatDate, calculateReadingTime } from '@/lib/utils';
 import { useSEO } from '@/hooks/useSEO';
@@ -123,16 +124,16 @@ export function BlogPostPage() {
   if (loading) {
     return (
       <main className="pt-20 pb-16">
-        <article className="container mx-auto px-4 max-w-3xl">
-          <Skeleton className="h-6 w-32 mb-6" />
-          <Skeleton className="h-64 w-full rounded-xl mb-8" />
+        <article className="container mx-auto px-4 max-w-4xl">
+          <Skeleton className="h-6 w-48 mb-6" />
+          <Skeleton className="h-[400px] w-full rounded-2xl mb-8" />
           <Skeleton className="h-10 w-3/4 mb-4" />
           <div className="flex gap-4 mb-8">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-20" />
           </div>
           <div className="space-y-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-4 w-full" />
             ))}
           </div>
@@ -146,10 +147,12 @@ export function BlogPostPage() {
     return (
       <main className="pt-20 pb-16">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <FileText className="h-16 w-16 text-muted-foreground" />
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-2">
+            <FileText className="h-10 w-10 text-muted-foreground" />
+          </div>
           <h1 className="text-2xl font-bold">Blog post not found</h1>
-          <p className="text-muted-foreground">The article you're looking for doesn't exist or has been removed.</p>
-          <div className="flex gap-3">
+          <p className="text-muted-foreground max-w-md text-center">The article you're looking for doesn't exist or has been removed.</p>
+          <div className="flex gap-3 mt-2">
             <Button variant="outline" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
@@ -164,6 +167,7 @@ export function BlogPostPage() {
   }
 
   const readingTime = calculateReadingTime(post.content.split(/\s+/).length);
+  const wordCount = post.content.split(/\s+/).length;
 
   // Render content: support basic HTML or split by paragraphs
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content);
@@ -172,20 +176,22 @@ export function BlogPostPage() {
     ADD_TAGS: ['iframe'],
   }) : '';
 
+  const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
+
   return (
     <main className="pt-20 pb-16">
       {/* Breadcrumbs */}
-      <div className="container mx-auto px-4 max-w-3xl mb-6">
+      <div className="container mx-auto px-4 max-w-4xl mb-6">
         <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
           <ChevronRight className="h-3 w-3" />
           <Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground line-clamp-1">{post.title}</span>
+          <span className="text-foreground line-clamp-1 font-medium">{post.title}</span>
         </nav>
       </div>
 
-      <article className="container mx-auto px-4 max-w-3xl">
+      <article className="container mx-auto px-4 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -193,76 +199,110 @@ export function BlogPostPage() {
         >
           {/* Hero Image */}
           {post.featuredImage && (
-            <div className="relative rounded-xl overflow-hidden mb-8 aspect-video">
+            <div className="relative rounded-2xl overflow-hidden mb-8 aspect-[2/1] shadow-xl">
               <img
                 src={post.featuredImage}
                 alt={post.title}
                 className="w-full h-full object-cover"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
             </div>
           )}
 
-          {/* Badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant="secondary">
+          {/* Badges Row */}
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <Badge variant="secondary" className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20">
               {getGeneratedByIcon(post.generatedBy)}
               <span className="ml-1">{getGeneratedByLabel(post.generatedBy)}</span>
             </Badge>
+            {post.category && (
+              <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0">
+                {post.category}
+              </Badge>
+            )}
+            {post.isFeatured && (
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+                <Heart className="h-3 w-3 mr-1" />
+                Featured
+              </Badge>
+            )}
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-serif leading-tight mb-6">
             {post.title}
           </h1>
 
-          {/* Meta */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
-            {post.publishedAt && (
-              <time dateTime={post.publishedAt} className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                {formatDate(post.publishedAt)}
-              </time>
-            )}
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" />
-              {readingTime}
-            </div>
-            {post.featuredBookIds.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <BookOpen className="h-4 w-4" />
-                {post.featuredBookIds.length} books featured
+          {/* Meta Bar */}
+          <Card className="border-0 shadow-md mb-8">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+                {post.publishedAt && (
+                  <time dateTime={post.publishedAt} className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span>{formatDate(post.publishedAt)}</span>
+                  </time>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>{readingTime}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span>{wordCount.toLocaleString()} words</span>
+                </div>
+                {post.featuredBookIds.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <span>{post.featuredBookIds.length} books featured</span>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto shadow-sm"
+                  onClick={handleShare}
+                >
+                  <Share2 className="h-4 w-4 mr-1.5" />
+                  Share
+                </Button>
               </div>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto"
-              onClick={handleShare}
-            >
-              <Share2 className="h-4 w-4 mr-1" />
-              Share
-            </Button>
-          </div>
-
-          <Separator className="mb-8" />
+            </CardContent>
+          </Card>
 
           {/* Excerpt */}
           {post.excerpt && (
-            <p className="text-lg text-muted-foreground italic border-l-4 border-primary pl-4 mb-8">
-              {post.excerpt}
-            </p>
+            <div className="relative mb-10 pl-6">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-purple-500 to-pink-500 rounded-full" />
+              <Quote className="h-5 w-5 text-primary/40 mb-2" />
+              <p className="text-lg text-muted-foreground italic leading-relaxed">
+                {post.excerpt}
+              </p>
+            </div>
           )}
 
           {/* Content */}
           {isHtml ? (
             <div
-              className="prose prose-lg dark:prose-invert max-w-none mb-12"
+              className="prose prose-lg dark:prose-invert max-w-none mb-12
+                prose-headings:font-serif prose-headings:font-bold
+                prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:pb-2 prose-h2:border-border
+                prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+                prose-p:leading-relaxed prose-p:text-foreground/80
+                prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+                prose-blockquote:border-l-primary prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
+                prose-strong:text-foreground prose-strong:font-semibold
+                prose-ul:my-6 prose-ol:my-6
+                prose-li:leading-relaxed
+                prose-img:rounded-xl prose-img:shadow-lg
+                prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+                prose-pre:bg-muted prose-pre:rounded-xl prose-pre:shadow-md"
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
             />
           ) : (
-            <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
+            <div className="prose prose-lg dark:prose-invert max-w-none mb-12 prose-headings:font-serif">
               {post.content.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="text-muted-foreground leading-relaxed mb-4">
+                <p key={idx} className="text-foreground/80 leading-relaxed mb-5">
                   {paragraph}
                 </p>
               ))}
@@ -271,48 +311,61 @@ export function BlogPostPage() {
 
           {/* Custom Link CTA */}
           {post.customLinkLabel && post.customLinkUrl && (
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 mb-8 text-center">
-              <p className="text-sm text-muted-foreground mb-3">Recommended Resource</p>
-              <Button asChild>
-                <a href={post.customLinkUrl} target="_blank" rel="noopener noreferrer">
-                  {post.customLinkLabel}
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </a>
-              </Button>
-            </div>
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5 mb-10">
+              <CardContent className="p-6 sm:p-8 text-center">
+                <p className="text-sm text-muted-foreground mb-1 uppercase tracking-wide font-medium">Recommended Resource</p>
+                <p className="text-lg font-semibold mb-4">{post.customLinkLabel}</p>
+                <Button asChild size="lg" className="shadow-md">
+                  <a href={post.customLinkUrl} target="_blank" rel="noopener noreferrer">
+                    Explore Now
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Tags */}
-          {post.tags && (
-            <>
-              <Separator className="mb-6" />
-              <div className="flex items-center gap-2 flex-wrap mb-8">
-                <span className="text-sm font-medium">Tags:</span>
-                {post.tags.split(',').filter(t => t.trim()).map((tag, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {tag.trim()}
-                  </Badge>
-                ))}
+          <Separator className="mb-8" />
+
+          {/* Tags & Category */}
+          <div className="flex flex-wrap items-start gap-6 mb-8">
+            {tags.length > 0 && (
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Tags</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, i) => (
+                    <Badge key={i} variant="outline" className="text-xs hover:bg-muted transition-colors cursor-default">
+                      {tag.trim()}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </>
-          )}
+            )}
+            {post.category && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Category</span>
+                </div>
+                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0">
+                  {post.category}
+                </Badge>
+              </div>
+            )}
+          </div>
 
-          {/* Category */}
-          {post.category && (
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-sm font-medium">Category:</span>
-              <Badge variant="secondary">{post.category}</Badge>
-            </div>
-          )}
+          <Separator className="mb-6" />
 
           {/* Navigation */}
-          <Separator className="mb-6" />
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => navigate(-1)}>
+            <Button variant="outline" onClick={() => navigate(-1)} className="shadow-sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="shadow-sm">
               <Link to="/blog">
                 All Posts
                 <ChevronRight className="h-4 w-4 ml-1" />

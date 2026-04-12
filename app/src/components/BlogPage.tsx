@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileText, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight, BookOpen, TrendingUp, Tag, ArrowRight, Star } from 'lucide-react';
+import { FileText, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight, BookOpen, TrendingUp, Tag, ArrowRight, Star, Crown, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { blogApi } from '@/api/client';
 import { formatDate, calculateReadingTime, truncateText, parseTags } from '@/lib/utils';
 import { useSEO } from '@/hooks/useSEO';
 import { useTopRated } from '@/hooks/useBooks';
-import { BookCarousel } from '@/components/BookCarousel';
+import { Top20Carousel } from '@/sections/Top20Carousel';
 import type { BlogPost } from '@/types';
 import { motion } from 'framer-motion';
 
@@ -112,26 +112,106 @@ export function BlogPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Badge variant="default" className="bg-primary mb-4">
-            <Sparkles className="w-3 h-3 mr-1" />
-            Featured Content
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Blog</h1>
-          <p className="text-lg text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 px-3 py-1">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Featured Content
+            </Badge>
+            <Badge variant="outline" className="text-xs text-purple-600 dark:text-purple-400 border-purple-500/30 bg-purple-500/5">
+              <Clock className="w-3 h-3 mr-1" />
+              Updated Weekly
+            </Badge>
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-serif mb-4">Our Blog</h1>
+          <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
             Curated reading lists, book recommendations, and literary insights.
             Fresh content every week.
           </p>
           {total > 0 && (
-            <p className="text-sm text-muted-foreground mt-2">{total} articles published</p>
+            <p className="text-sm text-muted-foreground mt-3 font-medium">{total} articles published</p>
           )}
         </motion.div>
 
+        {/* Featured Post (first post on page 1) */}
+        {page === 1 && !loading && posts.length > 0 && (
+          <motion.div
+            className="mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
+            <Link to={`/blog/${posts[0].slug}`} className="block group">
+              <Card className="overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
+                <div className="grid lg:grid-cols-2">
+                  <div className="relative h-64 lg:h-auto min-h-[300px] overflow-hidden bg-muted">
+                    {posts[0].featuredImage ? (
+                      <img
+                        src={posts[0].featuredImage}
+                        alt={posts[0].title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 flex items-center justify-center">
+                        <FileText className="h-16 w-16 text-muted-foreground/30" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent lg:bg-none" />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-md">
+                        <Flame className="w-3 h-3 mr-1" />
+                        Featured
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge variant="secondary" className="bg-muted">
+                        {getGeneratedByIcon(posts[0].generatedBy)}
+                        <span className="ml-1">{getGeneratedByLabel(posts[0].generatedBy)}</span>
+                      </Badge>
+                      {posts[0].category && (
+                        <Badge variant="outline" className="text-xs">{posts[0].category}</Badge>
+                      )}
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold font-serif mb-3 line-clamp-3 group-hover:text-primary transition-colors leading-snug">
+                      {posts[0].title}
+                    </h2>
+                    <p className="text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
+                      {posts[0].excerpt || truncateText(posts[0].content, 200)}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {posts[0].publishedAt && formatDate(posts[0].publishedAt)}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {calculateReadingTime(posts[0].content.split(/\s+/).length)}
+                      </div>
+                      {posts[0].featuredBookIds.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen className="h-3.5 w-3.5" />
+                          {posts[0].featuredBookIds.length} books
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-primary group-hover:underline flex items-center w-fit">
+                      Read Full Article
+                      <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </CardContent>
+                </div>
+              </Card>
+            </Link>
+          </motion.div>
+        )}
+
         {/* Blog Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-48 w-full" />
+              <Card key={i} className="overflow-hidden border-0 shadow-md">
+                <Skeleton className="h-52 w-full" />
                 <CardContent className="p-6 space-y-3">
                   <Skeleton className="h-4 w-20" />
                   <Skeleton className="h-6 w-full" />
@@ -147,7 +227,7 @@ export function BlogPage() {
               <p className="text-muted-foreground">Check back soon for new content!</p>
             </div>
           ) : (
-            posts.map((post, index) => (
+            (page === 1 ? posts.slice(1) : posts).map((post, index) => (
               <motion.div
                 key={post.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -155,60 +235,74 @@ export function BlogPage() {
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
                 <Link to={`/blog/${post.slug}`} className="block h-full">
-                  <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 h-full flex flex-col">
+                  <Card className="group overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col border-0 shadow-md">
                     {/* Featured Image */}
-                    <div className="relative h-48 overflow-hidden bg-muted">
+                    <div className="relative h-52 overflow-hidden bg-muted">
                       {post.featuredImage ? (
                         <img
                           src={post.featuredImage}
                           alt={post.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <FileText className="h-12 w-12 text-muted-foreground/50" />
+                        <div className="w-full h-full bg-gradient-to-br from-primary/10 via-purple-500/5 to-pink-500/5 flex items-center justify-center">
+                          <FileText className="h-12 w-12 text-muted-foreground/30" />
                         </div>
                       )}
-                      <div className="absolute top-4 left-4">
-                        <Badge variant="secondary" className="bg-white/90 text-foreground">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                      <div className="absolute top-4 left-4 flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-foreground shadow-sm">
                           {getGeneratedByIcon(post.generatedBy)}
                           <span className="ml-1">{getGeneratedByLabel(post.generatedBy)}</span>
                         </Badge>
                       </div>
+                      {post.category && (
+                        <div className="absolute bottom-4 left-4">
+                          <Badge className="bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] shadow-sm">
+                            {post.category}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
-                    <CardContent className="p-6 flex flex-col flex-1">
+                    <CardContent className="p-5 sm:p-6 flex flex-col flex-1">
                       {/* Meta */}
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" />
+                          <Calendar className="h-3 w-3" />
                           {post.publishedAt && formatDate(post.publishedAt)}
                         </div>
-                        <span className="text-muted-foreground/40">Â·</span>
+                        <span className="text-muted-foreground/30">&middot;</span>
                         <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
+                          <Clock className="h-3 w-3" />
                           {calculateReadingTime(post.content.split(/\s+/).length)}
                         </div>
                       </div>
 
                       {/* Title */}
-                      <h2 className="text-xl font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                      <h2 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                         {post.title}
                       </h2>
 
                       {/* Excerpt */}
-                      <p className="text-muted-foreground line-clamp-3 flex-1">
+                      <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed">
                         {post.excerpt || truncateText(post.content, 160)}
                       </p>
 
                       {/* Footer */}
                       <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                        <span className="text-sm text-muted-foreground">
-                          {post.featuredBookIds.length} books featured
-                        </span>
-                        <span className="text-sm font-medium text-primary group-hover:underline">
-                          Read More â†’
+                        {post.featuredBookIds.length > 0 ? (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <BookOpen className="h-3 w-3" />
+                            {post.featuredBookIds.length} books featured
+                          </div>
+                        ) : (
+                          <span />
+                        )}
+                        <span className="text-sm font-medium text-primary group-hover:underline flex items-center">
+                          Read More
+                          <ChevronRight className="ml-0.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </span>
                       </div>
                     </CardContent>
@@ -227,6 +321,7 @@ export function BlogPage() {
               size="sm"
               disabled={page <= 1}
               onClick={() => goToPage(page - 1)}
+              className="shadow-sm"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Previous
@@ -248,7 +343,7 @@ export function BlogPage() {
                     key={pageNum}
                     variant={pageNum === page ? 'default' : 'outline'}
                     size="sm"
-                    className="w-9 h-9"
+                    className={`w-9 h-9 ${pageNum === page ? 'shadow-md shadow-primary/20' : ''}`}
                     onClick={() => goToPage(pageNum)}
                   >
                     {pageNum}
@@ -261,12 +356,19 @@ export function BlogPage() {
               size="sm"
               disabled={page >= totalPages}
               onClick={() => goToPage(page + 1)}
+              className="shadow-sm"
             >
               Next
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
+
+        {/* Top 20 Books Carousel */}
+        <div className="mt-16">
+          <Separator className="mb-8" />
+          <Top20Carousel />
+        </div>
       </div>
     </main>
   );

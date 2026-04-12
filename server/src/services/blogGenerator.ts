@@ -316,15 +316,19 @@ Aim for 800-1200 words.`,
   const postId = uuidv4();
   const status = options?.autoPublish ? 'PUBLISHED' : 'DRAFT';
 
+  // Use the first book's cover image as the featured image
+  const featuredImage = books[0]?.cover_image || null;
+
   await dbRun(
-    `INSERT INTO blog_posts (id, title, slug, content, excerpt, meta_title, meta_description, category, tags, status, published_at, generated_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PUBLISHED' ? 'NOW()' : 'NULL'}, 'ai', NOW(), NOW())`,
+    `INSERT INTO blog_posts (id, title, slug, content, excerpt, featured_image, meta_title, meta_description, category, tags, status, published_at, generated_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PUBLISHED' ? 'NOW()' : 'NULL'}, 'ai', NOW(), NOW())`,
     [
       postId,
       post.title,
       post.slug,
       post.content,
       post.excerpt,
+      featuredImage,
       post.title.substring(0, 60),
       post.excerpt.substring(0, 160),
       post.category,
