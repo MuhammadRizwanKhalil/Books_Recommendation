@@ -15,7 +15,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Check, ArrowRight, BookOpen } from 'lucide-react';
-import { apiClient } from '@/api/client';
+
+// Internal API helper
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('thebooktimes-token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const base = (import.meta.env.VITE_API_URL || '/api');
+  const res = await fetch(`${base}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
 
 // Genre list with emojis — matches our expanded category map
 const GENRES = [
@@ -74,9 +90,9 @@ export function GenreOnboardingModal({ open, onComplete }: Props) {
     setSaving(true);
     try {
       // Save genre preferences
-      await apiClient.post('/genre-preferences', { categoryIds: selected, source: 'onboarding' });
+      await apiFetch('/genre-preferences', { method: 'POST', body: JSON.stringify({ categoryIds: selected, source: 'onboarding' }) });
       // Mark onboarding complete
-      await apiClient.post('/genre-preferences/complete');
+      await apiFetch('/genre-preferences/complete', { method: 'POST' });
       setStep('done');
       setTimeout(() => onComplete(), 1500);
     } catch (err) {
@@ -90,7 +106,7 @@ export function GenreOnboardingModal({ open, onComplete }: Props) {
 
   const handleSkip = async () => {
     try {
-      await apiClient.post('/genre-preferences/complete');
+      await apiFetch('/genre-preferences/complete', { method: 'POST' });
     } catch {}
     onComplete();
   };

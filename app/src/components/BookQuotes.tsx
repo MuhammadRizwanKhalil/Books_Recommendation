@@ -11,8 +11,24 @@ import { useState, useEffect } from 'react';
 import { Quote, ThumbsUp, Plus, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { apiClient } from '@/api/client';
 import { useAuth } from '@/components/AuthProvider';
+
+// Internal API helper — matches the pattern used across the app
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('thebooktimes-token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const base = (import.meta.env.VITE_API_URL || '/api');
+  const res = await fetch(`${base}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
 
 interface BookQuote {
   id: string;
@@ -80,7 +96,7 @@ export function BookQuotes({ bookId }: Props) {
   const handleUpvote = async (quoteId: string) => {
     if (!user || upvoted.has(quoteId)) return;
     try {
-      const result = await apiClient.post(`/quotes/${quoteId}/upvote`);
+      const result = await apiFetch<{ upvotes: number }>(`/quotes/${quoteId}/upvote`, { method: 'POST' });
       setUpvoted(prev => new Set([...prev, quoteId]));
       setQuotes(prev =>
         prev.map(q => q.id === quoteId ? { ...q, upvotes: result.upvotes } : q),
