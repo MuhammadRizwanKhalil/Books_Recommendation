@@ -39,11 +39,11 @@ export function Blog() {
   };
 
   return (
-    <section id="blog" className="py-12 sm:py-16 md:py-24">
+    <section id="blog" className="py-8 sm:py-10 md:py-14">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div 
-          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-6"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -56,8 +56,8 @@ export function Blog() {
                 {t('blog.aiPowered')}
               </Badge>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold font-serif flex items-center gap-3">
-              <FileText className="h-8 w-8 text-primary" />
+            <h2 className="text-2xl md:text-3xl font-bold font-serif flex items-center gap-2">
+              <FileText className="h-6 w-6 text-primary" />
               {t('sections.blog')}
             </h2>
             <p className="text-muted-foreground max-w-xl">

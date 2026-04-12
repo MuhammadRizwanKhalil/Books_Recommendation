@@ -1,13 +1,16 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileText, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight, BookOpen, TrendingUp, Tag, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { blogApi } from '@/api/client';
-import { formatDate, calculateReadingTime, truncateText } from '@/lib/utils';
+import { formatDate, calculateReadingTime, truncateText, parseTags } from '@/lib/utils';
 import { useSEO } from '@/hooks/useSEO';
+import { useTopRated } from '@/hooks/useBooks';
+import { BookCarousel } from '@/components/BookCarousel';
 import type { BlogPost } from '@/types';
 import { motion } from 'framer-motion';
 

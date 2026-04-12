@@ -25,93 +25,83 @@ export function NewReleases() {
   ];
 
   return (
-    <section id="new-releases" className="py-12 sm:py-16 md:py-24">
+    <section id="new-releases" className="py-8 sm:py-10 md:py-14">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <motion.div 
-          className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10"
-          initial={{ opacity: 0, y: 20 }}
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5"
+          initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-primary">
-                <Sparkles className="w-3 h-3 mr-1" />
-                {badge}
-              </Badge>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold font-serif flex items-center gap-3">
-              <Calendar className="h-8 w-8 text-primary" />
+          <div className="space-y-1">
+            <Badge variant="default" className="bg-primary text-xs">
+              <Sparkles className="w-3 h-3 mr-1" />
+              {badge}
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold font-serif flex items-center gap-2">
+              <Calendar className="h-6 w-6 text-primary" />
               {t('sections.newReleases')}
             </h2>
-            <p className="text-muted-foreground max-w-xl">
-              {description}
-            </p>
+            <p className="text-sm text-muted-foreground max-w-lg">{description}</p>
           </div>
-          <Button variant="outline" onClick={() => setShowAll(!showAll)}>
+          <Button variant="outline" size="sm" onClick={() => setShowAll(!showAll)}>
             {showAll ? t('common.showLess') : t('newReleases.viewAll')}
-            {showAll ? <ChevronDown className="ml-2 h-4 w-4" /> : <ChevronRight className="ml-2 h-4 w-4" />}
+            {showAll ? <ChevronDown className="ml-1 h-3.5 w-3.5" /> : <ChevronRight className="ml-1 h-3.5 w-3.5" />}
           </Button>
         </motion.div>
 
-        {/* Release Timeline */}
-        <motion.div 
-            className="mb-10"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="flex items-center gap-4 mb-6 overflow-x-auto pb-4">
-              {PERIODS.map((period) => (
-                <button
-                  key={period.value}
-                  onClick={() => setActivePeriod(period.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                    activePeriod === period.value
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+        {/* Period Tabs */}
+        <motion.div
+          className="mb-5"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+        >
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {PERIODS.map((period) => (
+              <button
+                key={period.value}
+                onClick={() => setActivePeriod(period.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                  activePeriod === period.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {period.label}
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Book Grid */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
           <BookGrid books={books} loading={loading} columns={4} />
         </motion.div>
 
-        {/* Auto-import Info */}
-        <motion.div 
-          className="mt-12 p-6 bg-muted/50 rounded-xl border border-dashed"
+        {/* Auto-import info - compact */}
+        <motion.div
+          className="mt-6 p-4 bg-muted/50 rounded-lg border border-dashed"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
         >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-semibold">{t('newReleases.autoImport')}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {t('newReleases.autoImportDesc')}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium">{t('newReleases.autoImport')}</span>
+              <span className="text-xs text-muted-foreground ml-2">{t('newReleases.autoImportDesc')}</span>
             </div>
-            <Badge variant="outline" className="text-green-600 border-green-600">
+            <Badge variant="outline" className="text-green-600 border-green-600 text-[10px] shrink-0">
               {t('newReleases.liveUpdates')}
             </Badge>
           </div>

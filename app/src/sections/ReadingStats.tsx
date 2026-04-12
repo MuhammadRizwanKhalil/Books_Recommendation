@@ -43,7 +43,7 @@ export function ReadingStats() {
   ];
 
   return (
-    <section className="py-12">
+    <section className="py-8 sm:py-10">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-lg bg-primary/10">

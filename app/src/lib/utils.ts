@@ -181,6 +181,23 @@ export function scrollToElement(elementId: string) {
   }
 }
 
+/**
+ * Parse tags that may be stored as JSON array string, comma-separated string, or array.
+ * Always returns a clean string array.
+ */
+export function parseTags(tags: string | string[] | undefined | null): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean);
+  const str = String(tags).trim();
+  if (str.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) return parsed.map((t: any) => String(t).trim()).filter(Boolean);
+    } catch { /* not valid JSON, fall through */ }
+  }
+  return str.split(',').map(t => t.trim()).filter(Boolean);
+}
+
 // Copy to clipboard
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {

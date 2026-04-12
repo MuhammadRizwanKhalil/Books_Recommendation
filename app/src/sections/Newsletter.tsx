@@ -49,7 +49,7 @@ export function Newsletter() {
   ];
 
   return (
-    <section id="newsletter" className="py-12 sm:py-16 md:py-24 bg-muted/40">
+    <section id="newsletter" className="py-8 sm:py-10 md:py-14 bg-muted/40">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -67,10 +67,10 @@ export function Newsletter() {
                       <Mail className="w-3 h-3 mr-1" />
                       {t('sections.newsletter')}
                     </Badge>
-                    <h2 className="text-3xl md:text-4xl font-bold font-serif mb-4">
+                    <h2 className="text-2xl md:text-3xl font-bold font-serif mb-2">
                       {newsletterHeading}
                     </h2>
-                    <p className="text-muted-foreground text-lg">
+                    <p className="text-muted-foreground text-sm">
                       {newsletterDescription}
                     </p>
                   </div>

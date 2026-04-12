@@ -28,31 +28,31 @@ export function Testimonials() {
       .catch(() => setTestimonials([]));
   }, []);
   return (
-    <section id="testimonials" className="py-12 sm:py-16 md:py-24 bg-muted/40">
+    <section id="testimonials" className="py-8 sm:py-10 md:py-14 bg-muted/40">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div
-          className="text-center max-w-2xl mx-auto mb-12"
+          className="text-center max-w-2xl mx-auto mb-6"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <Badge variant="default" className="mb-4">
+          <Badge variant="default" className="mb-2 text-xs">
             <Star className="w-3 h-3 mr-1 fill-current" />
             What Readers Say
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold font-serif mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold font-serif mb-2">
             Loved by Book Enthusiasts
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Join thousands of readers who have discovered their next favorite book through our
             smart recommendation engine.
           </p>
         </motion.div>
 
         {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.id}
