@@ -481,13 +481,18 @@ function AutoFlipCarousel({
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide"
-        onMouseEnter={() => { isPausedRef.current = true; }}
-        onMouseLeave={() => { isPausedRef.current = false; }}
-        style={{ scrollBehavior: 'auto' }}
-      >
+      <div className="relative">
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scrollbar-hide"
+          onMouseEnter={() => { isPausedRef.current = true; }}
+          onMouseLeave={() => { isPausedRef.current = false; }}
+          onTouchStart={() => { isPausedRef.current = true; }}
+          onTouchEnd={() => { isPausedRef.current = false; }}
+          style={{ scrollBehavior: 'auto' }}
+        >
         {displayBooks.map((book, idx) => (
           <div
             key={`${book.id}-${idx}`}
@@ -535,6 +540,7 @@ function AutoFlipCarousel({
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );
