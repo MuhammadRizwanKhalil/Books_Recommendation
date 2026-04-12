@@ -35,6 +35,8 @@ import experimentsRoutes from './routes/experiments.js';
 import webhooksRoutes from './routes/webhooks.js';
 import testimonialsRoutes from './routes/testimonials.js';
 import imageProxyRoutes from './routes/imageProxy.js';
+import quotesRoutes from './routes/quotes.js';
+import genrePreferencesRoutes from './routes/genrePreferences.js';
 
 // Job imports
 import { startImportCron, stopImportCron } from './jobs/bookImport.js';
@@ -192,6 +194,8 @@ app.use('/api/experiments', experimentsRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/testimonials', cacheControl(300), testimonialsRoutes);
 app.use('/api', imageProxyRoutes); // Image optimization proxy
+app.use('/api/quotes', cacheControl(60), quotesRoutes);             // Book quotes
+app.use('/api/genre-preferences', genrePreferencesRoutes);           // User genre onboarding
 
 // SEO routes (sitemap, robots.txt, structured data)
 app.use('/', seoRoutes);
@@ -304,6 +308,17 @@ async function bootstrap() {
       db: `${config.mysql.host}:${config.mysql.port}/${config.mysql.database}`,
       cors: config.frontendUrl,
     }, '🚀 The Book Times API Server started');
+
+    // Warn about missing optional but important API keys
+    if (!config.googleBooksApiKey) {
+      logger.warn('⚠️  GOOGLE_BOOKS_API_KEY is not set. Book imports will use unauthenticated API (100 req/min limit). Set GOOGLE_BOOKS_API_KEY in .env for 1000 req/100s.');
+    }
+    if (!config.openaiApiKey) {
+      logger.warn('⚠️  OPENAI_API_KEY is not set. AI blog generation is disabled.');
+    }
+    if (!config.resendApiKey) {
+      logger.warn('⚠️  RESEND_API_KEY is not set. Email features (digest, welcome, 2FA) are disabled.');
+    }
 
     // Start the daily book import cron job
     if (config.importJob.enabled) {

@@ -299,6 +299,33 @@ export function Navigation() {
                             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                           </div>
                         </div>
+                        {/* User feature links — previously hidden, now discoverable */}
+                        <div className="space-y-1">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2 text-sm"
+                            size="sm"
+                            onClick={() => { setIsMobileOpen(false); navigate('/for-you'); }}
+                          >
+                            🎯 For You
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2 text-sm"
+                            size="sm"
+                            onClick={() => { setIsMobileOpen(false); navigate('/lists'); }}
+                          >
+                            📚 My Reading Lists
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2 text-sm"
+                            size="sm"
+                            onClick={() => { setIsMobileOpen(false); navigate('/compare'); }}
+                          >
+                            ⚖️ Compare Books
+                          </Button>
+                        </div>
                         <Button
                           variant="ghost"
                           className="w-full justify-start text-destructive hover:text-destructive gap-2"

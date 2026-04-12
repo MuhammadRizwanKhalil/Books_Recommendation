@@ -706,40 +706,108 @@ export async function getTrending(limit: number = 8): Promise<any[]> {
  * - Must have Google rating >= 4.0
  * - Priority to books with high engagement but haven't been BOTD recently
  * - Deterministic per day (same book all day long)
+ * - Records selection in book_of_the_day table for history tracking
+ * - Respects manual admin overrides set for today
  */
 export async function getBookOfTheDay(): Promise<any | null> {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  // Deterministic hash from today's date
-  const dayHash = Array.from(today).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
-
-  // Get eligible books: rated >= 4.0, good metadata
-  const eligible = await dbAll<any>(`
-    SELECT id FROM books
-    WHERE status = 'PUBLISHED' AND is_active = 1
-      AND google_rating >= 4.0
-      AND description IS NOT NULL AND LENGTH(description) > 50
-      AND ratings_count >= 10
-    ORDER BY computed_score DESC
-    LIMIT 100
-  `);
-
-  if (eligible.length === 0) {
-    // Relaxed fallback
-    const fallback = await dbAll<any>(`
-      SELECT id FROM books
-      WHERE status = 'PUBLISHED' AND is_active = 1
-        AND google_rating >= 3.5
-      ORDER BY computed_score DESC
-      LIMIT 50
-    `);
-    if (fallback.length === 0) return null;
-    const idx = Math.abs(dayHash) % fallback.length;
-    return await dbGet<any>('SELECT * FROM books WHERE id = ?', [fallback[idx].id]);
+  // Check if admin has set a manual override for today
+  const manualOverride = await dbGet<any>(
+    `SELECT book_id FROM book_of_the_day WHERE date = ? AND selected_by = 'admin'`,
+    [today],
+  );
+  if (manualOverride) {
+    return await dbGet<any>('SELECT * FROM books WHERE id = ? AND status = \'PUBLISHED\' AND is_active = 1', [manualOverride.book_id]);
   }
 
-  const idx = Math.abs(dayHash) % eligible.length;
-  return await dbGet<any>('SELECT * FROM books WHERE id = ?', [eligible[idx].id]);
+  // Check if auto-selection already recorded for today (avoids re-computing)
+  const existingAuto = await dbGet<any>(
+    `SELECT book_id FROM book_of_the_day WHERE date = ? AND selected_by = 'auto'`,
+    [today],
+  );
+  if (existingAuto) {
+    return await dbGet<any>('SELECT * FROM books WHERE id = ? AND status = \'PUBLISHED\' AND is_active = 1', [existingAuto.book_id]);
+  }
+
+  // Fetch books that were BOTD in the last 30 days (to avoid repeats)
+  const recentBotd = await dbAll<any>(
+    `SELECT book_id FROM book_of_the_day WHERE date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`,
+  );
+  const recentIds = recentBotd.map((r: any) => r.book_id);
+  const exclusionClause = recentIds.length > 0
+    ? `AND id NOT IN (${recentIds.map(() => '?').join(',')})`
+    : '';
+
+  // Get eligible books: rated >= 4.0, good metadata, not recently featured
+  const eligible = await dbAll<any>(
+    `SELECT id FROM books
+     WHERE status = 'PUBLISHED' AND is_active = 1
+       AND google_rating >= 4.0
+       AND description IS NOT NULL AND LENGTH(description) > 50
+       AND ratings_count >= 10
+       ${exclusionClause}
+     ORDER BY computed_score DESC
+     LIMIT 100`,
+    recentIds,
+  );
+
+  let bookId: string | null = null;
+
+  if (eligible.length > 0) {
+    // Deterministic hash from today's date
+    const dayHash = Array.from(today).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+    const idx = Math.abs(dayHash) % eligible.length;
+    bookId = eligible[idx].id;
+  } else {
+    // Relaxed fallback: any good rated book
+    const fallback = await dbAll<any>(
+      `SELECT id FROM books WHERE status = 'PUBLISHED' AND is_active = 1 AND google_rating >= 3.5
+       ORDER BY computed_score DESC LIMIT 50`,
+    );
+    if (fallback.length === 0) return null;
+    const dayHash = Array.from(today).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+    bookId = fallback[Math.abs(dayHash) % fallback.length].id;
+  }
+
+  if (!bookId) return null;
+
+  // Record this auto-selection for history
+  try {
+    await dbRun(
+      `INSERT IGNORE INTO book_of_the_day (date, book_id, selected_by) VALUES (?, ?, 'auto')`,
+      [today, bookId],
+    );
+  } catch { /* non-critical — history is best-effort */ }
+
+  return await dbGet<any>('SELECT * FROM books WHERE id = ?', [bookId]);
+}
+
+/**
+ * Set a manual Book of the Day override (admin only).
+ */
+export async function setBookOfTheDayOverride(bookId: string, date: string, adminNote?: string): Promise<void> {
+  await dbRun(
+    `INSERT INTO book_of_the_day (date, book_id, selected_by, admin_note)
+     VALUES (?, ?, 'admin', ?)
+     ON DUPLICATE KEY UPDATE book_id = VALUES(book_id), selected_by = 'admin', admin_note = VALUES(admin_note), selected_at = NOW()`,
+    [date, bookId, adminNote || null],
+  );
+}
+
+/**
+ * Get Book of the Day history (last N days).
+ */
+export async function getBookOfTheDayHistory(days: number = 30): Promise<any[]> {
+  return await dbAll<any>(
+    `SELECT botd.date, botd.selected_by, botd.admin_note, botd.selected_at,
+            b.id, b.title, b.author, b.cover_image, b.google_rating, b.slug
+     FROM book_of_the_day botd
+     JOIN books b ON b.id = botd.book_id
+     ORDER BY botd.date DESC
+     LIMIT ?`,
+    [days],
+  );
 }
 
 // ── Review Trust Score ──────────────────────────────────────────────────────

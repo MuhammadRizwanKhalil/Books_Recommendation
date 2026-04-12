@@ -13,6 +13,8 @@ import {
   getRecommendations,
   getPersonalizedRecommendations,
   getBookOfTheDay,
+  getBookOfTheDayHistory,
+  setBookOfTheDayOverride,
   recalculateBookScore,
 } from '../services/scoring.js';
 
@@ -548,6 +550,15 @@ router.get('/search-suggestions', rateLimit('search-suggest', 30, 60 * 1000), as
       }
     }
 
+    const totalResults = bookSuggestions.length + categorySuggestions.length + authorSuggestions.length;
+
+    // Log search query for analytics (non-blocking, best-effort)
+    const { v4: uuidv4Sq } = await import('uuid');
+    dbRun(
+      `INSERT INTO search_queries (id, query, results_count, user_id, ip_address) VALUES (?, ?, ?, ?, ?)`,
+      [uuidv4Sq(), q, totalResults, req.user?.userId || null, req.ip || null],
+    ).catch(() => { /* non-critical */ });
+
     res.json({
       suggestions: bookSuggestions.map(b => ({
         id: b.id,
@@ -730,6 +741,38 @@ router.get('/book-of-the-day', async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/books/book-of-the-day/history ─────────────────────────────────
+router.get('/book-of-the-day/history', async (req: Request, res: Response) => {
+  try {
+    const days = Math.min(90, Math.max(7, parseInt(req.query.days as string || '30', 10)));
+    const history = await getBookOfTheDayHistory(days);
+    res.json(history);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch BOTD history' });
+  }
+});
+
+// ── POST /api/books/book-of-the-day/override (Admin) ───────────────────────
+router.post('/book-of-the-day/override', authenticate, requireAdmin, async (req: Request, res: Response) => {
+  const { bookId, date, adminNote } = req.body;
+  if (!bookId || !date) {
+    res.status(400).json({ error: 'bookId and date are required' });
+    return;
+  }
+  try {
+    const book = await dbGet<any>('SELECT id FROM books WHERE id = ? AND status = \'PUBLISHED\'', [bookId]);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found or not published' });
+      return;
+    }
+    await setBookOfTheDayOverride(bookId, date, adminNote);
+    res.json({ message: `Book of the Day for ${date} set to book ${bookId}` });
+  } catch (err: any) {
+    logger.error({ err }, 'BOTD override error');
+    res.status(500).json({ error: 'Failed to set BOTD override' });
+  }
+});
+
 // ── GET /api/books/recommendations/:bookId ──────────────────────────────────
 router.get('/recommendations/:bookId', async (req: Request, res: Response) => {
   try {
@@ -806,17 +849,35 @@ router.post('/upload-cover', authenticate, requireAdmin, upload.single('cover'),
       return;
     }
 
-    const filename = `${uuidv4()}.webp`;
-    const outputPath = path.join(UPLOADS_DIR, filename);
+    const id = uuidv4();
+    const baseFilename = `${id}`;
 
-    // Convert to WebP and optimize (resize to max 600px wide for covers)
-    await sharp(req.file.buffer)
-      .resize(600, 900, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 85 })
-      .toFile(outputPath);
+    // Generate 3 responsive sizes + full size, all as WebP
+    // This enables srcset for faster loading on different devices
+    const sizes = [
+      { suffix: '_thumb', width: 120, height: 180, quality: 80 },   // Card thumbnails
+      { suffix: '_card',  width: 300, height: 450, quality: 85 },   // Book cards
+      { suffix: '_full',  width: 600, height: 900, quality: 88 },   // Detail pages
+    ];
 
-    const url = `/uploads/covers/${filename}`;
-    res.json({ url, filename });
+    const generatedFiles: string[] = [];
+
+    for (const { suffix, width, height, quality } of sizes) {
+      const filename = `${baseFilename}${suffix}.webp`;
+      const outputPath = path.join(UPLOADS_DIR, filename);
+      await sharp(req.file.buffer)
+        .resize(width, height, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality })
+        .toFile(outputPath);
+      generatedFiles.push(filename);
+    }
+
+    // Primary URL points to full size; other sizes available via _thumb and _card suffixes
+    const url = `/uploads/covers/${baseFilename}_full.webp`;
+    const thumbUrl = `/uploads/covers/${baseFilename}_thumb.webp`;
+    const cardUrl = `/uploads/covers/${baseFilename}_card.webp`;
+
+    res.json({ url, thumbUrl, cardUrl, filename: `${baseFilename}_full.webp` });
   } catch (err: any) {
     logger.error({ err: err }, 'Cover upload error');
     res.status(500).json({ error: 'Failed to upload cover image' });

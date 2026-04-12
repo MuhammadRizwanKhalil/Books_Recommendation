@@ -174,11 +174,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: res.user.role || 'user',
         joinedAt: new Date().toISOString(),
         bio: '',
+        // Flag new users so the onboarding modal triggers
+        onboardingCompleted: false,
       };
       setUser(profile);
       setIsAuthModalOpen(false);
       toast.success(`Welcome to The Book Times, ${name}!`, {
-        description: 'Your account has been created.',
+        description: 'Your account has been created. Let\'s personalise your reading list!',
       });
       return true;
     } catch (err: any) {

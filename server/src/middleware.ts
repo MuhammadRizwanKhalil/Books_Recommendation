@@ -20,10 +20,11 @@ declare global {
   }
 }
 
-// Generate short-lived access token (15 min in prod, 7d in dev)
+// Generate access token (2h in prod, 7d in dev)
+// 2h balances security with UX — refresh tokens handle long sessions
 export function generateToken(payload: JwtPayload): string {
   return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.nodeEnv === 'production' ? '15m' : config.jwt.expiresIn,
+    expiresIn: config.nodeEnv === 'production' ? '2h' : config.jwt.expiresIn,
   } as jwt.SignOptions);
 }
 

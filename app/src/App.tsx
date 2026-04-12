@@ -19,6 +19,7 @@ import { BlogPage } from '@/components/BlogPage';
 import { BlogPostPage } from '@/components/BlogPostPage';
 import { TrendingPage } from '@/components/TrendingPage';
 import { CategoriesPage } from '@/components/CategoriesPage';
+import { GenreOnboardingModal } from '@/components/GenreOnboardingModal';
 import { Navigation } from '@/sections/Navigation';
 import { Hero } from '@/sections/Hero';
 import { Footer } from '@/sections/Footer';
@@ -494,8 +495,18 @@ function NotFoundPage() {
 function App() {
   const routerNavigate = useNavigate();
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [adminSlugVerified, setAdminSlugVerified] = useState(false);
+  // Onboarding modal: show for newly registered users who haven't completed it
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user && (user as any).onboardingCompleted === false) {
+      // Small delay so the welcome toast shows first
+      const t = setTimeout(() => setShowOnboarding(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, [user]);
 
   // Derive current view from URL for backward compat
   const currentView: AppView = (() => {
@@ -575,6 +586,11 @@ function App() {
       <div className="min-h-screen bg-background">
         <Toaster position="top-center" richColors />
         <AuthModal />
+        {/* Genre onboarding — shown once after registration */}
+        <GenreOnboardingModal
+          open={showOnboarding}
+          onComplete={() => setShowOnboarding(false)}
+        />
         {!isAdminView && !isLegalView && <Navigation />}
 
         <Routes>

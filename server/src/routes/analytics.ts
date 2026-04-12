@@ -480,4 +480,50 @@ router.get('/google', authenticate, requireAdmin, (_req: Request, res: Response)
   }
 });
 
+// ── GET /api/analytics/search-queries ─────────────────────────────────────────
+// Top search queries + no-results queries for content gap analysis
+router.get('/search-queries', authenticate, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const days = Math.min(90, parseInt(req.query.days as string || '30', 10));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+    const topQueries = await dbAll<any>(
+      `SELECT query, COUNT(*) as search_count,
+              AVG(results_count) as avg_results,
+              SUM(CASE WHEN results_count = 0 THEN 1 ELSE 0 END) as zero_results_count
+       FROM search_queries
+       WHERE created_at >= ?
+       GROUP BY query
+       ORDER BY search_count DESC
+       LIMIT 50`,
+      [since],
+    );
+
+    const noResultsQueries = await dbAll<any>(
+      `SELECT query, COUNT(*) as search_count
+       FROM search_queries
+       WHERE results_count = 0 AND created_at >= ?
+       GROUP BY query
+       ORDER BY search_count DESC
+       LIMIT 20`,
+      [since],
+    );
+
+    const totalSearches = await dbGet<any>(
+      `SELECT COUNT(*) as total FROM search_queries WHERE created_at >= ?`,
+      [since],
+    );
+
+    res.json({
+      topQueries,
+      noResultsQueries,
+      totalSearches: totalSearches?.total || 0,
+      period: `Last ${days} days`,
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'Search analytics error');
+    res.status(500).json({ error: 'Failed to fetch search analytics' });
+  }
+});
+
 export default router;

@@ -6,6 +6,7 @@ import type { Book } from '@/types';
 import { formatPrice, formatRating, getStarRating, formatDate, formatNumber, generateBookStructuredData } from '@/lib/utils';
 import { BookReviews } from './BookReviews';
 import { BookRecommendations } from './BookRecommendations';
+import { BookQuotes } from '@/components/BookQuotes';
 import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
@@ -359,6 +360,11 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
             {/* Recommendations (moved above reviews for better engagement) */}
             <BookRecommendations bookId={book.id} />
+
+            <Separator />
+
+            {/* Memorable Quotes */}
+            <BookQuotes bookId={book.id} />
 
             <Separator />
 

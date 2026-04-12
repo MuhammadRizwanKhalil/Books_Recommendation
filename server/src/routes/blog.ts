@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { dbGet, dbAll, dbRun } from '../database.js';
-import { authenticate, requireAdmin, optionalAuth } from '../middleware.js';
+import { authenticate, requireAdmin, optionalAuth, rateLimit } from '../middleware.js';
 
 const router = Router();
 
@@ -183,7 +183,7 @@ router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // ── POST /api/blog/upload-image (Admin) ─────────────────────────────────────
-router.post('/upload-image', authenticate, requireAdmin, upload.single('image'), async (req: Request, res: Response) => {
+router.post('/upload-image', authenticate, requireAdmin, rateLimit('blog-upload', 20, 60 * 60 * 1000), upload.single('image'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });

@@ -173,6 +173,32 @@ export function UserProfile() {
 
         <Separator />
         <div className="p-4 space-y-2">
+          {/* Feature discovery links — For You, Lists, Compare */}
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            size="sm"
+            onClick={() => { window.location.href = '/for-you'; }}
+          >
+            🎯 For You
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            size="sm"
+            onClick={() => { window.location.href = '/lists'; }}
+          >
+            📚 My Reading Lists
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            size="sm"
+            onClick={() => { window.location.href = '/compare'; }}
+          >
+            ⚖️ Compare Books
+          </Button>
+          <Separator />
           <Button
             variant="ghost"
             className="w-full justify-start text-destructive hover:text-destructive"

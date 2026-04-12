@@ -512,22 +512,68 @@ async function normalizeVolume(
 
 // ── Category Mapping ────────────────────────────────────────────────────────
 
-/** Map Google Books categories to our local category names */
+/** Map Google Books categories to our local category names.
+ * Expanded to 20+ genres for richer browsing and better search filtering.
+ */
 const CATEGORY_MAP: Record<string, string> = {
-  // Fiction variants
+  // ── Literary & General Fiction ──────────────────────────────────────
   'fiction': 'Fiction',
   'literary fiction': 'Fiction',
-  'fantasy': 'Fiction',
-  'mystery': 'Fiction',
-  'thriller': 'Fiction',
-  'romance': 'Fiction',
-  'horror': 'Fiction',
-  'science fiction': 'Fiction',
-  'adventure': 'Fiction',
-  'young adult fiction': 'Fiction',
-  'juvenile fiction': 'Fiction',
+  'general fiction': 'Fiction',
+  'literary collections': 'Fiction',
 
-  // Business
+  // ── Fantasy ─────────────────────────────────────────────────────────
+  'fantasy': 'Fantasy',
+  'epic fantasy': 'Fantasy',
+  'urban fantasy': 'Fantasy',
+  'dark fantasy': 'Fantasy',
+  'paranormal fiction': 'Fantasy',
+
+  // ── Science Fiction ─────────────────────────────────────────────────
+  'science fiction': 'Science Fiction',
+  'dystopian': 'Science Fiction',
+  'space opera': 'Science Fiction',
+  'cyberpunk': 'Science Fiction',
+
+  // ── Mystery & Thriller ──────────────────────────────────────────────
+  'mystery': 'Mystery & Thriller',
+  'thriller': 'Mystery & Thriller',
+  'suspense': 'Mystery & Thriller',
+  'detective': 'Mystery & Thriller',
+  'crime fiction': 'Mystery & Thriller',
+  'espionage': 'Mystery & Thriller',
+  'mystery & detective': 'Mystery & Thriller',
+  'thrillers': 'Mystery & Thriller',
+
+  // ── Romance ─────────────────────────────────────────────────────────
+  'romance': 'Romance',
+  'contemporary romance': 'Romance',
+  'historical romance': 'Romance',
+  'romantic suspense': 'Romance',
+  'love stories': 'Romance',
+
+  // ── Horror ──────────────────────────────────────────────────────────
+  'horror': 'Horror',
+  'occult': 'Horror',
+  'supernatural': 'Horror',
+  'gothic fiction': 'Horror',
+
+  // ── Historical Fiction ──────────────────────────────────────────────
+  'historical fiction': 'Historical Fiction',
+  'historical': 'Historical Fiction',
+
+  // ── Young Adult ─────────────────────────────────────────────────────
+  'young adult fiction': 'Young Adult',
+  'young adult': 'Young Adult',
+  'juvenile fiction': 'Young Adult',
+  'children\'s fiction': 'Young Adult',
+  'teen': 'Young Adult',
+
+  // ── Adventure ───────────────────────────────────────────────────────
+  'adventure': 'Adventure',
+  'action & adventure': 'Adventure',
+
+  // ── Business & Economics ────────────────────────────────────────────
   'business': 'Business',
   'business & economics': 'Business',
   'economics': 'Business',
@@ -535,8 +581,10 @@ const CATEGORY_MAP: Record<string, string> = {
   'entrepreneurship': 'Business',
   'finance': 'Business',
   'marketing': 'Business',
+  'investing': 'Business',
+  'leadership': 'Business',
 
-  // Technology
+  // ── Technology & Programming ────────────────────────────────────────
   'technology': 'Technology',
   'technology & engineering': 'Technology',
   'computers': 'Technology',
@@ -544,42 +592,101 @@ const CATEGORY_MAP: Record<string, string> = {
   'artificial intelligence': 'Technology',
   'computer science': 'Technology',
   'engineering': 'Technology',
+  'data science': 'Technology',
+  'software': 'Technology',
+  'web development': 'Technology',
 
-  // Self-Help
+  // ── Self-Help & Personal Development ────────────────────────────────
   'self-help': 'Self-Help',
   'personal development': 'Self-Help',
   'self improvement': 'Self-Help',
   'motivation': 'Self-Help',
   'mindfulness': 'Self-Help',
   'body, mind & spirit': 'Self-Help',
+  'happiness': 'Self-Help',
+  'productivity': 'Self-Help',
+  'habits': 'Self-Help',
 
-  // Science
+  // ── Science & Nature ────────────────────────────────────────────────
   'science': 'Science',
   'popular science': 'Science',
   'mathematics': 'Science',
   'physics': 'Science',
   'biology': 'Science',
   'nature': 'Science',
+  'astronomy': 'Science',
+  'chemistry': 'Science',
+  'environmental science': 'Science',
 
-  // History
+  // ── History ─────────────────────────────────────────────────────────
   'history': 'History',
   'world history': 'History',
   'political science': 'History',
   'social science': 'History',
+  'military history': 'History',
+  'ancient history': 'History',
 
-  // Psychology
+  // ── Psychology & Philosophy ─────────────────────────────────────────
   'psychology': 'Psychology',
   'mental health': 'Psychology',
   'cognitive psychology': 'Psychology',
   'behavioral sciences': 'Psychology',
-  'philosophy': 'Psychology',
+  'neuroscience': 'Psychology',
 
-  // Biography
+  // ── Philosophy (separate) ───────────────────────────────────────────
+  'philosophy': 'Philosophy',
+  'ethics': 'Philosophy',
+  'stoicism': 'Philosophy',
+  'existentialism': 'Philosophy',
+
+  // ── Biography & Memoir ──────────────────────────────────────────────
   'biography': 'Biography',
   'biography & autobiography': 'Biography',
   'memoir': 'Biography',
   'autobiography': 'Biography',
-  'true crime': 'Biography',
+
+  // ── True Crime ──────────────────────────────────────────────────────
+  'true crime': 'True Crime',
+  'crime': 'True Crime',
+
+  // ── Health & Wellness ───────────────────────────────────────────────
+  'health & fitness': 'Health & Wellness',
+  'health': 'Health & Wellness',
+  'fitness': 'Health & Wellness',
+  'nutrition': 'Health & Wellness',
+  'diet': 'Health & Wellness',
+  'wellness': 'Health & Wellness',
+  'medical': 'Health & Wellness',
+
+  // ── Cooking & Food ──────────────────────────────────────────────────
+  'cooking': 'Cooking',
+  'food': 'Cooking',
+  'cookbooks': 'Cooking',
+  'baking': 'Cooking',
+
+  // ── Art & Design ────────────────────────────────────────────────────
+  'art': 'Art & Design',
+  'design': 'Art & Design',
+  'photography': 'Art & Design',
+  'architecture': 'Art & Design',
+  'music': 'Art & Design',
+
+  // ── Travel ──────────────────────────────────────────────────────────
+  'travel': 'Travel',
+  'travel writing': 'Travel',
+
+  // ── Religion & Spirituality ─────────────────────────────────────────
+  'religion': 'Religion & Spirituality',
+  'spirituality': 'Religion & Spirituality',
+  'christianity': 'Religion & Spirituality',
+  'islam': 'Religion & Spirituality',
+  'buddhism': 'Religion & Spirituality',
+
+  // ── Education & Reference ───────────────────────────────────────────
+  'education': 'Education',
+  'study aids': 'Education',
+  'reference': 'Education',
+  'language arts': 'Education',
 };
 
 export function mapToLocalCategory(rawCategory: string): string | null {
