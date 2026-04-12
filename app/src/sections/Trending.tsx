@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { formatRating, truncateText } from '@/lib/utils';
+import { handleImgError } from '@/lib/imageUtils';
 
 export function Trending() {
   const { books, loading } = useTrendingBooks(14);
@@ -99,6 +100,7 @@ export function Trending() {
                     alt={books[0].title}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 md:rounded-xl"
                     loading="lazy"
+                    onError={handleImgError}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent md:rounded-xl" />
                   <Badge className="absolute top-4 left-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs px-2.5 py-0.5 shadow-lg">
@@ -193,6 +195,7 @@ export function Trending() {
                         alt={book.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
                         loading="lazy"
+                        onError={handleImgError}
                       />
                       {/* Hover overlay with details */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">

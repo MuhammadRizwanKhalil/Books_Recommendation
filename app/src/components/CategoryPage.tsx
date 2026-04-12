@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Book, Category } from '@/types';
 import { useBooksByCategory, useTopRated } from '@/hooks/useBooks';
 import { formatPrice, formatRating, getStarRating, formatNumber } from '@/lib/utils';
+import { handleImgError } from '@/lib/imageUtils';
 import { useWishlist } from '@/components/WishlistProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSEO } from '@/hooks/useSEO';
@@ -172,6 +173,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
                     alt={featuredBook.title}
                     className="w-full rounded-2xl shadow-2xl group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-all duration-500 group-hover:-translate-y-1"
                     loading="eager"
+                    onError={handleImgError}
                   />
                   <Badge className="absolute -top-3 right-2 bg-yellow-500 text-black font-bold shadow-lg">
                     <Sparkles className="h-3 w-3 mr-0.5" /> Featured
@@ -360,10 +362,11 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
                               alt={entry.bookTitle}
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                               loading="lazy"
+                              onError={handleImgError}
                             />
                           ) : (
                             <div className="h-full w-full bg-muted flex items-center justify-center">
-                              <span className="text-3xl">??</span>
+                              <span className="text-3xl">📚</span>
                             </div>
                           )}
                         </div>
@@ -500,6 +503,7 @@ function AutoFlipCarousel({
                   alt={book.title}
                   className="h-full w-full object-cover"
                   loading="lazy"
+                  onError={handleImgError}
                 />
               </div>
               {/* Back - Details */}
@@ -574,6 +578,7 @@ function HorizontalBookCard({
             alt={book.title}
             className="h-full w-full object-cover"
             loading="lazy"
+            onError={handleImgError}
           />
         </div>
         <div className="flex-1 min-w-0">

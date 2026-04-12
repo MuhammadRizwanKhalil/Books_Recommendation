@@ -8,6 +8,7 @@ import { useSettings } from '@/components/SettingsProvider';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { handleImgError } from '@/lib/imageUtils';
 import { formatRating } from '@/lib/utils';
 
 export function NewReleases() {
@@ -152,6 +153,7 @@ export function NewReleases() {
                   alt={book.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
                   loading="lazy"
+                  onError={handleImgError}
                 />
                 {/* Hover overlay with details */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">

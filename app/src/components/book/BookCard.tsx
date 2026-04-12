@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Book } from '@/types';
 import { formatPrice, formatRating, getStarRating, truncateText } from '@/lib/utils';
-import { getOptimizedImageUrl, getImageSrcSet, getImageSizes } from '@/lib/imageUtils';
+import { getOptimizedImageUrl, getImageSrcSet, getImageSizes, FALLBACK_COVER } from '@/lib/imageUtils';
 import { prefetchBook } from '@/lib/prefetch';
 import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
@@ -18,15 +18,6 @@ interface BookCardProps {
   variant?: 'compact' | 'standard' | 'featured';
   showAffiliate?: boolean;
 }
-
-// Fallback placeholder for broken images
-const FALLBACK_COVER = 'data:image/svg+xml,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">
-    <rect width="200" height="300" fill="#f3f0ea"/>
-    <text x="100" y="140" text-anchor="middle" font-family="system-ui" font-size="48" fill="#c2995c">📚</text>
-    <text x="100" y="180" text-anchor="middle" font-family="system-ui" font-size="12" fill="#8a7a68">No Cover</text>
-  </svg>`
-);
 
 // Book cover with error handling, CLS prevention, and responsive srcSet
 function BookImage({ src, alt, className, loading, fetchPriority, variant = 'standard' }: { 

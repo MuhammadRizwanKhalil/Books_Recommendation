@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { authorsApi, type AuthorDetailResponse } from '@/api/client';
 import { useSEO } from '@/hooks/useSEO';
 import { motion } from 'framer-motion';
+import { handleImgError } from '@/lib/imageUtils';
 
 export function AuthorPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -329,6 +330,7 @@ export function AuthorPage() {
                                   alt={book.title}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                   loading="lazy"
+                                  onError={handleImgError}
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/20">
@@ -440,6 +442,7 @@ export function AuthorPage() {
                                 alt={book.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 loading="lazy"
+                                onError={handleImgError}
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/20">

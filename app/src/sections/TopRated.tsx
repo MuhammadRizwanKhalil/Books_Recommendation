@@ -8,6 +8,7 @@ import { useAppNav } from '@/App';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { handleImgError } from '@/lib/imageUtils';
 
 export function TopRated() {
   const { books, loading } = useTopRated(20);
@@ -105,7 +106,7 @@ export function TopRated() {
                       onClick={() => openBook(book)}
                     >
                       <div className={`relative aspect-[2/3] rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 ${isFirst ? 'ring-2 ring-yellow-500/30' : ''}`}>
-                        <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover transition-transform duration-700 group-hover/top:scale-105" loading="lazy" />
+                        <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover transition-transform duration-700 group-hover/top:scale-105" loading="lazy" onError={handleImgError} />
                         {/* Hover overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover/top:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5 sm:p-3">
                           <h4 className="text-white text-xs sm:text-sm font-bold line-clamp-2 leading-tight mb-1">{book.title}</h4>
@@ -169,7 +170,7 @@ export function TopRated() {
                 onClick={() => openBook(book)}
               >
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                  <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" loading="lazy" />
+                  <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" loading="lazy" onError={handleImgError} />
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5">
                     <h4 className="text-white text-xs font-bold line-clamp-2 leading-tight mb-1">{book.title}</h4>

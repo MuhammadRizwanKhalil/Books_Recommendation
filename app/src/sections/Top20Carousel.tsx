@@ -8,6 +8,7 @@ import { useAppNav } from '@/App';
 import { formatRating, formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { handleImgError } from '@/lib/imageUtils';
 import type { Book } from '@/types';
 
 export function Top20Carousel() {
@@ -127,7 +128,7 @@ function FlipCard({ book, onBookClick, rank }: { book: Book; onBookClick: (b: Bo
       <div className="relative w-full aspect-[2/3] transition-transform duration-500 [transform-style:preserve-3d] group-hover/flip:[transform:rotateY(180deg)]">
         {/* Front */}
         <div className="absolute inset-0 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow [backface-visibility:hidden]">
-          <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" loading="lazy" />
+          <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" loading="lazy" onError={handleImgError} />
           {rank && rank <= 3 && (
             <div className="absolute top-2 left-2">
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md ${

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRating, getStarRating, truncateText, formatPrice } from '@/lib/utils';
+import { handleImgError } from '@/lib/imageUtils';
 import type { Book } from '@/types';
 import { motion } from 'framer-motion';
 import { mapBook } from '@/lib/mappers';
@@ -92,6 +93,7 @@ export function BookOfTheDay() {
                   alt={`${book.title} by ${book.author}`}
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 md:rounded-xl"
                   loading="lazy"
+                  onError={handleImgError}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent md:rounded-xl" />
                 <Badge className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg text-xs px-3 py-1">
