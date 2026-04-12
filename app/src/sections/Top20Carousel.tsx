@@ -93,19 +93,25 @@ export function Top20Carousel() {
         </motion.div>
       </div>
 
-      {/* Full-width auto-scrolling carousel */}
-      <div
-        ref={scrollRef}
-        className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4"
-        onMouseEnter={() => { isPausedRef.current = true; }}
-        onMouseLeave={() => { isPausedRef.current = false; }}
-        onTouchStart={() => { isPausedRef.current = true; }}
-        onTouchEnd={() => { isPausedRef.current = false; }}
-        style={{ scrollBehavior: 'auto' }}
-      >
+      {/* Contained auto-scrolling carousel */}
+      <div className="container mx-auto px-4">
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          <div
+            ref={scrollRef}
+            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide"
+            onMouseEnter={() => { isPausedRef.current = true; }}
+            onMouseLeave={() => { isPausedRef.current = false; }}
+            onTouchStart={() => { isPausedRef.current = true; }}
+            onTouchEnd={() => { isPausedRef.current = false; }}
+            style={{ scrollBehavior: 'auto' }}
+          >
         {displayBooks.map((book, idx) => (
           <FlipCard key={`${book.id}-${idx}`} book={book} onBookClick={openBook} rank={idx < books.length ? idx + 1 : undefined} />
         ))}
+          </div>
+        </div>
       </div>
     </section>
   );
