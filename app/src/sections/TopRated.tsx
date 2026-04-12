@@ -88,7 +88,7 @@ export function TopRated() {
         {/* Top 3 — smaller with hover overlay */}
         {!loading && books.length >= 3 && (
           <motion.div
-            className="mb-6"
+            className="mt-6 mb-6"
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -140,7 +140,7 @@ export function TopRated() {
         )}
       </div>
 
-      {/* Top 20 Auto-scrolling Carousel */}
+      {/* Top 20 Auto-scrolling Carousel — contained */}
       {!loading && displayBooks.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
@@ -148,12 +148,14 @@ export function TopRated() {
           viewport={{ once: true }}
           transition={{ duration: 0.4, delay: 0.15 }}
         >
-          <div className="container mx-auto px-4 mb-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Top 20 — hover to reveal</h3>
-          </div>
+          <div className="container mx-auto px-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Top 20 — hover to reveal</h3>
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/50 to-transparent z-10 pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-muted/50 to-transparent z-10 pointer-events-none" />
           <div
             ref={scrollRef}
-            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4"
+            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide"
             onMouseEnter={() => { isPausedRef.current = true; }}
             onMouseLeave={() => { isPausedRef.current = false; }}
             onTouchStart={() => { isPausedRef.current = true; }}
@@ -189,6 +191,8 @@ export function TopRated() {
               </div>
             ))}
           </div>
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -205,24 +209,6 @@ export function TopRated() {
         </div>
       )}
 
-      {/* Bottom CTA */}
-      <div className="container mx-auto px-4">
-        <motion.div
-          className="mt-6 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <Button variant="outline" size="sm" asChild className="px-6">
-            <Link to="/search?sort=rating">
-              <BookOpen className="mr-2 h-3.5 w-3.5" />
-              Explore All Top Rated Books
-              <ChevronRight className="ml-2 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </motion.div>
-      </div>
     </section>
   );
 }

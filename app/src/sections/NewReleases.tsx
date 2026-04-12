@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { formatRating } from '@/lib/utils';
 
 export function NewReleases() {
-  const [activePeriod, setActivePeriod] = useState('this-month');
+  const [activePeriod, setActivePeriod] = useState('this-week');
   const { books, loading } = useNewReleases(16, activePeriod);
   const { openBook } = useAppNav();
   const { getSetting } = useSettings();
@@ -115,9 +115,10 @@ export function NewReleases() {
         </motion.div>
       </div>
 
-      {/* Auto-scrolling carousel with hover detail overlay */}
+      {/* Auto-scrolling carousel with hover detail overlay — contained */}
+      <div className="container mx-auto px-4">
       {loading ? (
-        <div className="container mx-auto px-4">
+        <div>
           <div className="flex gap-3 overflow-hidden">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="shrink-0 w-[120px] sm:w-[140px]">
@@ -127,15 +128,18 @@ export function NewReleases() {
           </div>
         </div>
       ) : books.length > 0 ? (
-        <div
-          ref={scrollRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4"
-          onMouseEnter={() => { isPausedRef.current = true; }}
-          onMouseLeave={() => { isPausedRef.current = false; }}
-          onTouchStart={() => { isPausedRef.current = true; }}
-          onTouchEnd={() => { isPausedRef.current = false; }}
-          style={{ scrollBehavior: 'auto' }}
-        >
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          <div
+            ref={scrollRef}
+            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide"
+            onMouseEnter={() => { isPausedRef.current = true; }}
+            onMouseLeave={() => { isPausedRef.current = false; }}
+            onTouchStart={() => { isPausedRef.current = true; }}
+            onTouchEnd={() => { isPausedRef.current = false; }}
+            style={{ scrollBehavior: 'auto' }}
+          >
           {displayBooks.map((book, idx) => (
             <div
               key={`${book.id}-${idx}`}
@@ -166,28 +170,13 @@ export function NewReleases() {
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : (
-        <div className="container mx-auto px-4">
+        <div>
           <p className="text-sm text-muted-foreground text-center py-8">No books found for this period.</p>
         </div>
       )}
-
-      {/* View All CTA */}
-      <div className="container mx-auto px-4">
-        <motion.div
-          className="mt-6 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.15 }}
-        >
-          <Button variant="outline" size="sm" asChild className="px-6">
-            <Link to="/search?sort=newest">
-              Browse All New Releases <ChevronRight className="ml-2 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </motion.div>
       </div>
     </section>
   );

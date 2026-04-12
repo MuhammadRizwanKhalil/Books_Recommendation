@@ -129,20 +129,6 @@ export function Categories() {
           </div>
         </motion.div>
 
-        {/* View All CTA */}
-        <motion.div
-          className="mt-5 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <Button variant="outline" size="sm" asChild className="px-6">
-            <Link to="/categories">
-              View All Categories <ChevronRight className="ml-2 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </motion.div>
       </div>
     </section>
   );

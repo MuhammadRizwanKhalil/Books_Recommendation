@@ -76,13 +76,14 @@ export function ReadingStats() {
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
             >
-              <Card className="text-center border-0 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                <CardContent className={`pt-4 pb-3 bg-gradient-to-b ${stat.gradient} rounded-lg`}>
-                  <div className={`inline-flex p-2 rounded-full mb-2 ${stat.color}`}>
-                    <stat.icon className="h-4 w-4" />
+              <Card className="text-center border border-border/40 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <CardContent className={`pt-5 pb-4 bg-gradient-to-b ${stat.gradient} rounded-lg relative`}>
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-20" style={{ color: stat.color.includes('blue') ? '#3b82f6' : stat.color.includes('amber') ? '#f59e0b' : stat.color.includes('green') ? '#22c55e' : '#a855f7' }} />
+                  <div className={`inline-flex p-2.5 rounded-xl mb-2.5 ${stat.color} shadow-sm`}>
+                    <stat.icon className="h-5 w-5" />
                   </div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</p>
+                  <p className="text-3xl font-bold tracking-tight">{stat.value}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 font-medium">{stat.label}</p>
                 </CardContent>
               </Card>
             </motion.div>

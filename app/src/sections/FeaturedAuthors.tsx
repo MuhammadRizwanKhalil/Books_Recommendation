@@ -103,20 +103,21 @@ export function FeaturedAuthors() {
         </motion.div>
       </div>
 
-      {/* Auto-scrolling author cards — no wrapping */}
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      {/* Auto-scrolling author cards — contained, no wrapping */}
+      <div className="container mx-auto px-4">
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-        <div
-          ref={scrollRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4 flex-nowrap"
-          onMouseEnter={() => { isPausedRef.current = true; }}
-          onMouseLeave={() => { isPausedRef.current = false; }}
-          onTouchStart={() => { isPausedRef.current = true; }}
-          onTouchEnd={() => { isPausedRef.current = false; }}
-          style={{ scrollBehavior: 'auto' }}
-        >
+          <div
+            ref={scrollRef}
+            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide flex-nowrap"
+            onMouseEnter={() => { isPausedRef.current = true; }}
+            onMouseLeave={() => { isPausedRef.current = false; }}
+            onTouchStart={() => { isPausedRef.current = true; }}
+            onTouchEnd={() => { isPausedRef.current = false; }}
+            style={{ scrollBehavior: 'auto' }}
+          >
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="shrink-0 w-[140px] sm:w-[150px] flex flex-col items-center gap-2 p-4">
@@ -175,6 +176,7 @@ export function FeaturedAuthors() {
               </div>
             ))
           )}
+          </div>
         </div>
       </div>
     </section>

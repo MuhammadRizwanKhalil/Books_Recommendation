@@ -85,15 +85,15 @@ export function BookOfTheDay() {
         >
           <Card className="overflow-hidden border-primary/10 shadow-xl hover:shadow-2xl transition-all duration-500 group">
             <div className="flex flex-col md:flex-row">
-              {/* Book Cover - larger */}
-              <Link to={`/book/${book.slug}`} className="relative md:w-64 shrink-0 aspect-[2/3] md:aspect-auto md:min-h-[340px] overflow-hidden">
+              {/* Book Cover - with border radius and left spacing */}
+              <Link to={`/book/${book.slug}`} className="relative md:w-64 shrink-0 aspect-[2/3] md:aspect-auto md:min-h-[340px] overflow-hidden md:m-4 md:rounded-xl">
                 <img
                   src={book.coverImage}
                   alt={`${book.title} by ${book.author}`}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 md:rounded-xl"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent md:rounded-xl" />
                 <Badge className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg text-xs px-3 py-1">
                   <Sparkles className="h-3 w-3 mr-1" /> Today&apos;s Pick
                 </Badge>
