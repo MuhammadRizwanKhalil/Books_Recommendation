@@ -78,6 +78,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_BLOG_ENABLED: ${AI_BLOG_ENABLED:-false}
       AI_BLOG_CRON_SCHEDULE: ${AI_BLOG_CRON_SCHEDULE:-0 9 * * 1}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-The Book Times <noreply@thebooktimes.com>}
     volumes:
       - server-uploads:/app/data/uploads
     depends_on:
