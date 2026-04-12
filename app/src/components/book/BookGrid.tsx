@@ -63,7 +63,9 @@ export function BookGrid({
     <div>
       <div className={`grid ${columnClasses[columns]} gap-3 sm:gap-4 md:gap-6`}>
         {displayedBooks.map((book) => (
-          <BookCard key={book.id} book={book} variant={variant} />
+          <div key={book.id} className="min-w-0">
+            <BookCard book={book} variant={variant} />
+          </div>
         ))}
       </div>
 

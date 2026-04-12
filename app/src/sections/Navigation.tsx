@@ -30,6 +30,7 @@ const pageLinks = [
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isPastHero, setIsPastHero] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { wishlistCount, openWishlistDrawer } = useWishlist();
@@ -43,7 +44,10 @@ export function Navigation() {
   const logoUrl = getSetting('site_logo_url', '');
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+      setIsPastHero(window.scrollY > 400);
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -139,11 +143,11 @@ export function Navigation() {
             {/* Search Toggle */}
             <div className={cn(
               'hidden md:flex items-center transition-all duration-300',
-              isSearchOpen ? 'w-80' : 'w-auto'
+              (isSearchOpen || isPastHero) ? 'w-64 lg:w-80' : 'w-auto'
             )}>
-              {isSearchOpen ? (
+              {(isSearchOpen || isPastHero) ? (
                 <SearchDropdown
-                  autoFocus
+                  autoFocus={isSearchOpen}
                   className="w-full"
                   onClose={() => setIsSearchOpen(false)}
                 />

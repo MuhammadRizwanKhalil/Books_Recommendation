@@ -49,8 +49,8 @@ export function Hero() {
       {/* Subtle grid pattern */}
       <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:60px_60px]" />
       
-      <div className="relative container mx-auto px-4 py-12 sm:py-16 md:py-20">
-        <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 md:space-y-10">
+      <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-28">
+        <div className="max-w-4xl mx-auto text-center space-y-8 sm:space-y-10 md:space-y-12">
           {/* Badge */}
           <div className="flex justify-center">
             <Badge variant="secondary" className="px-5 py-2.5 text-sm font-medium gap-2 shadow-sm border border-border/50">
@@ -94,15 +94,15 @@ export function Hero() {
           </div>
 
           {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-10 pt-6">
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-8 md:gap-12 pt-8">
             {stats.map((stat) => (
               <div key={stat.label} className="flex items-center gap-3 group">
-                <div className={`p-3 rounded-xl ${stat.color} transition-transform group-hover:scale-110`}>
-                  <stat.icon className="h-5 w-5" />
+                <div className={`p-3.5 rounded-xl ${stat.color} transition-transform group-hover:scale-110`}>
+                  <stat.icon className="h-6 w-6" />
                 </div>
                 <div className="text-left">
-                  <p className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</p>
+                  <p className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">{stat.value}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</p>
                 </div>
               </div>
             ))}

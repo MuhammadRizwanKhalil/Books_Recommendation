@@ -1,4 +1,4 @@
-﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search } from 'lucide-react';
+﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -10,7 +10,7 @@ import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSEO } from '@/hooks/useSEO';
 import { ReadingStatusButton } from '@/components/ReadingStatus';
 import { Link } from 'react-router-dom';
@@ -302,32 +302,32 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Rating Bar */}
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-4 bg-muted/50 rounded-xl">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-0.5">
                   {Array.from({ length: stars.full }).map((_, i) => (
-                    <Star key={`f-${i}`} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+                    <Star key={`f-${i}`} className="h-5 w-5 sm:h-6 sm:w-6 fill-yellow-400 text-yellow-400" />
                   ))}
-                  {stars.half && <Star className="h-6 w-6 fill-yellow-400/50 text-yellow-400" />}
+                  {stars.half && <Star className="h-5 w-5 sm:h-6 sm:w-6 fill-yellow-400/50 text-yellow-400" />}
                   {Array.from({ length: stars.empty }).map((_, i) => (
-                    <Star key={`e-${i}`} className="h-6 w-6 text-gray-300" />
+                    <Star key={`e-${i}`} className="h-5 w-5 sm:h-6 sm:w-6 text-gray-300" />
                   ))}
                 </div>
-                <span className="text-2xl font-bold">{formatRating(book.googleRating)}</span>
+                <span className="text-xl sm:text-2xl font-bold">{formatRating(book.googleRating)}</span>
               </div>
-              <Separator orientation="vertical" className="h-8" />
-              <span className="text-muted-foreground">{formatNumber(book.ratingsCount)} ratings</span>
-              <Separator orientation="vertical" className="h-8" />
-              <span className="text-muted-foreground">Score: {book.computedScore.toFixed(1)}</span>
+              <Separator orientation="vertical" className="h-8 hidden sm:block" />
+              <span className="text-sm sm:text-base text-muted-foreground">{formatNumber(book.ratingsCount)} ratings</span>
+              <Separator orientation="vertical" className="h-8 hidden sm:block" />
+              <span className="text-sm sm:text-base text-muted-foreground">Score: {book.computedScore.toFixed(1)}</span>
             </div>
 
             {/* Description */}
-            <div>
-              <h2 className="text-xl font-bold mb-3">About This Book</h2>
-              <p className="text-muted-foreground leading-relaxed text-[15px]">
-                {book.description || 'No description available.'}
-              </p>
-            </div>
+            <DescriptionSection description={book.description} />
+
+            <Separator />
+
+            {/* Recommendations (moved above reviews for better engagement) */}
+            <BookRecommendations bookId={book.id} />
 
             <Separator />
 
@@ -335,14 +335,38 @@ export function BookPage({ book, onBack }: BookPageProps) {
             <div>
               <BookReviews bookId={book.id} />
             </div>
-
-            <Separator />
-
-            {/* Recommendations */}
-            <BookRecommendations bookId={book.id} />
           </motion.div>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+const DESCRIPTION_CHAR_LIMIT = 500;
+
+function DescriptionSection({ description }: { description?: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const text = description || 'No description available.';
+  const isLong = text.length > DESCRIPTION_CHAR_LIMIT;
+  const displayText = isLong && !isExpanded ? text.slice(0, DESCRIPTION_CHAR_LIMIT) + '...' : text;
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold mb-3">About This Book</h2>
+      <p className="text-muted-foreground leading-relaxed text-[15px]">
+        {displayText}
+      </p>
+      {isLong && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 text-primary gap-1"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? 'Show less' : 'Read more'}
+          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </Button>
+      )}
+    </div>
   );
 }
