@@ -112,8 +112,30 @@ export function BookPage({ book, onBack }: BookPageProps) {
         </div>
       </div>
 
+      {/* Breadcrumbs */}
+      <nav className="container mx-auto px-4 pt-4 pb-0" aria-label="Breadcrumb">
+        <ol className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+          <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
+          {book.categories.length > 0 && (
+            <>
+              <li className="select-none">/</li>
+              <li>
+                <Link
+                  to={`/category/${book.categories[0].toLowerCase().replace(/\s+/g, '-')}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  {book.categories[0]}
+                </Link>
+              </li>
+            </>
+          )}
+          <li className="select-none">/</li>
+          <li className="text-foreground font-medium truncate max-w-[200px]">{book.title}</li>
+        </ol>
+      </nav>
+
       <div className="container mx-auto px-4 py-8">
-        {/* ====== MAIN LAYOUT ====== */}
+        {/* ====== MAIN LAYOUT ====== */
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
           {/* LEFT COLUMN â€” Image + Affiliate */}
@@ -247,6 +269,13 @@ export function BookPage({ book, onBack }: BookPageProps) {
                     <span className="font-medium">{book.pageCount}</span>
                   </div>
                 )}
+                {book.pageCount && book.pageCount > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground">Reading time:</span>
+                    <span className="font-medium">~{Math.max(1, Math.round(book.pageCount * 1.7 / 60))} hours</span>
+                  </div>
+                )}
                 {book.isbn13 && (
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -274,7 +303,9 @@ export function BookPage({ book, onBack }: BookPageProps) {
             <div>
               <div className="flex flex-wrap gap-2 mb-3">
                 {book.categories.map((cat) => (
-                  <Badge key={cat} variant="secondary">{cat}</Badge>
+                  <Link key={cat} to={`/category/${cat.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 transition-colors">{cat}</Badge>
+                  </Link>
                 ))}
               </div>
               <h1 className="text-3xl lg:text-4xl font-bold">{book.title}</h1>

@@ -1,11 +1,13 @@
 import { Grid3X3, ChevronRight, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCategories } from '@/hooks/useBooks';
 import { useAppNav } from '@/App';
 import { useSettings } from '@/components/SettingsProvider';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export function Categories() {
   const { categories, loading: categoriesLoading } = useCategories();
@@ -33,6 +35,11 @@ export function Categories() {
             {t('categories.subtitle')}{' '}
             {categoriesDescription}
           </p>
+          <Button variant="ghost" className="mt-3" asChild>
+            <Link to="/categories">
+              View All Categories <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
         </motion.div>
 
         {/* Category Grid */}

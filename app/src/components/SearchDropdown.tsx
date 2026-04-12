@@ -6,6 +6,25 @@ import { booksApi } from '@/api/client';
 import { useDebounce } from '@/hooks/useBooks';
 import { cn } from '@/lib/utils';
 
+/** Highlights matching portions of text */
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query || query.length < 2) return <>{text}</>;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/20 text-foreground rounded-sm px-0.5">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 interface BookSuggestion {
   id: string;
   title: string;
@@ -264,8 +283,8 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{book.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+                        <p className="text-sm font-medium truncate"><HighlightMatch text={book.title} query={query} /></p>
+                        <p className="text-xs text-muted-foreground truncate"><HighlightMatch text={book.author} query={query} /></p>
                       </div>
                       {book.googleRating > 0 && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
@@ -302,7 +321,7 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
                         <Tag className="h-4 w-4 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{cat.name}</p>
+                        <p className="text-sm font-medium"><HighlightMatch text={cat.name} query={query} /></p>
                         <p className="text-xs text-muted-foreground">{cat.bookCount} books</p>
                       </div>
                     </button>
@@ -338,7 +357,7 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{author.name}</p>
+                        <p className="text-sm font-medium"><HighlightMatch text={author.name} query={query} /></p>
                         <p className="text-xs text-muted-foreground">{author.bookCount} {author.bookCount === 1 ? 'book' : 'books'}</p>
                       </div>
                     </button>
@@ -379,6 +398,23 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
             <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[10px]">Enter</kbd> Select</span>
             <span><kbd className="px-1 py-0.5 rounded bg-muted border text-[10px]">Esc</kbd> Close</span>
           </div>
+        </div>
+      )}
+
+      {/* No results */}
+      {isOpen && !loading && books.length === 0 && categories.length === 0 && authors.length === 0 && query.trim().length >= 2 && (
+        <div className={cn(
+          'absolute left-0 right-0 mt-2 bg-popover border rounded-xl shadow-xl z-50 p-6 text-center',
+        )}>
+          <Search className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+          <p className="text-sm font-medium">No results for "{query}"</p>
+          <p className="text-xs text-muted-foreground mt-1">Try a different spelling or broader search term</p>
+          <button
+            className="mt-3 text-xs text-primary hover:underline"
+            onClick={() => goToSearch()}
+          >
+            Search full catalog →
+          </button>
         </div>
       )}
     </div>

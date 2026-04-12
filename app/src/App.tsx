@@ -2,6 +2,7 @@
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { ScrollToTop } from '@/components/ScrollToTop';
+import { BackToTop } from '@/components/BackToTop';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthModal } from '@/components/AuthModal';
 import { CategoryPage } from '@/components/CategoryPage';
@@ -608,6 +609,7 @@ function App() {
         <WishlistDrawer />
         <AdminBar />
         <ScrollToTop />
+        <BackToTop />
       </div>
     </AppNavContext.Provider>
   );

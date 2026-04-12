@@ -8,6 +8,7 @@ import { useAppNav } from '@/App';
 import { useSettings } from '@/components/SettingsProvider';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export function Trending() {
   const [showAll, setShowAll] = useState(false);
@@ -44,10 +45,17 @@ export function Trending() {
               {trendingDescription}
             </p>
           </div>
-          <Button variant="outline" onClick={() => setShowAll(!showAll)}>
-            {showAll ? t('common.showLess') : t('trending.viewAll')}
-            {showAll ? <ChevronDown className="ml-2 h-4 w-4" /> : <ChevronRight className="ml-2 h-4 w-4" />}
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowAll(!showAll)}>
+              {showAll ? t('common.showLess') : t('trending.viewAll')}
+              {showAll ? <ChevronDown className="ml-2 h-4 w-4" /> : <ChevronRight className="ml-2 h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link to="/trending">
+                View All <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </motion.div>
 
         {/* Featured Book */}
