@@ -48,7 +48,7 @@ export function ReadingStats() {
   ];
 
   return (
-    <section className="py-10 sm:py-14">
+    <section className="py-6 sm:py-8">
       <div className="container mx-auto px-4">
         <motion.div
           className="space-y-2 mb-6"
@@ -62,12 +62,12 @@ export function ReadingStats() {
             Personal Tracker
           </Badge>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl sm:text-3xl font-bold font-serif">Your Reading Journey</h2>
+            <h2 className="text-xl sm:text-2xl font-bold font-serif">Your Reading Journey</h2>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">Track your progress and build your personal shelf</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">Track your progress and build your personal shelf</p>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {stats.map((stat, idx) => (
             <motion.div
               key={stat.label}
@@ -76,13 +76,13 @@ export function ReadingStats() {
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
             >
-              <Card className="text-center border-0 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                <CardContent className={`pt-6 pb-4 bg-gradient-to-b ${stat.gradient} rounded-lg`}>
-                  <div className={`inline-flex p-3 rounded-full mb-3 ${stat.color}`}>
-                    <stat.icon className="h-5 w-5" />
+              <Card className="text-center border-0 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <CardContent className={`pt-4 pb-3 bg-gradient-to-b ${stat.gradient} rounded-lg`}>
+                  <div className={`inline-flex p-2 rounded-full mb-2 ${stat.color}`}>
+                    <stat.icon className="h-4 w-4" />
                   </div>
-                  <p className="text-3xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -97,8 +97,8 @@ export function ReadingStats() {
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-0 shadow-md">
-              <CardContent className="py-5 px-6">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-primary" />

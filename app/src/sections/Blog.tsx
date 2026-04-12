@@ -11,7 +11,7 @@ import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
 
 export function Blog() {
-  const { posts, loading } = useBlogPosts(4);
+  const { posts, loading } = useBlogPosts(5);
   const { isAdmin } = useAuth();
   const { navigate } = useAppNav();
   const { t } = useTranslation();
@@ -39,7 +39,7 @@ export function Blog() {
   };
 
   return (
-    <section id="blog" className="py-10 sm:py-14 md:py-16">
+    <section id="blog" className="py-8 sm:py-10 md:py-12">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div 
@@ -76,36 +76,42 @@ export function Blog() {
           </Button>
         </motion.div>
 
-        {/* Blog Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        {/* Blog Row — 5 posts in single row */}
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none lg:hidden" />
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none lg:hidden" />
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 lg:grid lg:grid-cols-5 lg:overflow-visible">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="h-96">
-                <div className="animate-pulse">
-                  <div className="h-48 bg-muted" />
-                  <CardContent className="p-6 space-y-4">
-                    <div className="h-4 w-20 bg-muted rounded" />
-                    <div className="h-6 w-full bg-muted rounded" />
-                    <div className="h-4 w-3/4 bg-muted rounded" />
-                  </CardContent>
-                </div>
-              </Card>
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="shrink-0 w-[220px] lg:w-auto">
+                <Card className="h-full">
+                  <div className="animate-pulse">
+                    <div className="h-32 bg-muted rounded-t-lg" />
+                    <CardContent className="p-3 space-y-2">
+                      <div className="h-3 w-16 bg-muted rounded" />
+                      <div className="h-4 w-full bg-muted rounded" />
+                      <div className="h-3 w-3/4 bg-muted rounded" />
+                    </CardContent>
+                  </div>
+                </Card>
+              </div>
             ))
           ) : (
             posts.map((post, index) => (
               <motion.div
                 key={post.id}
-                initial={{ opacity: 0, y: 20 }}
+                className="shrink-0 w-[220px] lg:w-auto"
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
               >
                 <Card className="group overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col relative border-0 shadow-md">
                   {isAdmin && (
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full bg-orange-500/90 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      className="absolute right-2 top-2 z-10 h-6 w-6 rounded-full bg-orange-500/90 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -113,43 +119,49 @@ export function Blog() {
                       }}
                       title="Edit in admin"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-2.5 w-2.5" />
                     </Button>
                   )}
                   <Link to={`/blog/${post.slug}`} className="flex flex-col flex-1">
-                  <div className="relative h-52 overflow-hidden">
+                  <div className="relative h-32 overflow-hidden">
+                    {post.featuredImage ? (
                     <img
                       src={post.featuredImage}
                       alt={post.title}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="lazy"
                     />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/10 via-purple-500/5 to-pink-500/5 flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                    <div className="absolute top-4 left-4">
-                      <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-foreground shadow-sm">
+                    <div className="absolute top-2 left-2">
+                      <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-foreground shadow-sm text-[9px] px-1.5 py-0">
                         {getGeneratedByIcon(post.generatedBy)}
-                        <span className="ml-1">{getGeneratedByLabel(post.generatedBy)}</span>
+                        <span className="ml-0.5">{getGeneratedByLabel(post.generatedBy)}</span>
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                      <Calendar className="h-4 w-4" />
+                  <CardContent className="p-3 flex flex-col flex-1">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1.5">
+                      <Calendar className="h-2.5 w-2.5" />
                       {post.publishedAt && formatDate(post.publishedAt)}
                     </div>
-                    <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+                    <h3 className="text-sm font-bold mb-1 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                       {post.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed">
-                      {post.excerpt || truncateText(post.content, 150)}
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 flex-1 leading-relaxed">
+                      {post.excerpt || truncateText(post.content, 100)}
                     </p>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <span className="text-[10px] text-muted-foreground">
                         {post.featuredBookIds.length} {t('blog.booksFeatured')}
                       </span>
-                      <span className="text-sm font-medium text-primary group-hover:underline flex items-center">
+                      <span className="text-xs font-medium text-primary group-hover:underline flex items-center">
                         {t('book.readMore')}
-                        <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        <ChevronRight className="ml-0.5 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                       </span>
                     </div>
                   </CardContent>
@@ -158,36 +170,37 @@ export function Blog() {
               </motion.div>
             ))
           )}
+          </div>
         </div>
 
         {/* Auto-Generation Info */}
         <motion.div 
-          className="mt-12 p-6 bg-gradient-to-r from-purple-500/10 to-primary/10 rounded-xl border border-purple-500/20"
+          className="mt-6 p-3 sm:p-4 bg-gradient-to-r from-purple-500/10 to-primary/10 rounded-lg border border-purple-500/20"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/20">
-                <Sparkles className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold">{t('blog.aiWeekly')}</h4>
-                <p className="text-sm text-muted-foreground">
+                <h4 className="text-sm font-semibold">{t('blog.aiWeekly')}</h4>
+                <p className="text-xs text-muted-foreground hidden sm:block">
                   {t('blog.aiWeeklyDesc')}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="text-center">
-                <p className="text-2xl font-bold">{posts.length > 0 ? `${posts.length}+` : '...'}</p>
-                <p className="text-xs text-muted-foreground">{t('blog.articles')}</p>
+                <p className="text-lg font-bold">{posts.length > 0 ? `${posts.length}+` : '...'}</p>
+                <p className="text-[10px] text-muted-foreground">{t('blog.articles')}</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{t('blog.weekly')}</p>
-                <p className="text-xs text-muted-foreground">{t('blog.newContent')}</p>
+                <p className="text-lg font-bold">{t('blog.weekly')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('blog.newContent')}</p>
               </div>
             </div>
           </div>

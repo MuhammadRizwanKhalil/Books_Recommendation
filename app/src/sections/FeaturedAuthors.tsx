@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Star, Users, ChevronLeft, ChevronRight, Sparkles, BookOpen } from 'lucide-react';
+import { Star, Users, ChevronRight, Sparkles, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,6 +35,8 @@ export function FeaturedAuthors() {
   const [authors, setAuthors] = useState<AuthorData[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isPausedRef = useRef(false);
+  const animRef = useRef<number>(0);
 
   useEffect(() => {
     booksApi.authors(12)
@@ -43,18 +45,36 @@ export function FeaturedAuthors() {
       .finally(() => setLoading(false));
   }, []);
 
-  const scroll = (dir: 'left' | 'right') => {
+  // Duplicate for seamless infinite loop
+  const displayAuthors = authors.length > 0 ? [...authors, ...authors] : [];
+
+  useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === 'left' ? -280 : 280, behavior: 'smooth' });
-  };
+    if (!el || authors.length === 0) return;
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      if (!isPausedRef.current && lastTime) {
+        const delta = time - lastTime;
+        el.scrollLeft += 0.3 * (delta / 16);
+        const halfWidth = el.scrollWidth / 2;
+        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
+          el.scrollLeft -= halfWidth;
+        }
+      }
+      lastTime = time;
+      animRef.current = requestAnimationFrame(animate);
+    };
+    animRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [authors.length]);
 
   return (
-    <section id="authors" className="py-10 sm:py-14 md:py-16">
+    <section id="authors" className="py-8 sm:py-10 md:py-12">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div
-          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6"
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -75,97 +95,86 @@ export function FeaturedAuthors() {
               Explore books from today&rsquo;s most influential authors and acclaimed writers.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => scroll('left')}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => scroll('right')}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="default" size="sm" asChild className="shadow-md shadow-primary/20">
-              <Link to="/search?q=authors">
-                View All Authors <ChevronRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
+          <Button variant="default" size="sm" asChild className="shadow-md shadow-primary/20">
+            <Link to="/search?q=authors">
+              View All Authors <ChevronRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </Button>
         </motion.div>
+      </div>
 
-        {/* Horizontal scrolling author cards */}
-        <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      {/* Auto-scrolling author cards — no wrapping */}
+      <div className="relative">
+        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-          <div
-            ref={scrollRef}
-            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 -mb-2 px-1"
-            style={{ scrollSnapType: 'x mandatory' }}
-          >
-            {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="shrink-0 w-[150px] sm:w-[160px] flex flex-col items-center gap-2 p-4">
-                  <Skeleton className="w-18 h-18 rounded-full" />
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-2.5 w-14" />
-                </div>
-              ))
-            ) : authors.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8">No authors found yet.</p>
-            ) : (
-              authors.map((author, index) => (
-                <motion.div
-                  key={author.name}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.25, delay: index * 0.04 }}
-                  className="shrink-0"
-                  style={{ scrollSnapAlign: 'start' }}
-                >
-                  <Link to={`/author/${author.slug}`} className="group block">
-                    <div className="w-[150px] sm:w-[160px] text-center p-4 rounded-xl border bg-card hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300">
-                      <div className="relative mx-auto w-16 h-16 sm:w-18 sm:h-18 mb-3">
-                        {author.imageUrl || author.topCover ? (
-                          <img
-                            src={author.imageUrl || author.topCover}
-                            alt={author.name}
-                            className="w-full h-full rounded-full object-cover ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-md"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className={`w-full h-full rounded-full ${COLORS[index % COLORS.length]} flex items-center justify-center text-white text-sm font-bold ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-md`}>
-                            {getInitials(author.name)}
-                          </div>
-                        )}
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm ring-2 ring-background">
-                          {author.bookCount}
+        <div
+          ref={scrollRef}
+          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide px-4 flex-nowrap"
+          onMouseEnter={() => { isPausedRef.current = true; }}
+          onMouseLeave={() => { isPausedRef.current = false; }}
+          onTouchStart={() => { isPausedRef.current = true; }}
+          onTouchEnd={() => { isPausedRef.current = false; }}
+          style={{ scrollBehavior: 'auto' }}
+        >
+          {loading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="shrink-0 w-[140px] sm:w-[150px] flex flex-col items-center gap-2 p-4">
+                <Skeleton className="w-16 h-16 rounded-full" />
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2.5 w-14" />
+              </div>
+            ))
+          ) : authors.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8">No authors found yet.</p>
+          ) : (
+            displayAuthors.map((author, index) => (
+              <div
+                key={`${author.name}-${index}`}
+                className="shrink-0"
+              >
+                <Link to={`/author/${author.slug}`} className="group block">
+                  <div className="w-[140px] sm:w-[150px] text-center p-3 rounded-xl border bg-card hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300">
+                    <div className="relative mx-auto w-14 h-14 sm:w-16 sm:h-16 mb-2">
+                      {author.imageUrl || author.topCover ? (
+                        <img
+                          src={author.imageUrl || author.topCover}
+                          alt={author.name}
+                          className="w-full h-full rounded-full object-cover ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-md"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className={`w-full h-full rounded-full ${COLORS[index % COLORS.length]} flex items-center justify-center text-white text-sm font-bold ring-2 ring-border group-hover:ring-primary/50 transition-all shadow-md`}>
+                          {getInitials(author.name)}
                         </div>
-                      </div>
-                      <h3 className="font-semibold text-xs sm:text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                        {author.name}
-                      </h3>
-                      <div className="flex items-center justify-center gap-0.5 mt-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[11px] font-medium">{author.avgRating.toFixed(1)}</span>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-0.5 mt-2">
-                        {author.specialties.slice(0, 2).map((s) => (
-                          <span key={s} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground leading-none">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="mt-2 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
-                        <BookOpen className="h-2.5 w-2.5" />
-                        <span>{author.bookCount} books</span>
+                      )}
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm ring-2 ring-background">
+                        {author.bookCount}
                       </div>
                     </div>
-                  </Link>
-                </motion.div>
-              ))
-            )}
-          </div>
+                    <h3 className="font-semibold text-xs line-clamp-1 group-hover:text-primary transition-colors">
+                      {author.name}
+                    </h3>
+                    <div className="flex items-center justify-center gap-0.5 mt-1">
+                      <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-[10px] font-medium">{author.avgRating.toFixed(1)}</span>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-0.5 mt-1.5">
+                      {author.specialties.slice(0, 2).map((s) => (
+                        <span key={s} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground leading-none">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
+                      <BookOpen className="h-2.5 w-2.5" />
+                      <span>{author.bookCount} books</span>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </section>

@@ -223,9 +223,6 @@ function HomePage() {
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Top Rated"><TopRated /></ErrorBoundary>
       </Suspense>
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Top 20 Carousel"><Top20Carousel /></ErrorBoundary>
-      </Suspense>
       <SectionDivider />
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
