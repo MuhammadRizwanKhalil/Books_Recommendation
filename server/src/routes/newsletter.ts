@@ -24,7 +24,8 @@ router.post('/subscribe', rateLimit('newsletter', 5, 60 * 60 * 1000), validate(n
     const existing = await dbGet<any>('SELECT id, is_active FROM newsletter_subscribers WHERE email = ?', [normalizedEmail]);
     if (existing) {
       if (existing.is_active) {
-        res.status(409).json({ error: 'Email already subscribed' });
+        // Already subscribed — return success silently (don't store again)
+        res.json({ message: 'Successfully subscribed to the newsletter!' });
         return;
       }
       // Re-activate

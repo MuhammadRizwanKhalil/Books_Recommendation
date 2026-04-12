@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbGet, dbAll, dbRun } from '../database.js';
 import { authenticate, requireAdmin, rateLimit } from '../middleware.js';
-import { testSmtpConnection } from '../services/email.js';
+import { testSmtpConnection, sendEmail, wrapInBaseTemplate } from '../services/email.js';
 import { logger } from '../lib/logger.js';
 
 const router = Router();
@@ -537,6 +537,27 @@ router.post('/test-smtp', authenticate, requireAdmin, async (_req: Request, res:
   } catch (err: any) {
     logger.error({ err: err.message }, 'SMTP test failed');
     res.status(500).json({ success: false, error: 'SMTP connection test failed' });
+  }
+});
+
+// ── POST /api/settings/test-email — send a real test email ─────────────────
+
+router.post('/test-email', authenticate, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const to = req.body.email;
+    if (!to) {
+      res.status(400).json({ success: false, error: 'Email address is required' });
+      return;
+    }
+    const html = await wrapInBaseTemplate(
+      `<h2>Test Email</h2><p>This is a test email sent from TheBookTimes admin panel at ${new Date().toISOString()}.</p><p>If you received this, email delivery is working correctly!</p>`,
+      'Test Email',
+    );
+    const result = await sendEmail({ to, subject: 'TheBookTimes - Test Email', html });
+    res.json(result);
+  } catch (err: any) {
+    logger.error({ err: err.message }, 'Test email failed');
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
