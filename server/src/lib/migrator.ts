@@ -40,6 +40,7 @@ import { migration010 } from '../migrations/010_webhooks.js';
 import { migration011 } from '../migrations/011_two_factor_auth.js';
 import { migration012 } from '../migrations/012_book_authors.js';
 import { migration013 } from '../migrations/013_enhancement_pack.js';
+import { migration014 } from '../migrations/014_password_reset_otp.js';
 
 const migrations: Migration[] = [
   migration001,
@@ -55,6 +56,7 @@ const migrations: Migration[] = [
   migration011,
   migration012,
   migration013,
+  migration014,
 ];
 
 // ── Runner ──────────────────────────────────────────────────────────────

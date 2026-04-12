@@ -473,6 +473,37 @@ ${layout.footer}`.replace('{{unsubscribe_link}}', '');
   return { subject, html };
 }
 
+export async function buildPasswordResetEmail(userName: string, otp: string): Promise<{ subject: string; html: string }> {
+  const siteName = await getSiteSetting('site_name', 'The Book Times');
+  const siteUrl = await getSiteSetting('site_url', 'https://thebooktimes.com');
+  const subject = `Reset Your Password — ${siteName}`;
+
+  const layout = await getBaseLayout(subject);
+  const html = `${layout.header}
+        <h2>Password Reset Request &#x1F511;</h2>
+        <p>Hi ${escapeHtml(userName)},</p>
+        <p>We received a request to reset your password on <strong>${escapeHtml(siteName)}</strong>. Use the verification code below to proceed:</p>
+
+        <div class="code-box">${escapeHtml(otp)}</div>
+
+        <p style="text-align:center;color:#888;font-size:14px;">This code expires in <strong>10 minutes</strong>.</p>
+        <p style="text-align:center;color:#888;font-size:14px;">You have up to <strong>3 attempts</strong> to enter it correctly.</p>
+
+        <div class="divider"></div>
+
+        <div class="highlight-box" style="border-left-color:#dc3545;">
+          <p style="margin:0;"><strong>&#x26A0; Didn\'t request this?</strong></p>
+          <p style="margin:8px 0 0;font-size:14px;">If you didn\'t request a password reset, you can safely ignore this email. Your password will remain unchanged and no one else can access your account.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <p style="font-size:13px;color:#999;">For security reasons, never share this code with anyone. ${escapeHtml(siteName)} staff will never ask for your OTP.</p>
+${layout.footer}`.replace('{{unsubscribe_link}}', '');
+
+  return { subject, html };
+}
+
 // â”€â”€ Personalization helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function personalizeEmail(html: string, vars: Record<string, string>): string {

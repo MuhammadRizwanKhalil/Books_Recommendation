@@ -14,7 +14,7 @@ import {
 import {
   sendEmail, wrapInBaseTemplate, getSiteSetting,
   buildWelcomeEmail, buildAdminLoginAlertEmail,
-  build2FASetupEmail, build2FACodeEmail,
+  build2FASetupEmail, build2FACodeEmail, buildPasswordResetEmail,
 } from '../services/email.js';
 import { validate, registerSchema, loginSchema, updateProfileSchema } from '../lib/validation.js';
 import * as OTPAuth from 'otpauth';
@@ -589,6 +589,225 @@ router.put('/me', authenticate, rateLimit('update-profile', 10, 15 * 60 * 1000),
   } catch (err: any) {
     logger.error({ err: err }, 'Update profile error');
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── FORGOT PASSWORD FLOW (OTP via email) ─────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Generate a 6-digit numeric OTP */
+function generateOTP(): string {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+// ── Step 1: POST /api/auth/forgot-password ─────────────────────────────────
+// User submits their email. We generate OTP, hash it, store it, and email it.
+router.post('/forgot-password', rateLimit('forgot-pw', 3, 15 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Always return success to prevent email enumeration attacks
+    const successMsg = 'If an account exists with that email, we\'ve sent a verification code.';
+
+    const user = await dbGet<any>('SELECT id, name, email, is_active FROM users WHERE email = ?', [normalizedEmail]);
+    if (!user || !user.is_active) {
+      // Don't reveal that the account doesn't exist
+      res.json({ message: successMsg });
+      return;
+    }
+
+    // Invalidate any existing unused OTPs for this user
+    await dbRun(
+      `UPDATE password_reset_otps SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL AND expires_at > NOW()`,
+      [user.id],
+    );
+
+    // Generate and hash OTP
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+
+    await dbRun(
+      `INSERT INTO password_reset_otps (id, user_id, email, otp_hash, expires_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [uuidv4(), user.id, normalizedEmail, otpHash, expiresAt],
+    );
+
+    // Send the OTP email
+    try {
+      const emailContent = await buildPasswordResetEmail(user.name || 'Reader', otp);
+      const result = await sendEmail({
+        to: normalizedEmail,
+        subject: emailContent.subject,
+        html: emailContent.html,
+      });
+      if (!result.success) {
+        logger.error({ email: normalizedEmail, error: result.error }, 'Password reset email failed');
+      } else {
+        logger.info({ email: normalizedEmail }, 'Password reset OTP sent');
+      }
+    } catch (e) {
+      logger.error({ err: e }, 'Password reset email error');
+    }
+
+    res.json({ message: successMsg });
+  } catch (err: any) {
+    logger.error({ err }, 'Forgot password error');
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// ── Step 2: POST /api/auth/verify-reset-otp ────────────────────────────────
+// User submits email + OTP. We verify it and return a short-lived reset token.
+router.post('/verify-reset-otp', rateLimit('verify-otp', 10, 15 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      res.status(400).json({ error: 'Email and OTP are required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find the latest unused, unexpired OTP for this email
+    const record = await dbGet<any>(
+      `SELECT * FROM password_reset_otps
+       WHERE email = ? AND used_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [normalizedEmail],
+    );
+
+    if (!record) {
+      res.status(400).json({ error: 'No valid OTP found. Please request a new one.' });
+      return;
+    }
+
+    // Check max attempts
+    if (record.attempts >= record.max_attempts) {
+      // Burn the OTP
+      await dbRun('UPDATE password_reset_otps SET used_at = NOW() WHERE id = ?', [record.id]);
+      res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+      return;
+    }
+
+    // Verify OTP
+    const isValid = await bcrypt.compare(otp.toString().trim(), record.otp_hash);
+
+    if (!isValid) {
+      // Increment attempt counter
+      await dbRun('UPDATE password_reset_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+      const remaining = record.max_attempts - record.attempts - 1;
+      res.status(400).json({
+        error: remaining > 0
+          ? `Incorrect code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          : 'Incorrect code. Please request a new one.',
+      });
+      return;
+    }
+
+    // OTP is valid! Mark it as used
+    await dbRun('UPDATE password_reset_otps SET used_at = NOW() WHERE id = ?', [record.id]);
+
+    // Generate a short-lived reset token (5 minutes)
+    const resetToken = jwt.sign(
+      { userId: record.user_id, email: normalizedEmail, purpose: 'password-reset' },
+      config.jwt.secret + ':reset',
+      { expiresIn: '5m' } as jwt.SignOptions,
+    );
+
+    logger.info({ email: normalizedEmail }, 'Password reset OTP verified successfully');
+
+    res.json({
+      message: 'OTP verified successfully. You can now reset your password.',
+      resetToken,
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'Verify reset OTP error');
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+});
+
+// ── Step 3: POST /api/auth/reset-password ──────────────────────────────────
+// User submits the reset token + new password. We update the password.
+router.post('/reset-password', rateLimit('reset-pw', 5, 15 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      res.status(400).json({ error: 'Reset token and new password are required' });
+      return;
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      res.status(400).json({ error: 'Password must be at least 8 characters' });
+      return;
+    }
+
+    // Verify reset token
+    let payload: any;
+    try {
+      payload = jwt.verify(resetToken, config.jwt.secret + ':reset');
+    } catch {
+      res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+      return;
+    }
+
+    if (payload.purpose !== 'password-reset') {
+      res.status(400).json({ error: 'Invalid reset token' });
+      return;
+    }
+
+    // Find user
+    const user = await dbGet<any>('SELECT id, name, email, is_active FROM users WHERE id = ? AND email = ?', [payload.userId, payload.email]);
+    if (!user || !user.is_active) {
+      res.status(400).json({ error: 'Account not found or disabled' });
+      return;
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await dbRun('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?', [passwordHash, user.id]);
+
+    // Revoke all existing refresh tokens (force re-login everywhere)
+    await revokeAllRefreshTokens(user.id);
+
+    // Log the event
+    await logLoginEvent(user.id, 'password_reset', req);
+
+    // Send confirmation email
+    try {
+      const siteName = await getSiteSetting('site_name', 'The Book Times');
+      const html = await wrapInBaseTemplate(
+        `<h2>Password Changed Successfully &#x2705;</h2>
+        <p>Hi ${escapeHtml(user.name || 'Reader')},</p>
+        <p>Your password for <strong>${escapeHtml(siteName)}</strong> has been successfully changed.</p>
+        <div class="highlight-box" style="border-left-color:#dc3545;">
+          <p style="margin:0;"><strong>&#x26A0; Wasn\'t you?</strong></p>
+          <p style="margin:8px 0 0;font-size:14px;">If you didn\'t change your password, please contact us immediately at <a href="mailto:contact@thebooktimes.com">contact@thebooktimes.com</a></p>
+        </div>
+        <p style="font-size:14px;color:#666;">All your existing sessions have been logged out for security.</p>`,
+        `Password Changed — ${siteName}`,
+      );
+      sendEmail({ to: user.email, subject: `Password Changed — ${siteName}`, html })
+        .catch(e => logger.error({ err: e }, 'Password changed confirmation email failed'));
+    } catch (e) {
+      logger.error({ err: e }, 'Password changed email error');
+    }
+
+    logger.info({ userId: user.id, email: user.email }, 'Password reset completed');
+
+    res.json({ message: 'Password has been reset successfully. Please sign in with your new password.' });
+  } catch (err: any) {
+    logger.error({ err }, 'Reset password error');
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
