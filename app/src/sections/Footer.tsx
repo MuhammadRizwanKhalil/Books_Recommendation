@@ -1,5 +1,5 @@
 import { Mail, ExternalLink } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import { useSettings } from '@/components/SettingsProvider';
 import { useAppNav } from '@/App';
@@ -28,8 +28,6 @@ export function Footer() {
   const { getSetting, settings } = useSettings();
   const { openLegal } = useAppNav();
   const { t } = useTranslation();
-  const routerNavigate = useNavigate();
-  const location = useLocation();
   const currentYear = new Date().getFullYear();
 
   const siteName = getSetting('site_name', 'The Book Times');
@@ -49,28 +47,18 @@ export function Footer() {
 
   const footerLinks = {
     discover: [
-      { label: t('footer.trendingBooks'), href: '/trending', isRoute: true },
-      { label: t('sections.newReleases'), href: '/#new-releases', isRoute: false },
-      { label: t('sections.topRated'), href: '/#top-rated', isRoute: false },
-      { label: t('nav.categories'), href: '/categories', isRoute: true },
+      { label: t('footer.trendingBooks'), href: '/trending' },
+      { label: t('sections.newReleases'), href: '/search?sort=newest' },
+      { label: t('sections.topRated'), href: '/search?sort=rating-desc' },
+      { label: t('nav.categories'), href: '/categories' },
     ],
     company: [
-      { label: t('nav.blog'), href: '/blog', isRoute: true },
-      { label: t('nav.forYou'), href: '/for-you', isRoute: true },
-      { label: t('nav.lists'), href: '/lists', isRoute: true },
-      { label: t('nav.compare'), href: '/compare', isRoute: true },
-      { label: t('sections.newsletter'), href: '/#newsletter', isRoute: false },
+      { label: t('nav.blog'), href: '/blog' },
+      { label: t('nav.forYou'), href: '/for-you' },
+      { label: t('nav.lists'), href: '/lists' },
+      { label: t('nav.compare'), href: '/compare' },
+      { label: t('sections.newsletter'), href: '/blog' },
     ],
-  };
-
-  const scrollToSection = (href: string) => {
-    const hash = href.replace('/', '');
-    if (location.pathname !== '/') {
-      routerNavigate('/' + hash);
-      return;
-    }
-    const el = document.querySelector(hash);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   const legalLinks = [
@@ -132,19 +120,9 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.discover.map((link) => (
                 <li key={link.label}>
-                  {link.isRoute ? (
-                    <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <a
-                      href={link.href}
-                      onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  )}
+                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -156,19 +134,9 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
-                  {link.isRoute ? (
-                    <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                      {link.label}
-                    </Link>
-                  ) : (
-                    <a
-                      href={link.href}
-                      onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  )}
+                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>

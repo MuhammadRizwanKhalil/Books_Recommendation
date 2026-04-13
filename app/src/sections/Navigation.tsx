@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, Heart, User, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,11 +17,11 @@ import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const sectionLinks = [
-  { labelKey: 'sections.trending', href: '/trending', isPage: true },
-  { labelKey: 'sections.categories', href: '/categories', isPage: true },
-  { labelKey: 'sections.newReleases', href: '/#new-releases', isPage: false },
-  { labelKey: 'sections.topRated', href: '/#top-rated', isPage: false },
-  { labelKey: 'sections.featuredAuthors', href: '/#authors', isPage: false },
+  { labelKey: 'sections.trending', href: '/trending' },
+  { labelKey: 'sections.categories', href: '/categories' },
+  { labelKey: 'sections.newReleases', href: '/search?sort=newest' },
+  { labelKey: 'sections.topRated', href: '/search?sort=rating-desc' },
+  { labelKey: 'sections.featuredAuthors', href: '/search?sort=popular' },
 ];
 
 const pageLinks = [
@@ -53,18 +53,6 @@ export function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Scroll to hash section after navigation to home page
-  useEffect(() => {
-    if (location.pathname === '/' && location.hash) {
-      // Delay to allow home page sections to render
-      const timer = setTimeout(() => {
-        const el = document.querySelector(location.hash);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [location.pathname, location.hash]);
-
   // Global keyboard shortcut: Ctrl/Cmd+K to open search
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
@@ -76,17 +64,6 @@ export function Navigation() {
     window.addEventListener('keydown', handleKeyboard);
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, []);
-
-  const scrollToSection = useCallback((href: string) => {
-    const hash = href.replace('/', '');
-    if (location.pathname !== '/') {
-      // Navigate to home with hash — the useEffect above will handle scrolling
-      navigate('/' + hash);
-      return;
-    }
-    const element = document.querySelector(hash);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
-  }, [location.pathname, navigate]);
 
   return (
     <header
@@ -114,29 +91,18 @@ export function Navigation() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1" aria-label="Main navigation">
             {sectionLinks.map((link) => (
-              link.isPage ? (
-                <Link
-                  key={link.labelKey}
-                  to={link.href}
-                  className={cn(
-                    'inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-200',
-                    location.pathname === link.href
-                      ? 'text-primary bg-primary/10'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/80'
-                  )}
-                >
-                  {t(link.labelKey)}
-                </Link>
-              ) : (
-                <a
-                  key={link.labelKey}
-                  href={link.href}
-                  onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                  className="inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-200"
-                >
-                  {t(link.labelKey)}
-                </a>
-              )
+              <Link
+                key={link.labelKey}
+                to={link.href}
+                className={cn(
+                  'inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                  (location.pathname + location.search) === link.href || location.pathname === link.href
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/80'
+                )}
+              >
+                {t(link.labelKey)}
+              </Link>
             ))}
             {pageLinks.map((link) => (
               <Link
@@ -233,25 +199,14 @@ export function Navigation() {
                   {/* Mobile Nav Links */}
                   <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
                     {sectionLinks.map((link) => (
-                      link.isPage ? (
-                        <Link
-                          key={link.labelKey}
-                          to={link.href}
-                          onClick={() => setIsMobileOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
-                        >
-                          {t(link.labelKey)}
-                        </Link>
-                      ) : (
-                        <a
-                          key={link.labelKey}
-                          href={link.href}
-                          onClick={(e) => { e.preventDefault(); setIsMobileOpen(false); setTimeout(() => scrollToSection(link.href), 300); }}
-                          className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
-                        >
-                          {t(link.labelKey)}
-                        </a>
-                      )
+                      <Link
+                        key={link.labelKey}
+                        to={link.href}
+                        onClick={() => setIsMobileOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-accent transition-colors"
+                      >
+                        {t(link.labelKey)}
+                      </Link>
                     ))}
                     {pageLinks.map((link) => (
                       <Link
