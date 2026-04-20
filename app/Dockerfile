@@ -12,8 +12,8 @@ RUN apk add --no-cache python3 make g++ pkgconfig \
 
 # ── Dependencies stage ───────────────────────────────────────────────────────
 FROM base AS deps
-COPY package.json ./
-RUN npm install --legacy-peer-deps
+COPY package.json package-lock.json* ./
+RUN npm ci --legacy-peer-deps 2>/dev/null || npm install --legacy-peer-deps
 
 # ── Development stage: Vite dev server with HMR ─────────────────────────────
 FROM deps AS development

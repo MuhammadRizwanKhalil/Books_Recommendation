@@ -15,39 +15,75 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        timeout-minutes: 8
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 8m
           script: |
             set -e
 
             echo "=== Deploying The Book Times ==="
             cd ${{ secrets.DEPLOY_PATH }}
 
-            # Pull latest code
-            echo "Pulling latest code..."
-            git pull origin master
+            # ── System diagnostics ──
+            echo "=== System Info ==="
+            echo "Disk: $(df -h / | tail -1 | awk '{print $4 " free of " $2}')"
+            echo "Memory: $(free -h | awk '/Mem:/{print $7 " available of " $2}')"
+            echo "Docker: $(docker --version)"
 
-            # Build and restart containers
-            echo "Building and starting containers..."
-            docker compose -f docker-compose.prod.yml up --build -d
+            # Pull latest code
+            echo ""
+            echo "=== Pulling latest code ==="
+            git fetch origin master
+            git reset --hard origin/master
+
+            # Free disk space before building
+            echo ""
+            echo "=== Freeing disk space ==="
+            docker image prune -f 2>/dev/null || true
+            docker builder prune -f --keep-storage=2GB 2>/dev/null || true
+
+            # Build containers one at a time (prevents OOM on small servers)
+            echo ""
+            echo "=== Building server ==="
+            docker compose -f docker-compose.prod.yml build server
+            
+            echo ""
+            echo "=== Building app ==="
+            docker compose -f docker-compose.prod.yml build app
+            
+            echo ""
+            echo "=== Starting containers ==="
+            docker compose -f docker-compose.prod.yml up -d
 
             # Clean up old images to save disk space
-            echo "Pruning unused Docker images..."
-            docker image prune -f
+            echo ""
+            echo "=== Post-deploy cleanup ==="
+            docker image prune -f 2>/dev/null || true
 
             # Wait for health checks
-            echo "Waiting for services to be healthy..."
-            sleep 15
+            echo ""
+            echo "=== Waiting for services to be healthy (30s) ==="
+            sleep 30
 
             # Verify services are running
             echo "=== Container Status ==="
             docker compose -f docker-compose.prod.yml ps
 
-            # Health checks
-            echo "=== Health Checks ==="
-            curl -sf http://localhost:8080/ > /dev/null && echo "Frontend: OK" || echo "WARNING: Frontend check failed"
-            curl -sf http://localhost:8080/api/health > /dev/null && echo "API: OK" || echo "WARNING: API health check failed"
+            # Check for crashed containers and show logs
+            echo "=== Server Logs (last 30 lines) ==="
+            docker compose -f docker-compose.prod.yml logs --tail=30 server 2>&1 || true
+            echo "=== App Logs (last 10 lines) ==="
+            docker compose -f docker-compose.prod.yml logs --tail=10 app 2>&1 || true
 
+            # Health checks (non-fatal — warn only)
+            echo ""
+            echo "=== Health Checks ==="
+            curl -sf --max-time 10 http://localhost:8080/ > /dev/null && echo "Frontend: OK" || echo "WARNING: Frontend check failed"
+            curl -sf --max-time 10 http://localhost:8080/api/health > /dev/null && echo "API: OK" || echo "WARNING: API health check failed"
+
+            echo ""
             echo "=== Deployment Complete ==="
+            echo "Disk after deploy: $(df -h / | tail -1 | awk '{print $4 " free of " $2}')"
