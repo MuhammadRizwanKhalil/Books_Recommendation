@@ -29,7 +29,7 @@ jobs:
             # Designed for 1-vCPU / 1GB RAM servers
             # ═══════════════════════════════════════════════════════════════
 
-            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
+            DEPLOY_DIR=$(echo "${{ secrets.DEPLOY_PATH }}" | tr -d '[:space:]')
             COMPOSE_FILE="docker-compose.prod.yml"
             LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
 
