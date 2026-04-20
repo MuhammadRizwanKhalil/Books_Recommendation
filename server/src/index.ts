@@ -37,16 +37,50 @@ import testimonialsRoutes from './routes/testimonials.js';
 import imageProxyRoutes from './routes/imageProxy.js';
 import quotesRoutes from './routes/quotes.js';
 import genrePreferencesRoutes from './routes/genrePreferences.js';
+import seriesRoutes from './routes/series.js';
+import moodsRoutes from './routes/moods.js';
+import paceRoutes from './routes/pace.js';
+import readingCountsRoutes from './routes/readingCounts.js';
+import readingChallengeRoutes from './routes/readingChallenge.js';
+import activityFeedRoutes from './routes/activityFeed.js';
+import userStatsRoutes from './routes/userStats.js';
+import goodreadsImportRoutes from './routes/goodreadsImport.js';
+import contentWarningsRoutes from './routes/contentWarnings.js';
+import reviewCommentsRoutes from './routes/reviewComments.js';
+import blogMentionsRoutes from './routes/blogMentions.js';
+import communityListsRoutes from './routes/communityLists.js';
+import discussionsRoutes from './routes/discussions.js';
+import communityPromptsRoutes from './routes/communityPrompts.js';
+import bookClubsRoutes from './routes/bookClubs.js';
+import ownedBooksRoutes from './routes/ownedBooks.js';
+import editionsRoutes from './routes/editions.js';
+import coverGalleryRoutes from './routes/coverGallery.js';
+import charactersRoutes from './routes/characters.js';
+import tbrQueueRoutes from './routes/tbrQueue.js';
+import userTagsRoutes from './routes/userTags.js';
+import yearInBooksRoutes from './routes/yearInBooks.js';
+import choiceAwardsRoutes from './routes/choiceAwards.js';
+import journalRoutes from './routes/journal.js';
+import quizzesRoutes from './routes/quizzes.js';
+import storyArcRoutes from './routes/storyArc.js';
+import aiMoodRoutes from './routes/aiMood.js';
+import authorPortalRoutes from './routes/authorPortal.js';
+import giveawaysRoutes from './routes/giveaways.js';
+import famousReviewsRoutes from './routes/famousReviews.js';
 
 // Job imports
 import { startImportCron, stopImportCron } from './jobs/bookImport.js';
 import { startBlogCron, stopBlogCron } from './jobs/blogGeneration.js';
 import { startRetentionCron, stopRetentionCron } from './jobs/dataRetention.js';
 import { startDigestCron, stopDigestCron } from './jobs/emailDigest.js';
+import { startBatchProcessorCron, stopBatchProcessorCron } from './jobs/batchProcessor.js';
 import { recalculateAllScores } from './services/scoring.js';
 import cron from 'node-cron';
 
 const app = express();
+
+// Support comma-separated frontend origins in both CSP and CORS
+const configuredOrigins = config.frontendUrl.split(',').map(o => o.trim()).filter(Boolean);
 
 // ── Performance & Security Middleware ────────────────────────────────────────
 
@@ -72,7 +106,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", config.frontendUrl, "https://books.google.com", "https://www.googleapis.com"],
+      connectSrc: ["'self'", ...configuredOrigins, "https://books.google.com", "https://www.googleapis.com"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -84,10 +118,24 @@ app.use(helmet({
 }));
 
 // Support comma-separated CORS origins (e.g. "http://localhost:5173,https://thebooktimes.com")
-const allowedOrigins = config.frontendUrl.split(',').map(o => o.trim()).filter(Boolean);
+const devOriginPatterns = config.nodeEnv !== 'production'
+  ? [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/]
+  : [];
 
 app.use(cors({
-  origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (configuredOrigins.includes(origin) || devOriginPatterns.some((pattern) => pattern.test(origin))) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -165,10 +213,12 @@ app.use(async (req, res, next) => {
 
 // ── Global API Rate Limiting ────────────────────────────────────────────────
 // Allow 120 requests per minute per IP across all API endpoints
+// In test/development environments, raise the ceiling to avoid false throttling during E2E runs
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === '1';
 app.use('/api', rateLimitByTier('global-api', {
-  anonymous: { max: 60,  windowMs: 60 * 1000 },  // 60 req/min for anonymous
-  user:      { max: 120, windowMs: 60 * 1000 },  // 120 req/min for authenticated users
-  admin:     { max: 300, windowMs: 60 * 1000 },  // 300 req/min for admins
+  anonymous: { max: isTestEnv ? 10000 : 60,  windowMs: 60 * 1000 },
+  user:      { max: isTestEnv ? 10000 : 120, windowMs: 60 * 1000 },
+  admin:     { max: isTestEnv ? 10000 : 300, windowMs: 60 * 1000 },
 }));
 
 // ── API Routes ──────────────────────────────────────────────────────────────
@@ -187,7 +237,9 @@ app.use('/api/campaigns', campaignsRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reading-lists', readingListsRoutes);
+app.use('/api/lists', communityListsRoutes);
 app.use('/api/reading-progress', readingProgressRoutes);
+app.use('/api/feed', activityFeedRoutes);
 app.use('/api/email-digest', emailDigestRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/experiments', experimentsRoutes);
@@ -196,6 +248,34 @@ app.use('/api/testimonials', cacheControl(300), testimonialsRoutes);
 app.use('/api', imageProxyRoutes); // Image optimization proxy
 app.use('/api/quotes', cacheControl(60), quotesRoutes);             // Book quotes
 app.use('/api/genre-preferences', genrePreferencesRoutes);           // User genre onboarding
+app.use('/api/series', cacheControl(300), seriesRoutes);               // Book series
+app.use('/api/moods', cacheControl(60), moodsRoutes);                  // Mood tags
+app.use('/api/pace', cacheControl(60), paceRoutes);                    // Pace indicator
+app.use('/api/reading-counts', cacheControl(300), readingCountsRoutes);  // Reading counts (5 min cache)
+app.use('/api/reading-challenge', readingChallengeRoutes);                // Annual reading challenge
+app.use('/api/users', userStatsRoutes);                                    // User reading statistics
+app.use('/api/import/user', goodreadsImportRoutes);                       // Goodreads CSV import (user-facing)
+app.use('/api/content-warnings', contentWarningsRoutes);                   // Content warnings (community-sourced)
+app.use('/api/review-comments', reviewCommentsRoutes);                       // Review comments (threaded replies)
+app.use('/api', blogMentionsRoutes);                                         // Featured in blog cross-links
+app.use('/api', charactersRoutes);                                            // Book characters and moderation
+app.use('/api', discussionsRoutes);                                           // Book discussion forums
+app.use('/api', communityPromptsRoutes);                                      // Community prompts and answers
+app.use('/api', bookClubsRoutes);                                             // Book clubs and buddy reads
+app.use('/api', ownedBooksRoutes);                                            // Owned books tracking
+app.use('/api', editionsRoutes);                                              // Editions browser
+app.use('/api', coverGalleryRoutes);                                          // Cover zoom gallery
+app.use('/api/tbr-queue', tbrQueueRoutes);                                    // Up next queue
+app.use('/api', userTagsRoutes);                                              // Personal custom tags
+app.use('/api/users', yearInBooksRoutes);                                     // Year in books recap
+app.use('/api', choiceAwardsRoutes);                                           // Annual choice awards
+app.use('/api', journalRoutes);                                                // Reading journal and public quotes
+app.use('/api', quizzesRoutes);                                                // Quizzes and trivia
+app.use('/api', storyArcRoutes);                                               // Story arc visualization
+app.use('/api', aiMoodRoutes);                                                 // AI mood analysis and discovery
+app.use('/api', authorPortalRoutes);                                           // Author claims + author portal
+app.use('/api', giveawaysRoutes);                                              // Author-sponsored giveaways
+app.use('/api', famousReviewsRoutes);                                          // Famous critic reviews (AI-fetched)
 
 // SEO routes (sitemap, robots.txt, structured data)
 app.use('/', seoRoutes);
@@ -320,21 +400,58 @@ async function bootstrap() {
       logger.warn('⚠️  RESEND_API_KEY is not set. Email features (digest, welcome, 2FA) are disabled.');
     }
 
-    // Start the daily book import cron job
+    // ── Scheduled Jobs ──────────────────────────────────────────────────────
+    logger.info('');
+    logger.info('┌────────────────────────────────────────────────────────────────┐');
+    logger.info('│  📅 SCHEDULED JOBS                                            │');
+    logger.info('├────────────────────────┬─────────────────────┬────────────────┤');
+    logger.info('│  Job                   │ Schedule            │ Status         │');
+    logger.info('├────────────────────────┼─────────────────────┼────────────────┤');
+
+    // Book Import
     if (config.importJob.enabled) {
       startImportCron();
+      logger.info(`│  📚 Book Import        │ ${config.importJob.cronSchedule.padEnd(19)} │ ✅ enabled      │`);
+    } else {
+      logger.info('│  📚 Book Import        │ —                   │ ❌ disabled     │');
     }
 
-    // Start AI blog generation cron
+    // AI Blog Generation
+    // NOTE: Blog generation uses sequential OpenAI calls (NOT Batch API) because
+    // each step depends on the previous: keywords → content → excerpt → image.
+    // This is architecturally unavoidable for single-post generation.
     startBlogCron();
+    if (config.aiBlog.enabled && config.openaiApiKey) {
+      logger.info(`│  📝 AI Blog            │ ${config.aiBlog.cronSchedule.padEnd(19)} │ ✅ ${config.aiBlog.postsPerRun} post/run  │`);
+    } else {
+      const reason = !config.openaiApiKey ? 'no API key' : 'disabled';
+      logger.info(`│  📝 AI Blog            │ ${config.aiBlog.cronSchedule.padEnd(19)} │ ❌ ${reason.padEnd(10)} │`);
+    }
 
-    // Start data retention cron (purge old analytics)
+    // AI Enrichment (Batch API — submitted after import)
+    if (config.aiEnrichment.enabled && config.openaiApiKey) {
+      logger.info(`│  🧠 AI Enrichment      │ after import        │ ✅ batch=${String(config.aiEnrichment.batchSize).padEnd(4)} │`);
+    } else {
+      logger.info('│  🧠 AI Enrichment      │ after import        │ ❌ disabled     │');
+    }
+
+    // Batch Result Processor
+    startBatchProcessorCron();
+    if (config.openaiApiKey) {
+      logger.info('│  🔄 Batch Processor    │ */30 * * * *        │ ✅ every 30min │');
+    } else {
+      logger.info('│  🔄 Batch Processor    │ */30 * * * *        │ ❌ no API key  │');
+    }
+
+    // Data Retention
     startRetentionCron();
+    logger.info('│  🗑️  Data Retention     │ 30 3 * * *          │ ✅ daily 3:30  │');
 
-    // Start email digest cron (hourly check)
+    // Email Digest
     startDigestCron();
+    logger.info('│  📧 Email Digest       │ 0 * * * *           │ ✅ hourly      │');
 
-    // Score recalculation cron — runs every 2 hours to keep composite scores fresh
+    // Score Recalculation
     cron.schedule('0 */2 * * *', async () => {
       try {
         const result = await recalculateAllScores();
@@ -345,6 +462,10 @@ async function bootstrap() {
         logger.error({ err: err }, 'Score recalculation error');
       }
     });
+    logger.info('│  📊 Score Recalc       │ 0 */2 * * *         │ ✅ every 2h    │');
+
+    logger.info('└────────────────────────┴─────────────────────┴────────────────┘');
+    logger.info('');
 
     // Run initial score recalculation on startup (non-blocking)
     setTimeout(async () => {
@@ -365,6 +486,7 @@ async function bootstrap() {
     try { stopBlogCron(); } catch {}
     try { stopRetentionCron(); } catch {}
     try { stopDigestCron(); } catch {}
+    try { stopBatchProcessorCron(); } catch {}
     server.close(async () => {
       try { await closePool(); } catch {}
       logger.info('Server closed.');

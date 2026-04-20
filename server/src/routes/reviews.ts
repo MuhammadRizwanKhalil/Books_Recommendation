@@ -6,6 +6,7 @@ import { sendEmail, wrapInBaseTemplate, getSiteSetting } from '../services/email
 import { logger } from '../lib/logger.js';
 import { validateReviewContent, calculateReviewTrust, recalculateBookScore } from '../services/scoring.js';
 import { validate, createReviewSchema } from '../lib/validation.js';
+import { recordUserActivity } from '../services/activityFeed.js';
 
 const router = Router();
 
@@ -18,27 +19,67 @@ function escapeHtml(str: string): string {
 router.get('/book/:bookId', async (req: Request, res: Response) => {
   try {
     const { bookId } = req.params;
-    const { page = '1', limit = '20', sort = 'helpful' } = req.query;
+    const { page = '1', limit = '20', sort = 'helpful', includeSpoilers } = req.query;
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
+    const ratingFilter = req.query.rating ? parseFloat(req.query.rating as string) : undefined;
+    const minRating = req.query.minRating ? parseFloat(req.query.minRating as string) : undefined;
+    const maxRating = req.query.maxRating ? parseFloat(req.query.maxRating as string) : undefined;
+    const hasSpoilerFilter = req.query.hasSpoiler as string | undefined;
+
     const pageNum = Math.max(1, parseInt(page as string, 10));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10)));
     const offset = (pageNum - 1) * limitNum;
 
+    // Build WHERE clause with filters
+    const conditions: string[] = ['book_id = ?', 'is_approved = 1'];
+    const params: any[] = [bookId];
+
+    if (q) {
+      conditions.push('MATCH(title, content) AGAINST(? IN BOOLEAN MODE)');
+      params.push(q);
+    }
+    if (ratingFilter !== undefined && !isNaN(ratingFilter)) {
+      conditions.push('rating = ?');
+      params.push(ratingFilter);
+    }
+    if (minRating !== undefined && !isNaN(minRating)) {
+      conditions.push('rating >= ?');
+      params.push(minRating);
+    }
+    if (maxRating !== undefined && !isNaN(maxRating)) {
+      conditions.push('rating <= ?');
+      params.push(maxRating);
+    }
+    if (hasSpoilerFilter === 'true') {
+      conditions.push('has_spoiler = 1');
+    } else if (hasSpoilerFilter === 'false') {
+      conditions.push('has_spoiler = 0');
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Total unfiltered for the book (for stats)
     const totalRow = await dbGet<any>('SELECT COUNT(*) as total FROM reviews WHERE book_id = ? AND is_approved = 1', [bookId]);
     const total = totalRow.total;
+
+    // Total matching filters
+    const filteredRow = await dbGet<any>(`SELECT COUNT(*) as total FROM reviews WHERE ${whereClause}`, [...params]);
+    const totalFiltered = filteredRow.total;
 
     // Sort options: helpful (default), newest, highest, lowest
     let orderBy = 'helpful_count DESC, created_at DESC';
     if (sort === 'newest') orderBy = 'created_at DESC';
+    else if (sort === 'oldest') orderBy = 'created_at ASC';
     else if (sort === 'highest') orderBy = 'rating DESC, helpful_count DESC';
     else if (sort === 'lowest') orderBy = 'rating ASC, helpful_count DESC';
 
     const reviews = await dbAll<any>(`
-      SELECT * FROM reviews WHERE book_id = ? AND is_approved = 1
+      SELECT * FROM reviews WHERE ${whereClause}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
-    `, [bookId, limitNum, offset]);
+    `, [...params, limitNum, offset]);
 
-    // Get rating distribution
+    // Get rating distribution (always unfiltered for the book)
     const distribution = await dbAll<any>(`
       SELECT rating, COUNT(*) as count FROM reviews
       WHERE book_id = ? AND is_approved = 1
@@ -77,6 +118,14 @@ router.get('/book/:bookId', async (req: Request, res: Response) => {
         content: r.content,
         helpfulCount: r.helpful_count,
         isVerified: !!r.user_id, // Has an authenticated account
+        hasSpoiler: !!r.has_spoiler,
+        ...(includeSpoilers === 'true' && r.spoiler_text ? { spoilerText: r.spoiler_text } : {}),
+        authorResponse: r.author_response
+          ? {
+              content: r.author_response,
+              respondedAt: r.author_response_at,
+            }
+          : null,
         createdAt: r.created_at,
       })),
       stats: {
@@ -88,7 +137,7 @@ router.get('/book/:bookId', async (req: Request, res: Response) => {
           return { rating, count: found ? found.count : 0 };
         }),
       },
-      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+      pagination: { page: pageNum, limit: limitNum, total, totalFiltered, totalPages: Math.ceil(totalFiltered / limitNum) },
     });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to fetch reviews' });
@@ -100,6 +149,8 @@ router.get('/book/:bookId', async (req: Request, res: Response) => {
 router.post('/', authenticate, rateLimit('create-review', 10, 60 * 60 * 1000), validate(createReviewSchema), async (req: Request, res: Response) => {
   try {
     const { bookId, rating, title, content } = req.body;
+    const hasSpoiler = !!req.body.hasSpoiler;
+    const spoilerText = req.body.spoilerText ? String(req.body.spoilerText).slice(0, 5000) : null;
 
     // Content validation (spam detection, length checks)
     const validation = validateReviewContent(content, rating, title);
@@ -129,9 +180,9 @@ router.post('/', authenticate, rateLimit('create-review', 10, 60 * 60 * 1000), v
     const isApproved = validation.autoApprove ? 1 : 0;
 
     await dbRun(`
-      INSERT INTO reviews (id, book_id, user_id, user_name, user_avatar, rating, title, content, is_approved)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, bookId, req.user!.userId, user.name, user.avatar_url, rating, title || null, content, isApproved]);
+      INSERT INTO reviews (id, book_id, user_id, user_name, user_avatar, rating, title, content, is_approved, has_spoiler, spoiler_text)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, bookId, req.user!.userId, user.name, user.avatar_url, rating, title || null, content, isApproved, hasSpoiler ? 1 : 0, spoilerText]);
 
     // Recalculate the book's composite score now that a new review exists
     if (isApproved) {
@@ -151,9 +202,27 @@ router.post('/', authenticate, rateLimit('create-review', 10, 60 * 60 * 1000), v
       helpfulCount: review.helpful_count,
       isVerified: true,
       isApproved: !!review.is_approved,
+      hasSpoiler: !!review.has_spoiler,
+      spoilerText: review.spoiler_text || null,
       createdAt: review.created_at,
       ...(validation.issues.length > 0 && !validation.autoApprove ? { moderation: 'Your review has been submitted and will be visible after moderation.' } : {}),
     });
+
+    if (isApproved) {
+      setImmediate(() => {
+        recordUserActivity({
+          userId: req.user!.userId,
+          type: 'review',
+          bookId,
+          referenceId: id,
+          metadata: {
+            rating,
+            title: title || null,
+            reviewExcerpt: content.slice(0, 180),
+          },
+        }).catch(() => undefined);
+      });
+    }
 
     // ── Fire-and-forget: Admin notification ─────────────────────────────
     try {
@@ -190,20 +259,26 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
       return;
     }
     const { rating, title, content } = req.body;
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
-      res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    const hasSpoiler = req.body.hasSpoiler !== undefined ? !!req.body.hasSpoiler : undefined;
+    const spoilerText = req.body.spoilerText !== undefined ? (req.body.spoilerText ? String(req.body.spoilerText).slice(0, 5000) : null) : undefined;
+    if (rating !== undefined && (typeof rating !== 'number' || rating < 0.5 || rating > 5 || (rating * 2) % 1 !== 0)) {
+      res.status(400).json({ error: 'Rating must be between 0.5 and 5 in 0.5 increments' });
       return;
     }
     await dbRun(`
       UPDATE reviews SET rating = COALESCE(?, rating), title = COALESCE(?, title),
-      content = COALESCE(?, content), updated_at = NOW(), is_approved = 0
+      content = COALESCE(?, content), has_spoiler = COALESCE(?, has_spoiler),
+      spoiler_text = COALESCE(?, spoiler_text),
+      updated_at = NOW(), is_approved = 0
       WHERE id = ?
-    `, [rating || null, title !== undefined ? title : null, content || null, req.params.id]);
+    `, [rating || null, title !== undefined ? title : null, content || null, hasSpoiler !== undefined ? (hasSpoiler ? 1 : 0) : null, spoilerText !== undefined ? spoilerText : null, req.params.id]);
     const updated = await dbGet<any>('SELECT * FROM reviews WHERE id = ?', [req.params.id]);
     res.json({
       id: updated.id, bookId: updated.book_id, userId: updated.user_id,
       userName: updated.user_name, rating: updated.rating, title: updated.title,
-      content: updated.content, helpfulCount: updated.helpful_count, createdAt: updated.created_at,
+      content: updated.content, helpfulCount: updated.helpful_count,
+      hasSpoiler: !!updated.has_spoiler, spoilerText: updated.spoiler_text || null,
+      createdAt: updated.created_at,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to update review' });

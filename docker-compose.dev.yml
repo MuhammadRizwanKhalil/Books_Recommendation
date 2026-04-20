@@ -63,7 +63,12 @@ services:
       IMPORT_JOB_ENABLED: "true"
       IMPORT_RUN_ON_STARTUP: "true"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       AI_BLOG_ENABLED: ${AI_BLOG_ENABLED:-false}
+      AI_BLOG_CRON_SCHEDULE: ${AI_BLOG_CRON_SCHEDULE:-0 9 * * *}
+      AI_BLOG_POSTS_PER_RUN: ${AI_BLOG_POSTS_PER_RUN:-1}
+      AI_ENRICHMENT_ENABLED: ${AI_ENRICHMENT_ENABLED:-true}
+      AI_ENRICHMENT_BATCH_SIZE: ${AI_ENRICHMENT_BATCH_SIZE:-100}
     volumes:
       - ./server/src:/app/src
       - server-uploads-dev:/app/uploads

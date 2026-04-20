@@ -41,6 +41,44 @@ import { migration011 } from '../migrations/011_two_factor_auth.js';
 import { migration012 } from '../migrations/012_book_authors.js';
 import { migration013 } from '../migrations/013_enhancement_pack.js';
 import { migration014 } from '../migrations/014_password_reset_otp.js';
+import { migration015 } from '../migrations/015_series_information.js';
+import { migration016 } from '../migrations/016_mood_tags.js';
+import { migration017 } from '../migrations/017_pace_indicator.js';
+import { migration018 } from '../migrations/018_reading_counts.js';
+import { migration019 } from '../migrations/019_nullable_review_content.js';
+import { migration020 } from '../migrations/020_half_star_ratings.js';
+import { migration021 } from '../migrations/021_dnf_status.js';
+import { migration022 } from '../migrations/022_reading_challenge.js';
+import { migration023 } from '../migrations/023_reading_stats.js';
+import { migration024 } from '../migrations/024_goodreads_import.js';
+import { migration025 } from '../migrations/025_content_warnings.js';
+import { migration026 } from '../migrations/026_spoiler_tags.js';
+import { migration027 } from '../migrations/027_review_search.js';
+import { migration028 } from '../migrations/028_review_comments.js';
+import { migration029 } from '../migrations/029_blog_book_mentions.js';
+import { migration030 } from '../migrations/030_community_lists.js';
+import { migration031 } from '../migrations/031_characters.js';
+import { migration032 } from '../migrations/032_tbr_queue.js';
+import { migration033 } from '../migrations/033_user_following.js';
+import { migration034 } from '../migrations/034_activity_feed.js';
+import { migration035 } from '../migrations/035_social_login.js';
+import { migration036 } from '../migrations/036_discussions.js';
+import { migration037 } from '../migrations/037_community_prompts.js';
+import { migration038 } from '../migrations/038_book_clubs.js';
+import { migration039 } from '../migrations/039_owned_books.js';
+import { migration040 } from '../migrations/040_editions.js';
+import { migration041 } from '../migrations/041_progress_tracker.js';
+import { migration042 } from '../migrations/042_cover_gallery.js';
+import { migration043 } from '../migrations/043_custom_user_tags.js';
+import { migration044 } from '../migrations/044_choice_awards.js';
+import { migration045 } from '../migrations/045_reading_journal.js';
+import { migration046 } from '../migrations/046_quizzes.js';
+import { migration047 } from '../migrations/047_story_arc.js';
+import { migration048 } from '../migrations/048_ai_mood_detection.js';
+import { migration049 } from '../migrations/049_author_self_service.js';
+import { migration050 } from '../migrations/050_giveaways.js';
+import { migration051 } from '../migrations/051_famous_reviews.js';
+import { migration052 } from '../migrations/052_ai_batch_jobs.js';
 
 const migrations: Migration[] = [
   migration001,
@@ -57,6 +95,44 @@ const migrations: Migration[] = [
   migration012,
   migration013,
   migration014,
+  migration015,
+  migration016,
+  migration017,
+  migration018,
+  migration019,
+  migration020,
+  migration021,
+  migration022,
+  migration023,
+  migration024,
+  migration025,
+  migration026,
+  migration027,
+  migration028,
+  migration029,
+  migration030,
+  migration031,
+  migration032,
+  migration033,
+  migration034,
+  migration035,
+  migration036,
+  migration037,
+  migration038,
+  migration039,
+  migration040,
+  migration041,
+  migration042,
+  migration043,
+  migration044,
+  migration045,
+  migration046,
+  migration047,
+  migration048,
+  migration049,
+  migration050,
+  migration051,
+  migration052,
 ];
 
 // ── Runner ──────────────────────────────────────────────────────────────

@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Book, Category } from '@/types';
 import { useBooksByCategory, useTopRated } from '@/hooks/useBooks';
-import { formatPrice, formatRating, getStarRating, formatNumber } from '@/lib/utils';
+import { formatPrice, formatRating, formatNumber } from '@/lib/utils';
+import { StarDisplay } from '@/components/ui/star-display';
 import { handleImgError } from '@/lib/imageUtils';
 import { useWishlist } from '@/components/WishlistProvider';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +50,40 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
     ogDescription: `Explore top ${category.name} books on The Book Times`,
     ogUrl: `${window.location.origin}/category/${category.slug}`,
     canonical: `${window.location.origin}/category/${category.slug}`,
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: `${category.name} Books`,
+        description: category.description || `Browse the best ${category.name} books with ratings and reviews.`,
+        url: `${window.location.origin}/category/${category.slug}`,
+        isPartOf: { '@type': 'WebSite', name: 'The Book Times', url: window.location.origin },
+        numberOfItems: sortedBooks.length,
+        ...(featuredBook ? {
+          mainEntity: {
+            '@type': 'Book',
+            name: featuredBook.title,
+            author: { '@type': 'Person', name: featuredBook.author },
+            image: featuredBook.coverImage,
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: featuredBook.googleRating || 0,
+              ratingCount: featuredBook.ratingsCount || 0,
+              bestRating: 5,
+            },
+          },
+        } : {}),
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: window.location.origin },
+          { '@type': 'ListItem', position: 2, name: 'Categories', item: `${window.location.origin}/categories` },
+          { '@type': 'ListItem', position: 3, name: category.name, item: `${window.location.origin}/category/${category.slug}` },
+        ],
+      },
+    ],
   });
 
   const sortedBooks = useMemo(() => {
@@ -121,84 +156,117 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {/* ===== 1. HERO SECTION ===== */}
+        {/* ===== 1. HERO SECTION — Centered, immersive ===== */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-14"
         >
-          <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-12">
-            {/* Left: Category info */}
-            <div className="flex-1">
-              <Badge variant="outline" className="mb-3 text-xs">
-                <BookOpen className="h-3 w-3 mr-1" />
-                Category
-              </Badge>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif tracking-tight">
-                {category.name}
-              </h1>
-              {category.description && (
-                <p className="text-muted-foreground mt-4 text-base md:text-lg leading-relaxed max-w-xl">
-                  {category.description}
-                </p>
-              )}
-              <div className="flex flex-wrap items-center gap-3 mt-5">
-                <Badge variant="secondary" className="gap-1.5 py-1 px-3">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {sortedBooks.length} Books
-                </Badge>
-                {top20Books[0] && (
-                  <Badge variant="secondary" className="gap-1.5 py-1 px-3">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    Top Rated: {formatRating(top20Books[0].googleRating)}
-                  </Badge>
-                )}
-              </div>
-            </div>
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-primary/[0.06] via-background to-background border shadow-sm">
+            {/* Decorative blurred circles */}
+            <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 w-60 h-60 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Right: Featured book */}
-            {featuredBook && (
-              <div
-                className="relative shrink-0 cursor-pointer group mr-4 md:mr-8"
-                onClick={() => onBookClick(featuredBook)}
-              >
+            <div className="relative z-10 px-6 py-10 md:py-14 flex flex-col items-center text-center">
+              {/* Breadcrumb */}
+              <nav aria-label="Breadcrumb" className="mb-6">
+                <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <li><Link to="/" className="hover:text-foreground transition-colors">Home</Link></li>
+                  <li><ChevronRight className="h-3 w-3" /></li>
+                  <li><Link to="/categories" className="hover:text-foreground transition-colors">Categories</Link></li>
+                  <li><ChevronRight className="h-3 w-3" /></li>
+                  <li className="text-foreground font-medium">{category.name}</li>
+                </ol>
+              </nav>
+
+              {/* Featured book cover — centered, elevated */}
+              {featuredBook && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="relative w-40 sm:w-48 md:w-56"
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
+                  className="relative mb-8 cursor-pointer group"
+                  onClick={() => onBookClick(featuredBook)}
                 >
-                  <img
-                    src={featuredBook.coverImage}
-                    alt={featuredBook.title}
-                    className="w-full rounded-2xl shadow-2xl group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.3)] transition-all duration-500 group-hover:-translate-y-1"
-                    loading="eager"
-                    onError={handleImgError}
-                  />
-                  <Badge className="absolute -top-3 right-2 bg-yellow-500 text-black font-bold shadow-lg">
-                    <Sparkles className="h-3 w-3 mr-0.5" /> Featured
-                  </Badge>
-                  {/* Small detail box */}
-                  <div className="absolute -bottom-5 left-0 right-0 bg-card/95 backdrop-blur-sm border rounded-xl p-3 shadow-xl">
+                  <div className="relative w-44 sm:w-52 md:w-60 mx-auto">
+                    {/* Soft shadow beneath */}
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-black/15 dark:bg-black/30 rounded-full blur-xl" />
+                    <img
+                      src={featuredBook.coverImage}
+                      alt={`${featuredBook.title} by ${featuredBook.author} — Featured ${category.name} book`}
+                      className="relative w-full rounded-2xl shadow-2xl ring-1 ring-black/5 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.25)] transition-all duration-500 group-hover:-translate-y-2"
+                      loading="eager"
+                      onError={handleImgError}
+                    />
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg border-0 whitespace-nowrap">
+                      <Sparkles className="h-3 w-3 mr-1" /> Featured Pick
+                    </Badge>
+                  </div>
+
+                  {/* Featured book info card — centered below cover */}
+                  <div className="mt-5 bg-card/90 backdrop-blur-sm border rounded-xl px-4 py-3 shadow-lg max-w-xs mx-auto">
                     <p className="font-bold text-sm line-clamp-1">{featuredBook.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{featuredBook.author}</p>
-                    <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">by {featuredBook.author}</p>
+                    <div className="flex items-center justify-center gap-3 mt-2">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs font-semibold">
-                          {formatRating(featuredBook.googleRating)}
-                        </span>
+                        <span className="text-xs font-semibold">{formatRating(featuredBook.googleRating)}</span>
                       </div>
-                      {featuredBook.price && (
-                        <span className="text-xs font-bold text-primary">
-                          {formatPrice(featuredBook.price, featuredBook.currency)}
-                        </span>
+                      {featuredBook.price ? (
+                        <span className="text-xs font-bold text-primary">{formatPrice(featuredBook.price, featuredBook.currency)}</span>
+                      ) : null}
+                      {featuredBook.ratingsCount > 0 && (
+                        <span className="text-[10px] text-muted-foreground">({formatNumber(featuredBook.ratingsCount)} ratings)</span>
                       )}
                     </div>
                   </div>
                 </motion.div>
-              </div>
-            )}
+              )}
+
+              {/* Category title & description — centered */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="max-w-2xl"
+              >
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+                  {category.name}
+                  <span className="text-muted-foreground font-normal text-lg sm:text-xl md:text-2xl ml-3">Books</span>
+                </h1>
+
+                {category.description && (
+                  <p className="text-muted-foreground mt-4 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+                    {category.description}
+                  </p>
+                )}
+              </motion.div>
+
+              {/* Stats row — centered */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="flex flex-wrap items-center justify-center gap-3 mt-6"
+              >
+                <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  {sortedBooks.length} Books
+                </Badge>
+                {top20Books[0] && (
+                  <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    Top Rated: {formatRating(top20Books[0].googleRating)}
+                  </Badge>
+                )}
+                {top20Books.length > 1 && (
+                  <Badge variant="outline" className="gap-1.5 py-1.5 px-4 text-sm">
+                    <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                    {top20Books.length} Highly Rated
+                  </Badge>
+                )}
+              </motion.div>
+            </div>
           </div>
         </motion.section>
 
@@ -569,8 +637,6 @@ function HorizontalBookCard({
   liked: boolean;
   onToggleWishlist: () => void;
 }) {
-  const stars = getStarRating(book.googleRating);
-
   return (
     <div className="relative group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {/* Main Card: horizontal rectangle */}
@@ -637,18 +703,7 @@ function HorizontalBookCard({
                 {book.description}
               </p>
               <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-3 w-3 ${
-                      i < stars.full
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : i === stars.full && stars.half
-                        ? 'fill-yellow-400/50 text-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
+                <StarDisplay rating={book.googleRating || 0} size="xs" />
                 <span className="text-xs ml-1">{formatRating(book.googleRating)}</span>
                 <span className="text-[10px] text-muted-foreground ml-1">
                   ({formatNumber(book.ratingsCount)})

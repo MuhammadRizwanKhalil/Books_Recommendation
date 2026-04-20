@@ -21,6 +21,10 @@ export interface Book {
     name: string;
     slug: string;
     imageUrl?: string;
+    bio?: string;
+    bookCount?: number;
+    followerCount?: number;
+    isFollowed?: boolean;
   }>;
   description?: string;
   coverImage: string;
@@ -47,9 +51,58 @@ export interface Book {
   adminNotes?: string;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   isActive: boolean;
+  /** Series this book belongs to */
+  series?: BookSeriesEntry[];
+  userRating?: number | null;
   indexedAt: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Series Types
+export interface BookSeries {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  coverImage?: string | null;
+  totalBooks: number;
+  isComplete: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookSeriesEntry {
+  id: string;
+  name: string;
+  slug: string;
+  position: number;
+  totalBooks: number;
+}
+
+export interface BookSeriesDetail extends BookSeries {
+  books: SeriesBookEntry[];
+}
+
+export interface SeriesBookEntry {
+  id: string;
+  title: string;
+  slug: string;
+  author: string;
+  coverImage: string;
+  pageCount?: number;
+  googleRating?: number;
+  computedScore: number;
+  publishedDate?: string;
+  description?: string;
+  position: number;
+  isMainEntry: boolean;
+  authorData?: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string | null;
+  } | null;
 }
 
 export interface Author {

@@ -2,6 +2,8 @@
 import { toast } from 'sonner';
 import { authApi, setToken } from '@/api/client';
 
+type SocialProvider = 'google' | 'apple';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -11,7 +13,11 @@ export interface UserProfile {
   joinedAt: string;
   bio?: string;
   reviewCount?: number;
+  followerCount?: number;
+  followingCount?: number;
   twoFactorEnabled?: boolean;
+  hasPassword?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 interface ReadingHistoryEntry {
@@ -36,6 +42,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<boolean | { requires2FA: true; tempToken: string }>;
   verify2FA: (tempToken: string, code: string) => Promise<boolean>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
+  signInWithSocial: (provider: SocialProvider, token: string) => Promise<boolean>;
   signOut: () => void;
   readingHistory: ReadingHistoryEntry[];
   addToReadingHistory: (entry: Omit<ReadingHistoryEntry, 'viewedAt'>) => void;
@@ -66,7 +73,7 @@ function loadHistory(): ReadingHistoryEntry[] {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(loadUser);
-  const [isLoading, setIsLoading] = useState(() => !!loadUser());
+  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('thebooktimes-token'));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [readingHistory, setReadingHistory] = useState<ReadingHistoryEntry[]>(loadHistory);
@@ -74,19 +81,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Validate stored token on app load
   useEffect(() => {
     const storedToken = localStorage.getItem('thebooktimes-token');
-    if (storedToken && user) {
-      setIsLoading(true);
-      authApi.getMe().then((res) => {
-        // Token valid â€” refresh user data
-        setUser(prev => ({ id: res.id, email: res.email, name: res.name, avatar: res.avatarUrl || '', role: res.role as 'user' | 'admin', joinedAt: prev?.joinedAt || new Date().toISOString(), reviewCount: res.reviewCount || 0 }));
-      }).catch(() => {
-        // Token expired or invalid â€” sign out
-        setUser(null);
-        setToken(null);
-      }).finally(() => setIsLoading(false));
-    } else {
+    if (!storedToken) {
       setIsLoading(false);
+      return;
     }
+
+    setIsLoading(true);
+    authApi.getMe()
+      .then((res) => {
+        setUser((prev) => ({
+          id: String(res.id),
+          email: res.email,
+          name: res.name,
+          avatar: res.avatarUrl || prev?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.name)}`,
+          role: (res.role || 'user') as 'user' | 'admin',
+          joinedAt: prev?.joinedAt || new Date().toISOString(),
+          reviewCount: res.reviewCount || 0,
+          followerCount: res.followerCount || 0,
+          followingCount: res.followingCount || 0,
+          bio: prev?.bio || '',
+          hasPassword: res.hasPassword,
+          onboardingCompleted: prev?.onboardingCompleted,
+        }));
+      })
+      .catch(() => {
+        // Keep token on transient failures so feature pages can still recover
+        // via authenticated API calls once connectivity stabilizes.
+        setUser((prev) => prev ?? loadUser());
+      })
+      .finally(() => setIsLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -189,6 +212,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const signInWithSocial = useCallback(async (provider: SocialProvider, token: string): Promise<boolean> => {
+    try {
+      const res = provider === 'google'
+        ? await authApi.socialGoogle(token)
+        : await authApi.socialApple(token);
+
+      setToken(res.token);
+      const profile: UserProfile = {
+        id: String(res.user.id),
+        name: res.user.name,
+        email: res.user.email,
+        avatar: res.user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.user.name)}`,
+        role: res.user.role || 'user',
+        joinedAt: new Date().toISOString(),
+        bio: '',
+        hasPassword: res.user.hasPassword ?? false,
+      };
+      setUser(profile);
+      setIsAuthModalOpen(false);
+      toast.success(`Signed in with ${provider === 'google' ? 'Google' : 'Apple'}!`);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.body?.error || `Sign in with ${provider} failed`);
+      return false;
+    }
+  }, []);
+
   const signOut = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -220,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         verify2FA,
         signUp,
+        signInWithSocial,
         signOut,
         readingHistory,
         addToReadingHistory,

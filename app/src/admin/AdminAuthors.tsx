@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { authorsApi, type AuthorResponse } from '@/api/client';
+import { authorsApi, type AuthorResponse, type AuthorClaimResponse } from '@/api/client';
 import { toast } from 'sonner';
 
 const emptyForm = {
@@ -28,19 +28,37 @@ export function AdminAuthors() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [claims, setClaims] = useState<AuthorClaimResponse[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setClaimsLoading(true);
     try {
-      const res = await authorsApi.list(search || undefined);
+      const [res, claimsRes] = await Promise.all([
+        authorsApi.list(search || undefined),
+        authorsApi.adminListClaims('pending'),
+      ]);
       setAuthors(res);
+      setClaims(claimsRes.claims);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load authors');
     } finally {
       setLoading(false);
+      setClaimsLoading(false);
     }
   }, [search]);
+
+  async function handleClaimDecision(id: string, status: 'approved' | 'rejected') {
+    try {
+      await authorsApi.adminUpdateClaim(id, status);
+      toast.success(status === 'approved' ? 'Claim approved' : 'Claim rejected');
+      await load();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update claim');
+    }
+  }
 
   useEffect(() => {
     const timer = setTimeout(load, search ? 300 : 0);
@@ -158,6 +176,47 @@ export function AdminAuthors() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Search + Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Pending Author Claims</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {claimsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-12 rounded bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : claims.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No pending claims.</p>
+          ) : (
+            <div className="space-y-2">
+              {claims.map((claim) => (
+                <div key={claim.id} className="border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" data-testid={`admin-author-claim-${claim.id}`}>
+                  <div>
+                    <p className="text-sm font-medium">{claim.authorName || claim.authorId}</p>
+                    <p className="text-xs text-muted-foreground">Claimant: {claim.claimantName || claim.userId}</p>
+                    <p className="text-xs text-muted-foreground">Method: {claim.verificationMethod}</p>
+                    {claim.verificationProof && (
+                      <p className="text-xs text-muted-foreground break-all">Proof: {claim.verificationProof}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleClaimDecision(claim.id, 'rejected')}>
+                      Reject
+                    </Button>
+                    <Button size="sm" onClick={() => handleClaimDecision(claim.id, 'approved')} data-testid={`admin-author-claim-approve-${claim.id}`}>
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Search + Table */}
       <Card>

@@ -23,7 +23,16 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
-import { booksApi, categoriesApi, authorsApi, type BookResponse, type AuthorResponse } from '@/api/client';
+import {
+  booksApi,
+  categoriesApi,
+  authorsApi,
+  coverImagesApi,
+  type BookResponse,
+  type AuthorResponse,
+  type BookImageResponse,
+  type BookImageType,
+} from '@/api/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -75,6 +84,14 @@ const emptyForm: BookForm = {
   adminNotes: '', status: 'DRAFT', categoryIds: [],
 };
 
+const GALLERY_TYPES: { value: BookImageType; label: string }[] = [
+  { value: 'cover_front', label: 'Front Cover' },
+  { value: 'cover_back', label: 'Back Cover' },
+  { value: 'spine', label: 'Spine' },
+  { value: 'sample_page', label: 'Sample Page' },
+  { value: 'author_signed', label: 'Author Signed' },
+];
+
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function charCount(val: string, max: number) {
@@ -118,6 +135,12 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isDirty, setIsDirty] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<BookImageResponse[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [gallerySaving, setGallerySaving] = useState(false);
+  const [galleryUrl, setGalleryUrl] = useState('');
+  const [galleryAltText, setGalleryAltText] = useState('');
+  const [galleryType, setGalleryType] = useState<BookImageType>('sample_page');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!bookSlug;
 
@@ -186,6 +209,23 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
       })
       .finally(() => setLoading(false));
   }, [bookSlug]);
+
+  useEffect(() => {
+    if (!isEditing || !originalBook?.id) {
+      setGalleryImages([]);
+      return;
+    }
+
+    setGalleryLoading(true);
+    coverImagesApi.list(originalBook.id)
+      .then((res) => {
+        setGalleryImages((res.images || []).filter((img) => img.id !== 'main-cover'));
+      })
+      .catch(() => {
+        setGalleryImages([]);
+      })
+      .finally(() => setGalleryLoading(false));
+  }, [isEditing, originalBook?.id]);
 
   // Load categories (for new books â€” editing loads them above)
   useEffect(() => {
@@ -258,6 +298,41 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }, [form]);
+
+  const addGalleryImage = useCallback(async () => {
+    if (!originalBook?.id || !galleryUrl.trim()) return;
+
+    setGallerySaving(true);
+    try {
+      await coverImagesApi.adminUpload(originalBook.id, {
+        imageUrl: galleryUrl.trim(),
+        imageType: galleryType,
+        altText: galleryAltText.trim() || undefined,
+        displayOrder: galleryImages.length,
+      });
+      const updated = await coverImagesApi.list(originalBook.id);
+      setGalleryImages((updated.images || []).filter((img) => img.id !== 'main-cover'));
+      setGalleryUrl('');
+      setGalleryAltText('');
+      setGalleryType('sample_page');
+      toast.success('Gallery image added');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add gallery image');
+    } finally {
+      setGallerySaving(false);
+    }
+  }, [originalBook?.id, galleryUrl, galleryType, galleryAltText, galleryImages.length]);
+
+  const removeGalleryImage = useCallback(async (imageId: string) => {
+    if (!originalBook?.id) return;
+    try {
+      await coverImagesApi.adminDelete(originalBook.id, imageId);
+      setGalleryImages((prev) => prev.filter((img) => img.id !== imageId));
+      toast.success('Gallery image removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove gallery image');
+    }
+  }, [originalBook?.id]);
 
   // â”€â”€ Cover Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -854,6 +929,7 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                           ref={fileInputRef}
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif"
+                          aria-label="Upload cover image"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
@@ -940,6 +1016,78 @@ export function AdminBookEditor({ bookSlug }: AdminBookEditorProps) {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Additional gallery images */}
+              {isEditing && (
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" /> Cover Gallery Images
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <Input
+                        placeholder="https://..."
+                        value={galleryUrl}
+                        onChange={(e) => setGalleryUrl(e.target.value)}
+                        className="md:col-span-2"
+                      />
+                      <Select value={galleryType} onValueChange={(v) => setGalleryType(v as BookImageType)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GALLERY_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        disabled={gallerySaving || !galleryUrl.trim()}
+                        onClick={() => void addGalleryImage()}
+                      >
+                        {gallerySaving ? 'Adding…' : 'Add Image'}
+                      </Button>
+                    </div>
+
+                    <Input
+                      placeholder="Alt text (optional)"
+                      value={galleryAltText}
+                      onChange={(e) => setGalleryAltText(e.target.value)}
+                    />
+
+                    {galleryLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading gallery...</p>
+                    ) : galleryImages.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No additional images yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="admin-cover-gallery-list">
+                        {galleryImages.map((image) => (
+                          <div key={image.id} className="border rounded-lg overflow-hidden bg-muted/30">
+                            <div className="aspect-[2/3] bg-muted">
+                              <img src={image.url} alt={image.altText || 'Book gallery image'} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-2 space-y-2">
+                              <p className="text-xs text-muted-foreground truncate">{image.type}</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-destructive"
+                                onClick={() => void removeGalleryImage(image.id)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* â”€â”€ TAB: Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}

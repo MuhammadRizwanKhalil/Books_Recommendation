@@ -17,6 +17,7 @@ import {
   setBookOfTheDayOverride,
   recalculateBookScore,
 } from '../services/scoring.js';
+import { recordUserActivity } from '../services/activityFeed.js';
 
 const router = Router();
 
@@ -54,22 +55,26 @@ function ngrams(str: string, minN = 2, maxN = 3): string[] {
 }
 
 /**
- * Split a query into meaningful tokens, generating word-level fragments
- * for fuzzy matching. Returns an array of LIKE patterns.
- * e.g. "atmic hbits" → ["%atmic%", "%hbits%", "%atm%", "%tmi%", "%mic%", "%hbi%", "%bit%", "%its%"]
+ * Split a query into meaningful tokens, generating trigram fragments
+ * for STRICT fuzzy matching. Returns an array of LIKE patterns.
+ * Requires minimum 3 characters for typo tolerance.
+ * e.g. "harry potter" → ["%harry%", "%potter%", "%har%", "%arr%", ..., "%pot%", "%ott%", ...]
  */
 function fuzzyPatterns(query: string): string[] {
-  const words = query.toLowerCase().trim().split(/\s+/).filter(w => w.length >= 2);
+  // Require minimum 3 characters for fuzzy matching (strict)
+  const words = query.toLowerCase().trim().split(/\s+/).filter(w => w.length >= 3);
+  if (words.length === 0) return [];
+  
   const patterns = new Set<string>();
 
-  // Full words as LIKE patterns (for partial matching already)
+  // Full word as LIKE pattern (highest priority)
   for (const word of words) {
     patterns.add(`%${word}%`);
   }
 
-  // Add trigrams for each word (enables typo tolerance)
+  // ONLY trigrams for words >= 4 chars (stricter typo tolerance)
   for (const word of words) {
-    if (word.length >= 3) {
+    if (word.length >= 4) {
       for (const gram of ngrams(word, 3, 3)) {
         patterns.add(`%${gram}%`);
       }
@@ -204,6 +209,23 @@ async function mapBookToResponse(book: any, categoryNames: string[]) {
     }
   }
 
+  // Look up series information for this book
+  const seriesRows = await dbAll<any>(
+    `SELECT bs.id, bs.name, bs.slug, bs.total_books, bse.position
+     FROM book_series_entries bse
+     JOIN book_series bs ON bs.id = bse.series_id
+     WHERE bse.book_id = ?
+     ORDER BY bs.name ASC`,
+    [book.id],
+  );
+  const series = seriesRows.map(s => ({
+    id: s.id,
+    name: s.name,
+    slug: s.slug,
+    position: parseFloat(s.position),
+    totalBooks: s.total_books || 0,
+  }));
+
   return {
     id: book.id,
     googleBooksId: book.google_books_id,
@@ -216,6 +238,7 @@ async function mapBookToResponse(book: any, categoryNames: string[]) {
     authorId: book.author_id || null,
     authorData,
     authorsData,
+    series,
     description: book.description,
     coverImage: book.cover_image,
     publisher: book.publisher,
@@ -288,69 +311,84 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
     }
 
     if (search) {
-      const searchStr = String(search).slice(0, 200); // Cap search input length
-      // Use MySQL FULLTEXT search for fast, ranked results
-      let ftsMatched = false;
-      try {
-        const ftsIds = await dbAll<any>(`
-          SELECT b.id FROM books b
-          WHERE MATCH(b.title, b.author, b.description) AGAINST(? IN BOOLEAN MODE)
-        `, [searchStr.replace(/[^\w\s]/g, '') + '*']);
-        if (ftsIds.length > 0) {
-          const idPlaceholders = ftsIds.map(() => '?').join(',');
-          conditions.push(`b.id IN (${idPlaceholders})`);
-          params.push(...ftsIds.map(r => r.id));
-          ftsMatched = true;
-        }
-      } catch { /* FULLTEXT not available */ }
+      const searchStr = String(search).slice(0, 200).trim(); // Cap and trim search input
+      if (searchStr.length === 0) {
+        // Empty search after trim
+        conditions.push('1 = 0');
+      } else if (searchStr.length < 3) {
+        // Too short — require minimum 3 characters (professional search)
+        conditions.push('1 = 0');
+      } else {
+        const sanitized = searchStr.replace(/[^\w\s]/g, ''); // Remove special chars
+        // Use MySQL FULLTEXT search ONLY on title + author (NO description for accuracy)
+        let ftsMatched = false;
+        try {
+          const ftsIds = await dbAll<any>(`
+            SELECT b.id FROM books b
+            WHERE MATCH(b.title, b.author) AGAINST(? IN BOOLEAN MODE)
+              AND b.status = 'PUBLISHED' AND b.is_active = 1
+          `, [sanitized + '*']);
+          if (ftsIds.length > 0) {
+            const idPlaceholders = ftsIds.map(() => '?').join(',');
+            conditions.push(`b.id IN (${idPlaceholders})`);
+            params.push(...ftsIds.map(r => r.id));
+            ftsMatched = true;
+          }
+        } catch { /* FULLTEXT not available */ }
 
-      if (!ftsMatched) {
-        // Try simple LIKE first
-        const likeCheck = await dbGet<any>(`
-          SELECT id FROM books
-          WHERE (title LIKE ? OR author LIKE ?)
-            AND status = 'PUBLISHED' AND is_active = 1
-          LIMIT 1
-        `, [`%${searchStr}%`, `%${searchStr}%`]);
+        if (!ftsMatched) {
+          // Try EXACT and PARTIAL match on title and author (NOT description)
+          const likeCheck = await dbGet<any>(`
+            SELECT id FROM books
+            WHERE (title LIKE ? OR author LIKE ?)
+              AND status = 'PUBLISHED' AND is_active = 1
+            LIMIT 1
+          `, [`%${searchStr}%`, `%${searchStr}%`]);
 
-        if (likeCheck) {
-          conditions.push('(b.title LIKE ? OR b.author LIKE ? OR b.description LIKE ?)');
-          const searchTerm = `%${searchStr}%`;
-          params.push(searchTerm, searchTerm, searchTerm);
-        } else {
-          // Fuzzy fallback — use n-gram matching for typo-tolerant search
-          const patterns = fuzzyPatterns(searchStr);
-          if (patterns.length > 0) {
-            const scoreParts = patterns.map(() => `CASE WHEN (title LIKE ? OR author LIKE ?) THEN 1 ELSE 0 END`);
-            const scoreExpr = scoreParts.join(' + ');
-            const threshold = Math.max(1, Math.floor(patterns.length * 0.3));
-
-            const fuzzyParams: any[] = [];
-            for (const p of patterns) { fuzzyParams.push(p, p); }
-
-            const fuzzyIds = await dbAll<any>(`
-              SELECT * FROM (
-                SELECT id, (${scoreExpr}) AS score
-                FROM books
-                WHERE status = 'PUBLISHED' AND is_active = 1
-              ) sub
-              WHERE sub.score >= ?
-              ORDER BY sub.score DESC
-              LIMIT 200
-            `, [...fuzzyParams, threshold]);
-
-            if (fuzzyIds.length > 0) {
-              const idPlaceholders = fuzzyIds.map(() => '?').join(',');
-              conditions.push(`b.id IN (${idPlaceholders})`);
-              params.push(...fuzzyIds.map(r => r.id));
-            } else {
-              // Nothing found at all — push impossible condition
-              conditions.push('1 = 0');
-            }
-          } else {
-            conditions.push('(b.title LIKE ? OR b.author LIKE ? OR b.description LIKE ?)');
+          if (likeCheck) {
+            // Exact/partial match found — use TITLE and AUTHOR only
+            conditions.push('(b.title LIKE ? OR b.author LIKE ?)');
             const searchTerm = `%${searchStr}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            params.push(searchTerm, searchTerm);
+          } else {
+            // STRICT fuzzy fallback — only if query is 3+ chars
+            if (sanitized.length < 3) {
+              conditions.push('1 = 0');
+            } else {
+              const patterns = fuzzyPatterns(sanitized);
+              if (patterns.length > 0) {
+                const scoreParts = patterns.map(() => `CASE WHEN (title LIKE ? OR author LIKE ?) THEN 1 ELSE 0 END`);
+                const scoreExpr = scoreParts.join(' + ');
+                // INCREASED threshold from 30% to 60% — much stricter!
+                const threshold = Math.max(1, Math.ceil(patterns.length * 0.6));
+
+                const fuzzyParams: any[] = [];
+                for (const p of patterns) { fuzzyParams.push(p, p); }
+
+                const fuzzyIds = await dbAll<any>(`
+                  SELECT * FROM (
+                    SELECT id, (${scoreExpr}) AS score
+                    FROM books
+                    WHERE status = 'PUBLISHED' AND is_active = 1
+                  ) sub
+                  WHERE sub.score >= ?
+                  ORDER BY sub.score DESC
+                  LIMIT 200
+                `, [...fuzzyParams, threshold]);
+
+                if (fuzzyIds.length > 0) {
+                  const idPlaceholders = fuzzyIds.map(() => '?').join(',');
+                  conditions.push(`b.id IN (${idPlaceholders})`);
+                  params.push(...fuzzyIds.map(r => r.id));
+                } else {
+                  // No fuzzy matches — no results
+                  conditions.push('1 = 0');
+                }
+              } else {
+                // Too short for even fuzzy matching
+                conditions.push('1 = 0');
+              }
+            }
           }
         }
       }
@@ -431,33 +469,39 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // ── GET /api/books/search-suggestions ───────────────────────────────────────
-// Fast autocomplete with fuzzy matching (trigram-based)
+// Fast autocomplete with PROFESSIONAL STRICT matching — minimum 3 characters
 router.get('/search-suggestions', rateLimit('search-suggest', 30, 60 * 1000), async (req: Request, res: Response) => {
   try {
     const q = String(req.query.q || '').trim().slice(0, 200); // Cap input length
-    if (!q || q.length < 2) {
+    // STRICT: require minimum 3 characters for suggestions
+    if (!q || q.length < 3) {
       res.json({ suggestions: [], categories: [], authors: [] });
       return;
     }
 
     const sanitized = q.replace(/[^\w\s]/g, '');
+    // Final check: sanitized must be meaningful (no purely numeric or single chars)
+    if (sanitized.length < 3) {
+      res.json({ suggestions: [], categories: [], authors: [] });
+      return;
+    }
 
     // ─── Book suggestions ─────────────────────────────────────────────
     let bookSuggestions: any[] = [];
 
-    // 1) Try MySQL FULLTEXT first (fastest, prefix-matching)
+    // 1) Try MySQL FULLTEXT first (fastest, prefix-matching) — TITLE & AUTHOR ONLY (no description)
     try {
       bookSuggestions = await dbAll<any>(`
         SELECT b.id, b.title, b.author, b.slug, b.cover_image, b.google_rating, b.computed_score
         FROM books b
-        WHERE MATCH(b.title, b.author, b.description) AGAINST(? IN BOOLEAN MODE)
+        WHERE MATCH(b.title, b.author) AGAINST(? IN BOOLEAN MODE)
           AND b.status = 'PUBLISHED' AND b.is_active = 1
         ORDER BY b.computed_score DESC
         LIMIT 6
       `, [sanitized + '*']);
     } catch { /* FULLTEXT not available */ }
 
-    // 2) If FULLTEXT returned nothing, try LIKE (partial substring)
+    // 2) If FULLTEXT returned nothing, try EXACT/PARTIAL LIKE (title & author only)
     if (bookSuggestions.length === 0) {
       bookSuggestions = await dbAll<any>(`
         SELECT id, title, author, slug, cover_image, google_rating, computed_score
@@ -469,13 +513,14 @@ router.get('/search-suggestions', rateLimit('search-suggest', 30, 60 * 1000), as
       `, [`%${q}%`, `%${q}%`]);
     }
 
-    // 3) If still nothing, use fuzzy n-gram matching (typo tolerance)
+    // 3) STRICT fuzzy n-gram matching only as last resort (60%+ threshold now)
     if (bookSuggestions.length === 0) {
-      const patterns = fuzzyPatterns(q);
+      const patterns = fuzzyPatterns(sanitized);
       if (patterns.length > 0) {
         const scoreParts = patterns.map(() => `CASE WHEN (title LIKE ? OR author LIKE ?) THEN 1 ELSE 0 END`);
         const scoreExpr = scoreParts.join(' + ');
-        const threshold = Math.max(1, Math.floor(patterns.length * 0.3));
+        // INCREASED from 30% to 60% — much stricter matching!
+        const threshold = Math.max(1, Math.ceil(patterns.length * 0.6));
 
         const fuzzyParams: any[] = [];
         for (const p of patterns) { fuzzyParams.push(p, p); }
@@ -494,7 +539,7 @@ router.get('/search-suggestions', rateLimit('search-suggest', 30, 60 * 1000), as
       }
     }
 
-    // ─── Category suggestions ─────────────────────────────────────────
+    // ─── Category suggestions (STRICT: no fuzzy matching) ────────────
     let categorySuggestions = await dbAll<any>(`
       SELECT c.id, c.name, c.slug, COUNT(bc.book_id) as book_count
       FROM categories c
@@ -505,50 +550,16 @@ router.get('/search-suggestions', rateLimit('search-suggest', 30, 60 * 1000), as
       LIMIT 3
     `, [`%${q}%`]);
 
-    // Fuzzy fallback for categories
-    if (categorySuggestions.length === 0) {
-      const patterns = fuzzyPatterns(q);
-      for (const p of patterns) {
-        categorySuggestions = await dbAll<any>(`
-          SELECT c.id, c.name, c.slug, COUNT(bc.book_id) as book_count
-          FROM categories c
-          LEFT JOIN book_categories bc ON bc.category_id = c.id
-          WHERE c.name LIKE ?
-          GROUP BY c.id
-          ORDER BY book_count DESC
-          LIMIT 3
-        `, [p]);
-        if (categorySuggestions.length > 0) break;
-      }
-    }
-
-    // ─── Author suggestions (from authors table with slugs) ────────────
+    // ─── Author suggestions (STRICT: no fuzzy matching) ────────────
     let authorSuggestions = await dbAll<any>(`
       SELECT a.id, a.name, a.slug, a.image_url,
         (SELECT COUNT(*) FROM books b WHERE b.author_id = a.id AND b.status = 'PUBLISHED' AND b.is_active = 1) as book_count,
-        (SELECT MAX(b.computed_score) FROM books b WHERE b.author_id = a.id AND b.status = 'PUBLISHED') as top_score
+        (SELECT AVG(b.computed_score) FROM books b WHERE b.author_id = a.id AND b.status = 'PUBLISHED') as avg_score
       FROM authors a
       WHERE a.name LIKE ?
-      ORDER BY top_score DESC
+      ORDER BY avg_score DESC
       LIMIT 4
     `, [`%${q}%`]);
-
-    // Fuzzy fallback for authors
-    if (authorSuggestions.length === 0) {
-      const patterns = fuzzyPatterns(q);
-      for (const p of patterns) {
-        authorSuggestions = await dbAll<any>(`
-          SELECT a.id, a.name, a.slug, a.image_url,
-            (SELECT COUNT(*) FROM books b WHERE b.author_id = a.id AND b.status = 'PUBLISHED' AND b.is_active = 1) as book_count,
-            (SELECT MAX(b.computed_score) FROM books b WHERE b.author_id = a.id AND b.status = 'PUBLISHED') as top_score
-          FROM authors a
-          WHERE a.name LIKE ?
-          ORDER BY top_score DESC
-          LIMIT 4
-        `, [p]);
-        if (authorSuggestions.length > 0) break;
-      }
-    }
 
     const totalResults = bookSuggestions.length + categorySuggestions.length + authorSuggestions.length;
 
@@ -808,6 +819,143 @@ router.get('/for-you', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/books/:slug/rate (Quick inline rating) ────────────────────────
+router.post('/:slug/rate', authenticate, rateLimit('rate-book', 30, 60 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { rating } = req.body;
+
+    // Validate rating (0.5 increments from 0.5 to 5.0)
+    if (typeof rating !== 'number' || rating < 0.5 || rating > 5 || (rating * 2) % 1 !== 0) {
+      res.status(400).json({ error: 'Rating must be between 0.5 and 5 in 0.5 increments' });
+      return;
+    }
+
+    // Look up book by slug
+    const book = await dbGet<any>('SELECT id FROM books WHERE slug = ?', [req.params.slug]);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found' });
+      return;
+    }
+
+    const userId = req.user!.userId;
+
+    // Check if user already has a review for this book
+    const existing = await dbGet<any>('SELECT id FROM reviews WHERE book_id = ? AND user_id = ?', [book.id, userId]);
+
+    if (existing) {
+      // Update existing review's rating only
+      await dbRun('UPDATE reviews SET rating = ?, updated_at = NOW() WHERE id = ?', [rating, existing.id]);
+      // Recalculate score non-blocking
+      setImmediate(async () => {
+        try { await recalculateBookScore(book.id); } catch (_) { /* non-blocking */ }
+      });
+      setImmediate(() => {
+        recordUserActivity({
+          userId,
+          type: 'rating',
+          bookId: book.id,
+          referenceId: existing.id,
+          metadata: { rating },
+        }).catch(() => undefined);
+      });
+      res.json({ reviewId: existing.id, rating, isNew: false });
+    } else {
+      // Create rating-only review (no title/content)
+      const user = await dbGet<any>('SELECT name, avatar_url FROM users WHERE id = ?', [userId]);
+      const id = uuidv4();
+      await dbRun(`
+        INSERT INTO reviews (id, book_id, user_id, user_name, user_avatar, rating, title, content, is_approved)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 1)
+      `, [id, book.id, userId, user?.name || 'Anonymous', user?.avatar_url || null, rating]);
+      // Recalculate score non-blocking
+      setImmediate(async () => {
+        try { await recalculateBookScore(book.id); } catch (_) { /* non-blocking */ }
+      });
+      setImmediate(() => {
+        recordUserActivity({
+          userId,
+          type: 'rating',
+          bookId: book.id,
+          referenceId: id,
+          metadata: { rating },
+        }).catch(() => undefined);
+      });
+      res.json({ reviewId: id, rating, isNew: true });
+    }
+  } catch (err: any) {
+    logger.error({ err }, 'Rate book error');
+    res.status(500).json({ error: 'Failed to rate book' });
+  }
+});
+
+// ── GET /api/books/:id/friends-activity ─────────────────────────────────────
+router.get('/:id/friends-activity', authenticate, async (req: Request, res: Response) => {
+  try {
+    const book = await dbGet<any>('SELECT id FROM books WHERE id = ?', [req.params.id]);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found' });
+      return;
+    }
+
+    const rows = await dbAll<any>(`
+      SELECT
+        u.id,
+        u.name,
+        u.avatar_url,
+        rp.status AS reading_status,
+        rv.id AS review_id,
+        rv.rating
+      FROM user_follows uf
+      JOIN users u ON u.id = uf.following_id
+      LEFT JOIN reading_progress rp
+        ON rp.user_id = u.id AND rp.book_id = ?
+      LEFT JOIN reviews rv
+        ON rv.user_id = u.id AND rv.book_id = ?
+      WHERE uf.follower_id = ?
+        AND (
+          (rp.status IS NOT NULL AND rp.status IN ('reading', 'finished', 'dnf'))
+          OR rv.id IS NOT NULL
+        )
+      ORDER BY
+        CASE rp.status
+          WHEN 'reading' THEN 1
+          WHEN 'finished' THEN 2
+          WHEN 'dnf' THEN 3
+          ELSE 4
+        END,
+        rv.rating DESC,
+        u.name ASC
+    `, [book.id, book.id, req.user!.userId]);
+
+    const friends = rows.map((row) => ({
+      user: {
+        id: row.id,
+        name: row.name,
+        avatarUrl: row.avatar_url || null,
+      },
+      status: row.reading_status === 'finished'
+        ? 'read'
+        : row.reading_status || (row.rating != null ? 'rated' : 'reviewed'),
+      rating: row.rating != null ? Number(row.rating) : null,
+      reviewId: row.review_id || null,
+    }));
+
+    const ratedFriends = friends.filter((entry) => typeof entry.rating === 'number');
+    const friendsAvgRating = ratedFriends.length > 0
+      ? Math.round((ratedFriends.reduce((sum, entry) => sum + Number(entry.rating || 0), 0) / ratedFriends.length) * 10) / 10
+      : 0;
+
+    res.json({
+      friends,
+      friendsAvgRating,
+      totalFriends: friends.length,
+    });
+  } catch (err: any) {
+    logger.error({ err, bookId: req.params.id, userId: req.user?.userId }, 'Friends activity error');
+    res.status(500).json({ error: 'Failed to fetch friends activity' });
+  }
+});
+
 // ── GET /api/books/:slug ────────────────────────────────────────────────────
 router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
   try {
@@ -834,7 +982,43 @@ router.get('/:slug', optionalAuth, async (req: Request, res: Response) => {
       }
     });
 
-    res.json(await buildBookResponse(book));
+    const response = await buildBookResponse(book);
+
+    // Enrich authorsData with bio, bookCount, followerCount, isFollowed
+    if (response.authorsData && response.authorsData.length > 0) {
+      const userId = req.user?.userId || null;
+      const enriched = await Promise.all(
+        response.authorsData.map(async (a: any) => {
+          const [authorRow, bookCountRow, followerCountRow, followRow] = await Promise.all([
+            dbGet<any>('SELECT bio FROM authors WHERE id = ?', [a.id]),
+            dbGet<any>('SELECT COUNT(*) as c FROM book_authors WHERE author_id = ?', [a.id]),
+            dbGet<any>('SELECT COUNT(*) as c FROM author_follows WHERE author_id = ?', [a.id]),
+            userId
+              ? dbGet<any>('SELECT 1 FROM author_follows WHERE user_id = ? AND author_id = ?', [userId, a.id])
+              : Promise.resolve(null),
+          ]);
+          return {
+            ...a,
+            bio: authorRow?.bio || null,
+            bookCount: bookCountRow?.c || 0,
+            followerCount: followerCountRow?.c || 0,
+            isFollowed: !!followRow,
+          };
+        }),
+      );
+      response.authorsData = enriched;
+    }
+
+    // Include user's rating if authenticated
+    if (req.user?.userId) {
+      const userReview = await dbGet<any>(
+        'SELECT rating FROM reviews WHERE book_id = ? AND user_id = ?',
+        [book.id, req.user.userId],
+      );
+      (response as any).userRating = userReview ? userReview.rating : null;
+    }
+
+    res.json(response);
   } catch (err: any) {
     logger.error({ err: err }, 'Get book error');
     res.status(500).json({ error: 'Failed to fetch book' });

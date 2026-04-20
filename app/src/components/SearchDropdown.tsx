@@ -77,9 +77,9 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
   // Total items for keyboard nav
   const totalItems = books.length + categories.length + authors.length + (query.trim() ? 1 : 0); // +1 for "View all results"
 
-  // Fetch suggestions
+  // Fetch suggestions — PROFESSIONAL: require MIN 3 characters
   useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.length < 2) {
+    if (!debouncedQuery || debouncedQuery.trim().length < 3) {
       setBooks([]);
       setCategories([]);
       setAuthors([]);
@@ -88,7 +88,7 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
     }
 
     setLoading(true);
-    booksApi.searchSuggestions(debouncedQuery)
+    booksApi.searchSuggestions(debouncedQuery.trim())
       .then((res) => {
         setBooks(res.suggestions);
         setCategories(res.categories);

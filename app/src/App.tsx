@@ -8,9 +8,34 @@ import { AuthModal } from '@/components/AuthModal';
 import { CategoryPage } from '@/components/CategoryPage';
 import { BookPage } from '@/components/book/BookPage';
 import { AuthorPage } from '@/components/AuthorPage';
+import { AuthorPortal } from '@/components/AuthorPortal';
+import { SeriesPage } from '@/components/SeriesPage';
+import { MoodDiscoveryPage } from '@/components/MoodDiscoveryPage';
+import { ReadingChallengePage } from '@/components/ReadingChallenge';
+import { ReadingStatsPage } from '@/components/ReadingStatsPage';
+import { YearInBooks } from '@/components/YearInBooks';
+import { ImportGoodreadsPage } from '@/components/ImportGoodreadsPage';
 import { ReadingListsPage, ReadingListDetailPage, PublicReadingListPage } from '@/components/ReadingListsPage';
+import { ListDiscoveryPage } from '@/components/ListDiscoveryPage';
+import { CommunityListPage } from '@/components/CommunityListPage';
 import { BookComparePage } from '@/components/BookComparePage';
+import { TBRQueuePage } from '@/components/TBRQueue';
+import { PublicUserProfilePage } from '@/components/PublicUserProfilePage';
 import { ForYouPage } from '@/components/ForYouPage';
+import { ActivityFeed } from '@/components/ActivityFeed';
+import { DiscussionThread } from '@/components/DiscussionThread';
+import { BookClubsPage } from '@/components/BookClubsPage';
+import { BookClubDetail } from '@/components/BookClubDetail';
+import { GiveawaysPage } from '@/components/GiveawaysPage';
+import { GiveawayDetailPage } from '@/components/GiveawayDetailPage';
+import { MyGiveawayEntriesPage } from '@/components/MyGiveawayEntriesPage';
+import { OwnedBooksPage } from '@/components/OwnedBooksPage';
+import { TagsPage } from '@/components/TagsPage';
+import { ChoiceAwardsPage } from '@/components/ChoiceAwardsPage';
+import { JournalPage } from '@/components/JournalPage';
+import { QuizPage } from '@/components/QuizPage';
+import { QuizzesDiscoverPage } from '@/components/QuizzesDiscoverPage';
+import { QuizCreatePage } from '@/components/QuizCreatePage';
 import { PricingPage } from '@/components/PricingPage';
 import { DigestSettingsPage } from '@/components/DigestSettingsPage';
 import { WebhooksPage } from '@/components/WebhooksPage';
@@ -26,6 +51,8 @@ import { Footer } from '@/sections/Footer';
 
 // â”€â”€ Lazy-loaded below-fold sections (reduces initial bundle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Trending = lazy(() => import('@/sections/Trending').then(m => ({ default: m.Trending })));
+const QuickDiscoverBar = lazy(() => import('@/sections/QuickDiscoverBar').then(m => ({ default: m.QuickDiscoverBar })));
+const FeatureHub = lazy(() => import('@/sections/FeatureHub').then(m => ({ default: m.FeatureHub })));
 const Categories = lazy(() => import('@/sections/Categories').then(m => ({ default: m.Categories })));
 const NewReleases = lazy(() => import('@/sections/NewReleases').then(m => ({ default: m.NewReleases })));
 const TopRated = lazy(() => import('@/sections/TopRated').then(m => ({ default: m.TopRated })));
@@ -35,15 +62,16 @@ const Blog = lazy(() => import('@/sections/Blog').then(m => ({ default: m.Blog }
 const Newsletter = lazy(() => import('@/sections/Newsletter').then(m => ({ default: m.Newsletter })));
 const BookOfTheDay = lazy(() => import('@/sections/BookOfTheDay').then(m => ({ default: m.BookOfTheDay })));
 const RecentlyViewed = lazy(() => import('@/sections/RecentlyViewed').then(m => ({ default: m.RecentlyViewed })));
-const PopularSearches = lazy(() => import('@/sections/PopularSearches').then(m => ({ default: m.PopularSearches })));
 const ReadingStats = lazy(() => import('@/sections/ReadingStats').then(m => ({ default: m.ReadingStats })));
 const Top20Carousel = lazy(() => import('@/sections/Top20Carousel').then(m => ({ default: m.Top20Carousel })));
+const ChallengeWidget = lazy(() => import('@/components/ChallengeWidget').then(m => ({ default: m.ChallengeWidget })));
 import type { AdminPage } from '@/admin/AdminLayout';
 import { LegalPage } from '@/components/LegalPage';
 import { AdminBar } from '@/components/AdminBar';
 import { WishlistDrawer } from '@/components/WishlistDrawer';
 import { useAuth } from '@/components/AuthProvider';
-import { settingsApi } from '@/api/client';
+import { ApiError, booksApi, settingsApi } from '@/api/client';
+import { mapBook } from '@/lib/mappers';
 import type { Book, Category } from '@/types';
 import { useSEO } from '@/hooks/useSEO';
 import './App.css';
@@ -61,9 +89,15 @@ const AdminUsers = lazy(() => import('@/admin/AdminUsers').then(m => ({ default:
 const AdminAnalytics = lazy(() => import('@/admin/AdminAnalytics').then(m => ({ default: m.AdminAnalytics })));
 const AdminNewsletter = lazy(() => import('@/admin/AdminNewsletter').then(m => ({ default: m.AdminNewsletter })));
 const AdminCampaigns = lazy(() => import('@/admin/AdminCampaigns').then(m => ({ default: m.AdminCampaigns })));
+const AdminAIMood = lazy(() => import('@/admin/AdminAIMood').then(m => ({ default: m.AdminAIMood })));
 const AdminEmailMarketing = lazy(() => import('@/admin/AdminEmailMarketing').then(m => ({ default: m.AdminEmailMarketing })));
 const AdminSettings = lazy(() => import('@/admin/AdminSettings').then(m => ({ default: m.AdminSettings })));
 const AdminImport = lazy(() => import('@/admin/AdminImport').then(m => ({ default: m.AdminImport })));
+const AdminContentWarnings = lazy(() => import('@/admin/AdminContentWarnings').then(m => ({ default: m.AdminContentWarnings })));
+const AdminCharacters = lazy(() => import('@/admin/AdminCharacters').then(m => ({ default: m.AdminCharacters })));
+const AdminSeries = lazy(() => import('@/admin/AdminSeries').then(m => ({ default: m.AdminSeries })));
+const AdminEditions = lazy(() => import('@/admin/AdminEditions').then(m => ({ default: m.AdminEditions })));
+const AdminAwards = lazy(() => import('@/admin/AdminAwards').then(m => ({ default: m.AdminAwards })));
 const AdminBookEditor = lazy(() => import('@/admin/AdminBookEditor').then(m => ({ default: m.AdminBookEditor })));
 const AdminBlogEditor = lazy(() => import('@/admin/AdminBlogEditor').then(m => ({ default: m.AdminBlogEditor })));
 
@@ -202,47 +236,87 @@ function HomePage() {
 
   return (
     <main>
+      {/* 1. Hero – full-width split layout with 3D flip book carousel */}
       <ErrorBoundary section="Hero"><Hero /></ErrorBoundary>
+
+      {/* 2. Quick Discover Bar – horizontal scrollable feature pills */}
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Quick Discover"><QuickDiscoverBar /></ErrorBoundary>
+      </Suspense>
+
+      {/* 3. Recently viewed – personalized (only shows when user has history) */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Recently Viewed"><RecentlyViewed /></ErrorBoundary>
       </Suspense>
+
+      {/* 4. Trending – magazine-style layout */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Trending"><Trending /></ErrorBoundary>
       </Suspense>
-      <SectionDivider />
+
+      {/* 5. Book of the Day – editorial spotlight */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Book of the Day"><BookOfTheDay /></ErrorBoundary>
       </Suspense>
+
+      <SectionDivider />
+
+      {/* 6. Categories – genre browsing grid */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Categories"><Categories /></ErrorBoundary>
       </Suspense>
-      <SectionDivider />
+
+      {/* 7. New Releases – fresh titles with period tabs */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="New Releases"><NewReleases /></ErrorBoundary>
       </Suspense>
+
+      <SectionDivider />
+
+      {/* 8. Top Rated – podium + auto-scroll */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Top Rated"><TopRated /></ErrorBoundary>
       </Suspense>
-      <SectionDivider />
+
+      {/* 9. Feature Hub – gateway to all platform features */}
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
+        <ErrorBoundary section="Feature Hub"><FeatureHub /></ErrorBoundary>
       </Suspense>
+
       <SectionDivider />
+
+      {/* 10. Reading Challenge – engagement widget */}
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Challenge Widget"><ChallengeWidget /></ErrorBoundary>
+      </Suspense>
+
+      {/* 11. Featured Authors – auto-scrolling cards */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Featured Authors"><FeaturedAuthors /></ErrorBoundary>
       </Suspense>
+
+      {/* 12. Testimonials – social proof + stats */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Testimonials"><Testimonials /></ErrorBoundary>
       </Suspense>
+
       <SectionDivider />
+
+      {/* 13. Blog – magazine layout */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Blog"><Blog /></ErrorBoundary>
       </Suspense>
+
+      {/* 14. Reading Stats – personal reading tracker */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Reading Stats"><ReadingStats /></ErrorBoundary>
       </Suspense>
+
+      <SectionDivider />
+
+      {/* 15. Newsletter – final CTA */}
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
+        <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
       </Suspense>
     </main>
   );
@@ -298,40 +372,79 @@ function BookRoute() {
   const { slug } = useParams<{ slug: string }>();
   const routerNavigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
-  const [error, setError] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (slug) {
-      import('@/api/client').then(({ booksApi }) => {
-        booksApi.getBySlug(slug).then((b: any) => {
-          setBook({
-            id: String(b.id), googleBooksId: b.googleBooksId || '', title: b.title,
-            subtitle: b.subtitle || '', author: b.author, description: b.description || '',
-            coverImage: b.coverImage || '', publisher: b.publisher || '',
-            publishedDate: b.publishedDate || '', pageCount: b.pageCount || 0,
-            language: b.language || 'en', categories: b.categories || [],
-            googleRating: b.googleRating ?? 0, ratingsCount: b.ratingsCount ?? 0,
-            computedScore: b.computedScore ?? 0, price: b.price ?? 0,
-            currency: b.currency || 'USD', amazonUrl: b.amazonUrl || '',
-            isbn10: b.isbn10 || '', isbn13: b.isbn13 || '', slug: b.slug || '',
-            metaTitle: b.metaTitle || '', metaDescription: b.metaDescription || '',
-            status: b.status || 'PUBLISHED', isActive: b.isActive ?? true,
-            authorId: b.authorId || undefined,
-            authorData: b.authorData || null,
-            indexedAt: b.indexedAt || '', createdAt: b.createdAt || '', updatedAt: b.updatedAt || '',
-          });
-        }).catch(() => setError(true));
-      });
+    if (!slug) {
+      setBook(null);
+      setNotFound(false);
+      setLoadError('Missing book slug');
+      return;
     }
+
+    let cancelled = false;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    setBook(null);
+    setNotFound(false);
+    setLoadError(null);
+
+    const loadBook = async (attempt = 0): Promise<void> => {
+      try {
+        const response = await booksApi.getBySlug(slug);
+        if (cancelled) return;
+        setBook(mapBook(response));
+        setNotFound(false);
+        setLoadError(null);
+      } catch (err) {
+        if (cancelled) return;
+
+        if (err instanceof ApiError && err.status === 404) {
+          setBook(null);
+          setNotFound(true);
+          return;
+        }
+
+        if (attempt < 1) {
+          retryTimeout = setTimeout(() => {
+            void loadBook(attempt + 1);
+          }, 250);
+          return;
+        }
+
+        setBook(null);
+        setLoadError(err instanceof Error ? err.message : 'Failed to load book');
+      }
+    };
+
+    void loadBook();
+
+    return () => {
+      cancelled = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, [slug]);
 
-  if (error) {
+  if (notFound) {
     return (
       <main className="pt-16">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <h2 className="text-2xl font-bold">Book not found</h2>
           <p className="text-muted-foreground">The book you're looking for doesn't exist.</p>
           <button onClick={() => routerNavigate('/')} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Go Home</button>
+        </div>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="pt-16">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <h2 className="text-2xl font-bold">We couldn&apos;t load this book</h2>
+          <p className="text-muted-foreground">Please try again in a moment.</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Retry</button>
         </div>
       </main>
     );
@@ -356,11 +469,70 @@ function BookRoute() {
   );
 }
 
+function SeriesRoute() {
+  const { slug } = useParams<{ slug: string }>();
+  const routerNavigate = useNavigate();
+  const [series, setSeries] = useState<any>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (slug) {
+      import('@/api/client').then(({ seriesApi }) => {
+        seriesApi.getBySlug(slug).then((res: any) => {
+          setSeries(res.series);
+        }).catch(() => setError(true));
+      });
+    }
+  }, [slug]);
+
+  if (error) {
+    return (
+      <main className="pt-16">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <h2 className="text-2xl font-bold">Series not found</h2>
+          <p className="text-muted-foreground">The series you're looking for doesn't exist.</p>
+          <button onClick={() => routerNavigate('/')} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">Go Home</button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!series) {
+    return (
+      <main className="pt-16">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="pt-16">
+      <ErrorBoundary section="Series">
+        <SeriesPage series={series} onBack={() => routerNavigate(-1)} />
+      </ErrorBoundary>
+    </main>
+  );
+}
+
 function LegalRoute() {
   const { pageKey } = useParams<{ pageKey: string }>();
   const routerNavigate = useNavigate();
   if (!pageKey) return null;
   return <LegalPage pageKey={pageKey} onBack={() => routerNavigate('/')} />;
+}
+
+function MoodDiscoveryRoute() {
+  const { slug } = useParams<{ slug: string }>();
+  const routerNavigate = useNavigate();
+  return (
+    <main className="pt-16">
+      <ErrorBoundary section="Mood Discovery">
+        <MoodDiscoveryPage initialSlug={slug} onBack={() => routerNavigate(-1)} />
+      </ErrorBoundary>
+    </main>
+  );
 }
 
 function AdminRoute() {
@@ -388,14 +560,20 @@ function AdminRoute() {
         {adminPage === 'books' && <AdminBooks />}
         {adminPage === 'authors' && <AdminAuthors />}
         {adminPage === 'categories' && <AdminCategories />}
+        {adminPage === 'series' && <AdminSeries />}
+        {adminPage === 'editions' && <AdminEditions />}
         {adminPage === 'blog' && <AdminBlog />}
         {adminPage === 'reviews' && <AdminReviews />}
+        {adminPage === 'characters' && <AdminCharacters />}
         {adminPage === 'users' && <AdminUsers />}
         {adminPage === 'analytics' && <AdminAnalytics />}
         {adminPage === 'newsletter' && <AdminNewsletter />}
         {adminPage === 'campaigns' && <AdminCampaigns />}
+        {adminPage === 'awards' && <AdminAwards />}
+        {adminPage === 'ai-mood' && <AdminAIMood />}
         {adminPage === 'email-marketing' && <AdminEmailMarketing />}
         {adminPage === 'import' && <AdminImport />}
+        {adminPage === 'content-warnings' && <AdminContentWarnings />}
         {adminPage === 'settings' && <AdminSettings />}
       </AdminLayout>
     </Suspense>
@@ -509,6 +687,11 @@ function App() {
     }
   }, [user]);
 
+  // Auto-scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
   // Derive current view from URL for backward compat
   const currentView: AppView = (() => {
     const p = location.pathname;
@@ -594,6 +777,7 @@ function App() {
         />
         {!isAdminView && !isLegalView && <Navigation />}
 
+        <main className={!isAdminView && !isLegalView ? 'pt-16 sm:pt-20' : ''}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/trending" element={<TrendingPage />} />
@@ -603,12 +787,38 @@ function App() {
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/category/:slug" element={<CategoryRoute />} />
           <Route path="/book/:slug" element={<BookRoute />} />
+          <Route path="/series/:slug" element={<SeriesRoute />} />
+          <Route path="/discover/mood" element={<MoodDiscoveryRoute />} />
+          <Route path="/discover/mood/:slug" element={<MoodDiscoveryRoute />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
+          <Route path="/author-portal" element={<AuthorPortal />} />
+          <Route path="/users/:id" element={<PublicUserProfilePage />} />
+          <Route path="/discussions/:id" element={<DiscussionThread />} />
+          <Route path="/book-clubs" element={<BookClubsPage />} />
+          <Route path="/book-clubs/:id" element={<BookClubDetail />} />
+          <Route path="/giveaways" element={<GiveawaysPage />} />
+          <Route path="/giveaways/my-entries" element={<MyGiveawayEntriesPage />} />
+          <Route path="/giveaways/:id" element={<GiveawayDetailPage />} />
+          <Route path="/owned-books" element={<OwnedBooksPage />} />
+          <Route path="/my-tags" element={<TagsPage />} />
+          <Route path="/journal" element={<JournalPage />} />
+          <Route path="/quizzes" element={<QuizzesDiscoverPage />} />
+          <Route path="/quizzes/create" element={<QuizCreatePage />} />
+          <Route path="/quizzes/:id" element={<QuizPage />} />
+          <Route path="/awards/:year" element={<ChoiceAwardsPage />} />
           <Route path="/lists" element={<ReadingListsPage />} />
-          <Route path="/lists/:id" element={<ReadingListDetailPage />} />
+          <Route path="/lists/discover" element={<ListDiscoveryPage />} />
+          <Route path="/lists/mine/:id" element={<ReadingListDetailPage />} />
           <Route path="/lists/public/:userId/:slug" element={<PublicReadingListPage />} />
+          <Route path="/lists/:id" element={<CommunityListPage />} />
           <Route path="/compare" element={<BookComparePage />} />
+          <Route path="/up-next" element={<TBRQueuePage />} />
           <Route path="/for-you" element={<ForYouPage />} />
+          <Route path="/feed" element={<ActivityFeed />} />
+          <Route path="/reading-challenge" element={<ReadingChallengePage />} />
+          <Route path="/my-stats" element={<ReadingStatsPage />} />
+          <Route path="/year-in-books/:year" element={<YearInBooks />} />
+          <Route path="/import/goodreads" element={<ImportGoodreadsPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/settings/digest" element={<DigestSettingsPage />} />
           <Route path="/settings/webhooks" element={<WebhooksPage />} />
@@ -621,6 +831,7 @@ function App() {
           <Route path="/admin/:page" element={<AdminRoute />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </main>
 
         {!isAdminView && !isLegalView && <Footer />}
         <WishlistDrawer />

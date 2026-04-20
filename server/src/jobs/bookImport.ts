@@ -26,6 +26,7 @@ import {
 } from '../services/googleBooks.js';
 import { calculateCompositeScore, recalculateAllScores, invalidatePriorCache } from '../services/scoring.js';
 import { resolveAuthorImage, resolveHDCover } from '../services/coverResolver.js';
+import { runPostImportEnrichment } from './aiEnrichment.js';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -238,52 +239,10 @@ async function upsertBook(book: NormalizedBook): Promise<'inserted' | 'updated' 
   const primaryAuthorId = authorIds[0] || null;
 
   if (existingId) {
-    // Only update existing books if they haven't been updated in the last 30 days.
-    // New books are always inserted; this guard prevents constant overwrites.
-    const existingRow = await dbGet<any>(
-      'SELECT updated_at FROM books WHERE id = ?',
-      [existingId],
-    );
-    if (existingRow?.updated_at) {
-      const daysSinceUpdate = (Date.now() - new Date(existingRow.updated_at).getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSinceUpdate < 30) {
-        // Still link any new authors/categories even when skipping the data update
-        await linkBookAuthors(existingId, authorIds);
-        await linkCategories(existingId, book.categories);
-        return 'skipped';
-      }
-    }
-
-    // Update existing book with fresher data (only when > 30 days old)
-    await dbRun(`
-      UPDATE books SET
-        google_rating = COALESCE(?, google_rating),
-        ratings_count = CASE WHEN ? > ratings_count THEN ? ELSE ratings_count END,
-        computed_score = CASE WHEN ? > computed_score THEN ? ELSE computed_score END,
-        cover_image = COALESCE(?, cover_image),
-        description = COALESCE(?, description),
-        price = COALESCE(?, price),
-        amazon_url = COALESCE(?, amazon_url),
-        author_id = COALESCE(?, author_id),
-        updated_at = NOW()
-      WHERE id = ?
-    `, [
-      book.googleRating,
-      book.ratingsCount, book.ratingsCount,
-      score, score,
-      book.coverImage,
-      book.description,
-      book.price,
-      book.amazonUrl,
-      primaryAuthorId,
-      existingId,
-    ]);
-
-    // Link all authors
-    await linkBookAuthors(existingId, authorIds);
-    // Link any new categories
-    await linkCategories(existingId, book.categories);
-    return 'updated';
+    // Skip entirely — don't update existing books. They were already imported.
+    // The Google API fetch already filters by google_books_id, but ISBNs may
+    // cause a book to match an existing row. Just skip it completely.
+    return 'skipped';
   }
 
   // Insert new book
@@ -382,24 +341,18 @@ async function linkCategories(bookId: string, categoryNames: string[]) {
 }
 
 /**
- * Post-import: fix Amazon /dp/ URLs that use invalid ISBN-10 check digits.
- * Replaces them with reliable search URLs that always resolve.
+ * Post-import: fix Amazon URLs — replace all fragile /dp/ links with reliable
+ * ISBN-based search URLs, and fill in any missing Amazon URLs.
  */
 async function fixInvalidAmazonUrls(log: (msg: string) => void): Promise<number> {
-  const books = await dbAll<any>(
+  // Replace ALL /dp/ links with search URLs (search URLs always work)
+  const dpBooks = await dbAll<any>(
     `SELECT id, isbn10, isbn13, title, author, amazon_url
      FROM books WHERE amazon_url LIKE '%/dp/%' AND is_active = 1`,
   );
 
   let fixed = 0;
-  for (const book of books) {
-    const dpMatch = book.amazon_url?.match(/\/dp\/(\w+)/);
-    if (!dpMatch) continue;
-
-    const isbn = dpMatch[1];
-    if (isbn.length === 10 && isValidIsbn10(isbn)) continue; // Valid — keep
-
-    // Invalid ISBN in /dp/ link — replace with search URL
+  for (const book of dpBooks) {
     const searchUrl = buildAmazonSearchUrl({
       isbn10: book.isbn10,
       isbn13: book.isbn13,
@@ -410,12 +363,29 @@ async function fixInvalidAmazonUrls(log: (msg: string) => void): Promise<number>
     fixed++;
   }
 
-  // Also fill in missing Amazon URLs
+  // Fill in missing Amazon URLs
   const missing = await dbAll<any>(
     `SELECT id, isbn10, isbn13, title, author FROM books
      WHERE (amazon_url IS NULL OR amazon_url = '') AND is_active = 1`,
   );
   for (const book of missing) {
+    const url = buildAmazonSearchUrl({
+      isbn10: book.isbn10,
+      isbn13: book.isbn13,
+      title: book.title,
+      author: book.author,
+    });
+    await dbRun('UPDATE books SET amazon_url = ? WHERE id = ?', [url, book.id]);
+    fixed++;
+  }
+
+  // Also fix URLs that don't include the affiliate tag
+  const noTag = await dbAll<any>(
+    `SELECT id, isbn10, isbn13, title, author, amazon_url FROM books
+     WHERE amazon_url IS NOT NULL AND amazon_url != ''
+       AND amazon_url NOT LIKE '%tag=%' AND is_active = 1`,
+  );
+  for (const book of noTag) {
     const url = buildAmazonSearchUrl({
       isbn10: book.isbn10,
       isbn13: book.isbn13,
@@ -552,6 +522,13 @@ export async function runImportJob(
   log(`Starting ${type} import job (id: ${jobId})...`);
 
   try {
+    // ── Pre-fetch: load already-imported Google IDs to skip duplicates at API level ──
+    const existingRows = await dbAll<{ google_books_id: string }>(
+      `SELECT google_books_id FROM books WHERE google_books_id IS NOT NULL AND google_books_id != ''`,
+    );
+    const existingGoogleIds = new Set(existingRows.map(r => r.google_books_id));
+    log(`Found ${existingGoogleIds.size} already-imported Google Book IDs – will skip during fetch`);
+
     // Fetch books from Google API
     let fetchedBooks: NormalizedBook[];
 
@@ -560,12 +537,14 @@ export async function runImportJob(
       fetchedBooks = await fetchTopBooks(
         config.importJob.booksPerCategory,
         log,
+        existingGoogleIds,
       );
     } else {
       log('Running daily import – fetching new and trending books...');
       fetchedBooks = await fetchDailyNewBooks(
         config.importJob.dailyBooksPerQuery,
         log,
+        existingGoogleIds,
       );
     }
 
@@ -633,6 +612,20 @@ export async function runImportJob(
       await upgradeImportedCovers(log);
     } catch (e: any) {
       log(`Cover upgrade warning: ${e.message}`);
+    }
+
+    // ── Post-import AI enrichment (Batch API — 50% cheaper) ──────────
+    // Submit newly imported books for mood analysis & famous reviews.
+    // Results are processed automatically by the batch processor cron.
+    if (inserted > 0) {
+      try {
+        const enrichResult = await runPostImportEnrichment(log);
+        if (enrichResult.moodSubmitted > 0 || enrichResult.reviewsSubmitted > 0) {
+          log(`AI enrichment: ${enrichResult.moodSubmitted} mood + ${enrichResult.reviewsSubmitted} reviews submitted via Batch API`);
+        }
+      } catch (e: any) {
+        log(`AI enrichment warning: ${e.message}`);
+      }
     }
 
     return result;

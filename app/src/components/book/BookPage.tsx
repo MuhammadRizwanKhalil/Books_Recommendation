@@ -1,12 +1,25 @@
-﻿import { Star, Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
+﻿import { Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Book } from '@/types';
-import { formatPrice, formatRating, getStarRating, formatDate, formatNumber, generateBookStructuredData } from '@/lib/utils';
+import { formatPrice, formatRating, formatDate, formatNumber, generateBookStructuredData } from '@/lib/utils';
 import { BookReviews } from './BookReviews';
 import { BookRecommendations } from './BookRecommendations';
+import { FeaturedInBlog } from './FeaturedInBlog';
 import { BookQuotes } from '@/components/BookQuotes';
+import { SeriesBadge } from './SeriesBadge';
+import { MoodTags } from './MoodTags';
+import { PaceIndicator } from './PaceIndicator';
+import { AuthorSection } from './AuthorSection';
+import { ReadingCounts } from './ReadingCounts';
+import { FriendsReadingThis } from './FriendsReadingThis';
+import { BookDiscussions } from './BookDiscussions';
+import { CommunityPrompts } from './CommunityPrompts';
+import { ContentWarnings } from './ContentWarnings';
+import { CharactersList } from './CharactersList';
+import { InlineRatingWidget } from './InlineRatingWidget';
+import { StarDisplay } from '@/components/ui/star-display';
 import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
@@ -16,6 +29,19 @@ import { useSEO } from '@/hooks/useSEO';
 import { ReadingStatusButton } from '@/components/ReadingStatus';
 import { Link } from 'react-router-dom';
 import { SocialShare } from '@/components/SocialShare';
+import { AddToListButton } from './AddToListButton';
+import { TBRQueueButton } from '@/components/TBRQueueButton';
+import { OwnedBookButton } from '@/components/OwnedBookButton';
+import { EditionsBrowser } from './EditionsBrowser';
+import { ProgressTracker } from './ProgressTracker';
+import { CoverZoom } from './CoverZoom';
+import { TagManager } from './TagManager';
+import { ReadingJournal } from './ReadingJournal';
+import { BookQuizzes } from './BookQuizzes';
+import { analyticsApi } from '@/api/client';
+import { isAnalyticsEnabled } from '@/lib/analytics';
+import { StoryArcChart } from './StoryArcChart';
+import { AIInsights } from './AIInsights';
 import { useNavigate } from 'react-router-dom';
 
 interface BookPageProps {
@@ -28,7 +54,6 @@ export function BookPage({ book, onBack }: BookPageProps) {
   const { addToReadingHistory, isAuthenticated, isAdmin } = useAuth();
   const routerNavigate = useNavigate();
   const isLiked = isInWishlist(book.id);
-  const stars = getStarRating(book.googleRating);
   const structuredData = generateBookStructuredData(book);
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -80,6 +105,19 @@ export function BookPage({ book, onBack }: BookPageProps) {
     } else {
       navigator.clipboard.writeText(bookUrl);
       toast.success('Link copied to clipboard!');
+    }
+  };
+
+  const handleAffiliateClick = () => {
+    if (!isAnalyticsEnabled()) return;
+    if (navigator.sendBeacon) {
+      const data = JSON.stringify({ bookId: book.id, source: 'book-page' });
+      navigator.sendBeacon(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/analytics/affiliate-click`,
+        new Blob([data], { type: 'application/json' }),
+      );
+    } else {
+      analyticsApi.trackAffiliateClick(book.id).catch(() => {});
     }
   };
 
@@ -141,22 +179,21 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
           {/* LEFT COLUMN â€” Image + Affiliate */}
           <div className="space-y-5 lg:max-w-none">
-            {/* Cover */}
+            {/* Cover with zoom modal */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-2xl"
             >
-              <img
-                src={book.coverImage}
-                alt={`${book.title} cover`}
-                className="h-full w-full object-cover"
+              <CoverZoom
+                bookId={book.id}
+                title={book.title}
+                fallbackCoverImage={book.coverImage}
               />
             </motion.div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant={isLiked ? 'default' : 'outline'}
                 className="flex-1 gap-2"
@@ -165,6 +202,8 @@ export function BookPage({ book, onBack }: BookPageProps) {
                 <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
                 {isLiked ? 'In Wishlist' : 'Add to Wishlist'}
               </Button>
+              <AddToListButton bookId={book.id} bookTitle={book.title} className="flex-1" />
+              <TBRQueueButton bookId={book.id} className="flex-1" />
               <Button variant="outline" size="icon" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -172,6 +211,15 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
             {/* Reading Status */}
             <ReadingStatusButton bookId={book.id} className="w-full" />
+
+            {/* Private personal tags */}
+            <TagManager bookId={book.slug || book.id} />
+
+            {/* Progress tracker for currently-reading books */}
+            <ProgressTracker bookId={book.id} totalPages={book.pageCount} />
+
+            {/* Owned books tracking */}
+            <OwnedBookButton bookId={book.id} />
 
             {/* Social Sharing */}
             <SocialShare
@@ -195,7 +243,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
                 return (
                   <>
                     <Button className="w-full gap-2" size="lg" asChild>
-                      <a href={book.amazonUrl} target="_blank" rel="nofollow sponsored noopener noreferrer">
+                      <a href={book.amazonUrl} target="_blank" rel="nofollow sponsored noopener noreferrer" onClick={handleAffiliateClick}>
                         {isDirectLink ? (
                           <ShoppingCart className="h-4 w-4" />
                         ) : (
@@ -211,6 +259,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
                         target="_blank"
                         rel="nofollow sponsored noopener noreferrer"
                         className="block text-[11px] text-center text-muted-foreground hover:text-primary transition-colors"
+                        onClick={handleAffiliateClick}
                       >
                         Not finding the book? Search on Amazon instead
                       </a>
@@ -291,6 +340,10 @@ export function BookPage({ book, onBack }: BookPageProps) {
                 </div>
               </div>
             </div>
+
+            {/* Editions Browser */}
+            <EditionsBrowser bookId={book.id} />
+
           </div>
 
           {/* RIGHT COLUMN â€” Description, Ratings, Reviews */}
@@ -331,40 +384,96 @@ export function BookPage({ book, onBack }: BookPageProps) {
                   <span className="font-medium text-primary">{book.author}</span>
                 )}
               </p>
+              {book.series && book.series.length > 0 && (
+                <div className="mt-3">
+                  <SeriesBadge series={book.series} />
+                </div>
+              )}
+              {/* Mood Tags */}
+              <div className="mt-4">
+                <MoodTags bookId={book.id} />
+              </div>
+              {/* Pace Indicator */}
+              <div className="mt-4">
+                <PaceIndicator bookId={book.id} />
+              </div>
             </div>
 
             {/* Rating Bar */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-4 bg-muted/50 rounded-xl">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: stars.full }).map((_, i) => (
-                    <Star key={`f-${i}`} className="h-5 w-5 sm:h-6 sm:w-6 fill-yellow-400 text-yellow-400" />
-                  ))}
-                  {stars.half && <Star className="h-5 w-5 sm:h-6 sm:w-6 fill-yellow-400/50 text-yellow-400" />}
-                  {Array.from({ length: stars.empty }).map((_, i) => (
-                    <Star key={`e-${i}`} className="h-5 w-5 sm:h-6 sm:w-6 text-gray-300" />
-                  ))}
-                </div>
+                <StarDisplay rating={book.googleRating || 0} size="md" />
                 <span className="text-xl sm:text-2xl font-bold">{formatRating(book.googleRating)}</span>
               </div>
               <Separator orientation="vertical" className="h-8 hidden sm:block" />
               <span className="text-sm sm:text-base text-muted-foreground">{formatNumber(book.ratingsCount)} ratings</span>
               <Separator orientation="vertical" className="h-8 hidden sm:block" />
               <span className="text-sm sm:text-base text-muted-foreground">Score: {book.computedScore.toFixed(1)}</span>
+              <Separator orientation="vertical" className="h-8 hidden sm:block" />
+              <InlineRatingWidget bookSlug={book.slug} userRating={book.userRating} />
             </div>
+
+            {/* Reading Counts */}
+            <ReadingCounts bookId={book.id} />
+
+            {/* Friends reading this */}
+            <FriendsReadingThis bookId={book.id} />
+
+            {/* Content Warnings (collapsed by default) */}
+            <ContentWarnings bookId={book.id} />
+
+            {/* Story arc visualization */}
+            <StoryArcChart bookId={book.id} />
+
+            {/* AI insights */}
+            <AIInsights bookId={book.id} />
+
+            {/* Characters */}
+            <CharactersList bookId={book.id} />
 
             {/* Description */}
             <DescriptionSection description={book.description} />
 
             <Separator />
 
+            {/* About the Author */}
+            {book.authorsData && book.authorsData.length > 0 && (
+              <>
+                <AuthorSection authors={book.authorsData} />
+                <Separator />
+              </>
+            )}
+
             {/* Recommendations (moved above reviews for better engagement) */}
             <BookRecommendations bookId={book.id} />
+
+            {/* Featured in blog cross-links */}
+            <FeaturedInBlog bookId={book.id} />
 
             <Separator />
 
             {/* Memorable Quotes */}
             <BookQuotes bookId={book.id} />
+
+            <Separator />
+
+            {/* Personal reading journal */}
+            <ReadingJournal bookId={book.id} />
+
+            <Separator />
+
+            {/* Quizzes & Trivia */}
+            <BookQuizzes bookId={book.id} />
+
+            <Separator />
+
+            {/* Discussion forums */}
+            <BookDiscussions bookId={book.id} />
+
+            <Separator />
+
+            {/* Community prompts */}
+            <CommunityPrompts bookId={book.id} />
 
             <Separator />
 

@@ -51,11 +51,12 @@ import { dbGet, dbAll, dbRun, dbTransaction } from '../database.js';
 // ── Configuration ───────────────────────────────────────────────────────────
 
 const WEIGHTS = {
-  google: 0.40,       // Google Books rating (external credibility)
+  google: 0.35,       // Google Books rating (external credibility)
   localReviews: 0.25, // Our user reviews (community validation)
   engagement: 0.20,   // Views, wishlist, affiliate clicks
   recency: 0.10,      // Freshness / time decay
   quality: 0.05,      // Content completeness
+  aiEnrichment: 0.05, // AI mood/theme data availability bonus
 } as const;
 
 // Bayesian prior strengths
@@ -243,6 +244,33 @@ function qualityComponent(book: any): number {
   return score;
 }
 
+/**
+ * AI Enrichment component (0-100).
+ * Rewards books that have AI mood/theme analysis data,
+ * which enables richer recommendations and discovery.
+ */
+async function aiEnrichmentComponent(bookId: string): Promise<number> {
+  let score = 0;
+
+  // Has AI mood analysis?
+  const moodAnalysis = await dbGet<any>(
+    `SELECT id FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood' LIMIT 1`,
+    [bookId],
+  );
+  if (moodAnalysis) score += 50;
+
+  // Has famous reviews?
+  const famousReviews = await dbGet<any>(
+    `SELECT COUNT(*) as cnt FROM famous_reviews WHERE book_id = ?`,
+    [bookId],
+  );
+  if (famousReviews && famousReviews.cnt > 0) {
+    score += Math.min(50, famousReviews.cnt * 10); // Up to 50 points for 5+ reviews
+  }
+
+  return score;
+}
+
 // ── Composite Score ─────────────────────────────────────────────────────────
 
 /**
@@ -257,13 +285,15 @@ export async function calculateCompositeScore(book: any): Promise<number> {
   const engagement = await engagementComponent(book.id, priors);
   const recency = recencyComponent(book.published_date, book.created_at);
   const quality = qualityComponent(book);
+  const aiEnrichment = await aiEnrichmentComponent(book.id);
 
   const composite =
     google * WEIGHTS.google +
     local * WEIGHTS.localReviews +
     engagement * WEIGHTS.engagement +
     recency * WEIGHTS.recency +
-    quality * WEIGHTS.quality;
+    quality * WEIGHTS.quality +
+    aiEnrichment * WEIGHTS.aiEnrichment;
 
   return Math.round(composite * 10) / 10; // 1 decimal place
 }
@@ -326,6 +356,18 @@ export async function recalculateAllScores(): Promise<{ updated: number; duratio
   const clickMap = new Map<string, number>();
   for (const c of clickStats) clickMap.set(c.book_id, c.cnt);
 
+  // ── Batch 6: AI enrichment data (mood analysis + famous reviews) ──────
+  const moodData = await dbAll<any>(`
+    SELECT book_id FROM ai_book_analysis WHERE analysis_type = 'mood'
+  `);
+  const hasMood = new Set(moodData.map((m: any) => m.book_id));
+
+  const reviewCountData = await dbAll<any>(`
+    SELECT book_id, COUNT(*) as cnt FROM famous_reviews GROUP BY book_id
+  `);
+  const famousReviewCount = new Map<string, number>();
+  for (const r of reviewCountData) famousReviewCount.set(r.book_id, r.cnt);
+
   // ── Calculate scores using in-memory data (zero additional queries) ───
   let updated = 0;
   const BATCH_SIZE = 500;
@@ -349,13 +391,20 @@ export async function recalculateAllScores(): Promise<{ updated: number; duratio
     const recency = recencyComponent(book.published_date, book.created_at);
     const quality = qualityComponent(book);
 
+    // AI enrichment component (from batch maps)
+    let aiEnrichment = 0;
+    if (hasMood.has(book.id)) aiEnrichment += 50;
+    const frCount = famousReviewCount.get(book.id) || 0;
+    if (frCount > 0) aiEnrichment += Math.min(50, frCount * 10);
+
     // Composite
     const composite =
       google * WEIGHTS.google +
       local * WEIGHTS.localReviews +
       engagement * WEIGHTS.engagement +
       recency * WEIGHTS.recency +
-      quality * WEIGHTS.quality;
+      quality * WEIGHTS.quality +
+      aiEnrichment * WEIGHTS.aiEnrichment;
 
     const newScore = Math.round(composite * 10) / 10;
 
@@ -567,6 +616,63 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
     }
   }
 
+  // ─── Strategy 5: Mood/Theme Similarity (AI-powered) ───────────────
+  const sourceAnalysis = await dbGet<any>(
+    `SELECT analysis_data FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
+    [bookId],
+  );
+
+  if (sourceAnalysis?.analysis_data) {
+    try {
+      const srcData = typeof sourceAnalysis.analysis_data === 'string'
+        ? JSON.parse(sourceAnalysis.analysis_data)
+        : sourceAnalysis.analysis_data;
+
+      const srcMoods = new Set<string>(srcData?.mood?.moods || []);
+      const srcThemes = new Set<string>(srcData?.themes?.themes || []);
+
+      if (srcMoods.size > 0 || srcThemes.size > 0) {
+        // Get books with mood analysis that we haven't scored yet
+        const moodCandidates = await dbAll<any>(`
+          SELECT b.id, b.computed_score, a.analysis_data
+          FROM books b
+          JOIN ai_book_analysis a ON a.book_id = b.id
+          WHERE a.analysis_type = 'mood'
+            AND b.id != ?
+            AND b.status = 'PUBLISHED' AND b.is_active = 1
+          ORDER BY b.computed_score DESC
+          LIMIT 100
+        `, [bookId]);
+
+        for (const mc of moodCandidates) {
+          if (seen.has(mc.id)) continue;
+
+          try {
+            const mcData = typeof mc.analysis_data === 'string'
+              ? JSON.parse(mc.analysis_data)
+              : mc.analysis_data;
+
+            let moodScore = 0;
+            const mcMoods = mcData?.mood?.moods || [];
+            const mcThemes = mcData?.themes?.themes || [];
+
+            // Shared moods (8 pts each)
+            const sharedMoods = mcMoods.filter((m: string) => srcMoods.has(m)).length;
+            moodScore += sharedMoods * 8;
+
+            // Shared themes (6 pts each)
+            const sharedThemes = mcThemes.filter((t: string) => srcThemes.has(t)).length;
+            moodScore += sharedThemes * 6;
+
+            if (moodScore > 0) {
+              scores.set(mc.id, (scores.get(mc.id) || 0) + moodScore);
+            }
+          } catch { /* skip unparseable */ }
+        }
+      }
+    } catch { /* skip if source parse fails */ }
+  }
+
   // ─── Rank and return top N ────────────────────────────────────────
   const ranked = Array.from(scores.entries())
     .filter(([id]) => !seen.has(id))
@@ -596,7 +702,7 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
   });
 
   // Determine primary strategy
-  const strategy = bookCats.length > 0 ? 'multi_signal' : (authorBooks.length > 0 ? 'author' : 'engagement');
+  const strategy = sourceAnalysis?.analysis_data ? 'multi_signal_with_mood' : (bookCats.length > 0 ? 'multi_signal' : (authorBooks.length > 0 ? 'author' : 'engagement'));
 
   return { books, strategy, scores };
 }
@@ -1158,5 +1264,250 @@ export async function getPersonalizedRecommendations(
   books.sort((a: any, b: any) => (scores.get(b.id) || 0) - (scores.get(a.id) || 0));
 
   return { books, strategies, confidence };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── Mood & Theme-Based Recommendations ──────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get books that match a specific mood, using AI mood analysis data.
+ * Only returns books that have been AI-analyzed.
+ */
+export async function getBooksByMood(
+  mood: string,
+  limit: number = 12,
+): Promise<any[]> {
+  return dbAll<any>(`
+    SELECT b.*, a.analysis_data
+    FROM books b
+    JOIN ai_book_analysis a ON a.book_id = b.id
+    WHERE a.analysis_type = 'mood'
+      AND b.status = 'PUBLISHED' AND b.is_active = 1
+      AND JSON_CONTAINS(JSON_EXTRACT(a.analysis_data, '$.mood.moods'), ?)
+    ORDER BY
+      JSON_EXTRACT(a.analysis_data, '$.mood.confidence') DESC,
+      b.computed_score DESC
+    LIMIT ?
+  `, [JSON.stringify(mood), limit]);
+}
+
+/**
+ * Get books by pace (slow, medium, fast).
+ */
+export async function getBooksByPace(
+  pace: 'slow' | 'medium' | 'fast',
+  limit: number = 12,
+): Promise<any[]> {
+  return dbAll<any>(`
+    SELECT b.*, a.analysis_data
+    FROM books b
+    JOIN ai_book_analysis a ON a.book_id = b.id
+    WHERE a.analysis_type = 'mood'
+      AND b.status = 'PUBLISHED' AND b.is_active = 1
+      AND JSON_EXTRACT(a.analysis_data, '$.pace.pace') = ?
+    ORDER BY
+      JSON_EXTRACT(a.analysis_data, '$.pace.confidence') DESC,
+      b.computed_score DESC
+    LIMIT ?
+  `, [pace, limit]);
+}
+
+/**
+ * Get books by difficulty level.
+ */
+export async function getBooksByDifficulty(
+  level: 'easy' | 'moderate' | 'challenging',
+  limit: number = 12,
+): Promise<any[]> {
+  return dbAll<any>(`
+    SELECT b.*, a.analysis_data
+    FROM books b
+    JOIN ai_book_analysis a ON a.book_id = b.id
+    WHERE a.analysis_type = 'mood'
+      AND b.status = 'PUBLISHED' AND b.is_active = 1
+      AND JSON_EXTRACT(a.analysis_data, '$.difficulty.level') = ?
+    ORDER BY b.computed_score DESC
+    LIMIT ?
+  `, [level, limit]);
+}
+
+/**
+ * Get books similar to a given book by mood/theme overlap.
+ * Uses AI analysis data (moods, themes, pace) for deeper similarity than category alone.
+ *
+ * Scoring:
+ *  - Shared moods: 15 pts each (max 60)
+ *  - Shared themes: 10 pts each (max 50)
+ *  - Same pace: 15 pts
+ *  - Same difficulty: 10 pts
+ *  - Bonus: computed_score scaled to max 20 pts
+ */
+export async function getMoodBasedRecommendations(
+  bookId: string,
+  limit: number = 8,
+): Promise<{ books: any[]; strategy: string }> {
+  // Get source book's mood analysis
+  const sourceAnalysis = await dbGet<any>(
+    `SELECT analysis_data FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
+    [bookId],
+  );
+
+  if (!sourceAnalysis?.analysis_data) {
+    // Fall back to regular recommendations if no mood data
+    const fallback = await getRecommendations(bookId, limit);
+    return { books: fallback.books, strategy: 'fallback_no_mood_data' };
+  }
+
+  let sourceData: any;
+  try {
+    sourceData = typeof sourceAnalysis.analysis_data === 'string'
+      ? JSON.parse(sourceAnalysis.analysis_data)
+      : sourceAnalysis.analysis_data;
+  } catch {
+    const fallback = await getRecommendations(bookId, limit);
+    return { books: fallback.books, strategy: 'fallback_parse_error' };
+  }
+
+  const sourceMoods = new Set<string>(sourceData?.mood?.moods || []);
+  const sourceThemes = new Set<string>(sourceData?.themes?.themes || []);
+  const sourcePace = sourceData?.pace?.pace;
+  const sourceDifficulty = sourceData?.difficulty?.level;
+
+  // Get all other books with mood analysis
+  const candidates = await dbAll<any>(`
+    SELECT b.id, b.computed_score, a.analysis_data
+    FROM books b
+    JOIN ai_book_analysis a ON a.book_id = b.id
+    WHERE a.analysis_type = 'mood'
+      AND b.id != ?
+      AND b.status = 'PUBLISHED' AND b.is_active = 1
+    ORDER BY b.computed_score DESC
+    LIMIT 500
+  `, [bookId]);
+
+  const scored: Array<{ id: string; score: number }> = [];
+
+  for (const candidate of candidates) {
+    let data: any;
+    try {
+      data = typeof candidate.analysis_data === 'string'
+        ? JSON.parse(candidate.analysis_data)
+        : candidate.analysis_data;
+    } catch { continue; }
+
+    let score = 0;
+
+    // Mood overlap (15 pts each, max 60)
+    const candidateMoods = data?.mood?.moods || [];
+    const sharedMoods = candidateMoods.filter((m: string) => sourceMoods.has(m)).length;
+    score += Math.min(60, sharedMoods * 15);
+
+    // Theme overlap (10 pts each, max 50)
+    const candidateThemes = data?.themes?.themes || [];
+    const sharedThemes = candidateThemes.filter((t: string) => sourceThemes.has(t)).length;
+    score += Math.min(50, sharedThemes * 10);
+
+    // Pace match (15 pts)
+    if (sourcePace && data?.pace?.pace === sourcePace) score += 15;
+
+    // Difficulty match (10 pts)
+    if (sourceDifficulty && data?.difficulty?.level === sourceDifficulty) score += 10;
+
+    // Quality bonus (max 20 pts from computed_score)
+    score += (candidate.computed_score / 100) * 20;
+
+    if (score > 0) {
+      scored.push({ id: candidate.id, score });
+    }
+  }
+
+  // Sort by score and return top results
+  scored.sort((a, b) => b.score - a.score);
+  const topIds = scored.slice(0, limit).map(s => s.id);
+
+  if (topIds.length === 0) {
+    const fallback = await getRecommendations(bookId, limit);
+    return { books: fallback.books, strategy: 'fallback_no_matches' };
+  }
+
+  const placeholders = topIds.map(() => '?').join(',');
+  const books = await dbAll<any>(
+    `SELECT * FROM books WHERE id IN (${placeholders})`,
+    topIds,
+  );
+
+  // Preserve score ordering
+  const scoreMap = new Map(scored.map(s => [s.id, s.score]));
+  books.sort((a: any, b: any) => (scoreMap.get(b.id) || 0) - (scoreMap.get(a.id) || 0));
+
+  return { books, strategy: 'mood_theme_similarity' };
+}
+
+/**
+ * Get the scoring breakdown for a single book — useful for admin debugging.
+ */
+export async function getScoreBreakdown(bookId: string): Promise<{
+  bookId: string;
+  compositeScore: number;
+  components: {
+    google: { score: number; weight: number; weighted: number; rating: number | null; count: number };
+    localReviews: { score: number; weight: number; weighted: number; avgRating: number | null; count: number };
+    engagement: { score: number; weight: number; weighted: number; views: number; wishlists: number; clicks: number };
+    recency: { score: number; weight: number; weighted: number; publishedDate: string | null };
+    quality: { score: number; weight: number; weighted: number };
+    aiEnrichment: { score: number; weight: number; weighted: number; hasMood: boolean; famousReviewCount: number };
+  };
+} | null> {
+  const book = await dbGet<any>('SELECT * FROM books WHERE id = ?', [bookId]);
+  if (!book) return null;
+
+  const priors = await getPriors();
+  const last90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Google
+  const google = googleComponent(book.google_rating, book.ratings_count, priors);
+
+  // Local reviews
+  const localStats = await dbGet<any>(`
+    SELECT AVG(rating) as avg_rating, COUNT(*) as cnt FROM reviews WHERE book_id = ? AND is_approved = 1
+  `, [bookId]);
+  const local = localStats?.cnt > 0
+    ? bayesianScore(localStats.avg_rating, localStats.cnt, priors.localMean, LOCAL_PRIOR_M)
+    : 0;
+
+  // Engagement
+  const views = (await dbGet<any>(`SELECT COUNT(*) as cnt FROM analytics_events WHERE event_type = 'view' AND entity_type = 'book' AND entity_id = ? AND created_at >= ?`, [bookId, last90]))?.cnt || 0;
+  const wishlists = (await dbGet<any>(`SELECT COUNT(*) as cnt FROM wishlist WHERE book_id = ?`, [bookId]))?.cnt || 0;
+  const clicks = (await dbGet<any>(`SELECT COUNT(*) as cnt FROM affiliate_clicks WHERE book_id = ? AND created_at >= ?`, [bookId, last90]))?.cnt || 0;
+  const engagement = Math.min(100, ((views / priors.maxViews) * 0.5 + (wishlists / priors.maxWishlists) * 0.3 + (clicks / priors.maxClicks) * 0.2) * 100);
+
+  // Recency
+  const recency = recencyComponent(book.published_date, book.created_at);
+
+  // Quality
+  const quality = qualityComponent(book);
+
+  // AI enrichment
+  const hasMood = !!(await dbGet<any>(`SELECT id FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood' LIMIT 1`, [bookId]));
+  const frCount = (await dbGet<any>(`SELECT COUNT(*) as cnt FROM famous_reviews WHERE book_id = ?`, [bookId]))?.cnt || 0;
+  let aiEnrichment = 0;
+  if (hasMood) aiEnrichment += 50;
+  if (frCount > 0) aiEnrichment += Math.min(50, frCount * 10);
+
+  const composite = google * WEIGHTS.google + local * WEIGHTS.localReviews + engagement * WEIGHTS.engagement + recency * WEIGHTS.recency + quality * WEIGHTS.quality + aiEnrichment * WEIGHTS.aiEnrichment;
+
+  return {
+    bookId,
+    compositeScore: Math.round(composite * 10) / 10,
+    components: {
+      google: { score: Math.round(google * 10) / 10, weight: WEIGHTS.google, weighted: Math.round(google * WEIGHTS.google * 10) / 10, rating: book.google_rating, count: book.ratings_count },
+      localReviews: { score: Math.round(local * 10) / 10, weight: WEIGHTS.localReviews, weighted: Math.round(local * WEIGHTS.localReviews * 10) / 10, avgRating: localStats?.avg_rating || null, count: localStats?.cnt || 0 },
+      engagement: { score: Math.round(engagement * 10) / 10, weight: WEIGHTS.engagement, weighted: Math.round(engagement * WEIGHTS.engagement * 10) / 10, views, wishlists, clicks },
+      recency: { score: Math.round(recency * 10) / 10, weight: WEIGHTS.recency, weighted: Math.round(recency * WEIGHTS.recency * 10) / 10, publishedDate: book.published_date },
+      quality: { score: Math.round(quality * 10) / 10, weight: WEIGHTS.quality, weighted: Math.round(quality * WEIGHTS.quality * 10) / 10 },
+      aiEnrichment: { score: Math.round(aiEnrichment * 10) / 10, weight: WEIGHTS.aiEnrichment, weighted: Math.round(aiEnrichment * WEIGHTS.aiEnrichment * 10) / 10, hasMood, famousReviewCount: frCount },
+    },
+  };
 }
 

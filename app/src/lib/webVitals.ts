@@ -13,6 +13,7 @@
  */
 
 import type { Metric } from 'web-vitals';
+import { isAnalyticsEnabled } from './analytics';
 
 const VITALS_ENDPOINT = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/analytics/web-vitals`
@@ -43,7 +44,7 @@ function sendToAnalytics(metric: Metric) {
   }
 
   // In production, send via beacon (non-blocking)
-  if (VITALS_ENDPOINT && navigator.sendBeacon) {
+  if (isAnalyticsEnabled() && VITALS_ENDPOINT && navigator.sendBeacon) {
     navigator.sendBeacon(
       VITALS_ENDPOINT,
       new Blob([JSON.stringify(data)], { type: 'application/json' })

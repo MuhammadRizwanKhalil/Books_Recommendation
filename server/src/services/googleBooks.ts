@@ -76,10 +76,23 @@ export function isValidIsbn10(isbn: string): boolean {
   return sum % 11 === 0;
 }
 
-/** Build an Amazon search URL (always works, unlike /dp/ links) */
+/** Build the most reliable Amazon URL for a book.
+ * Priority:
+ *  1. ISBN-13 search URL (most reliable — Amazon resolves ISBN-13 to product page)
+ *  2. ISBN-10 direct product link (only when checksum is valid)
+ *  3. Title+author search as fallback
+ */
 export function buildAmazonSearchUrl(book: { isbn10?: string | null; isbn13?: string | null; title: string; author: string }): string {
-  const searchTerm = book.isbn13 || book.isbn10 || `${book.title} ${book.author}`;
-  return `https://www.amazon.com/s?k=${encodeURIComponent(searchTerm)}&tag=thebooktimes-20`;
+  // ISBN-based search URLs are the most reliable — Amazon resolves them to the product page
+  if (book.isbn13) {
+    return `https://www.amazon.com/s?k=${encodeURIComponent(book.isbn13)}&i=stripbooks&tag=thebooktimes-20`;
+  }
+  if (book.isbn10) {
+    return `https://www.amazon.com/s?k=${encodeURIComponent(book.isbn10)}&i=stripbooks&tag=thebooktimes-20`;
+  }
+  // Title+author search as ultimate fallback
+  const query = `${book.title} ${book.author}`.trim();
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks&tag=thebooktimes-20`;
 }
 
 /** Normalized book data ready for DB insertion */
@@ -113,41 +126,100 @@ const BASE_URL = 'https://www.googleapis.com/books/v1/volumes';
 const MAX_RESULTS_PER_PAGE = 40; // Google API max
 const REQUEST_DELAY_MS = 1500;    // Throttle between requests (generous to avoid 429)
 
-// Search queries for the initial "top books" fetch — wider net across sub-genres
+// Search queries for the initial "top books" fetch — 40+ queries to yield 1000+ unique books
 const TOP_BOOKS_QUERIES = [
   // Fiction — multiple angles for depth
   { query: 'subject:fiction bestseller award winning', category: 'Fiction' },
   { query: 'subject:fiction NYT bestseller popular', category: 'Fiction' },
   { query: 'subject:literary fiction Pulitzer Booker prize', category: 'Fiction' },
   { query: 'subject:fiction thriller mystery top rated', category: 'Fiction' },
+  { query: 'subject:fiction contemporary modern literary', category: 'Fiction' },
+
+  // Fantasy
+  { query: 'subject:fantasy bestseller epic dark urban', category: 'Fantasy' },
+  { query: 'subject:fantasy award winning series popular', category: 'Fantasy' },
+
+  // Science Fiction
+  { query: 'subject:science fiction bestseller space dystopian', category: 'Science Fiction' },
+  { query: 'subject:science fiction Hugo Nebula award winning', category: 'Science Fiction' },
+
+  // Mystery & Thriller
+  { query: 'subject:mystery thriller bestseller suspense', category: 'Mystery & Thriller' },
+  { query: 'subject:crime fiction detective noir', category: 'Mystery & Thriller' },
+  { query: 'subject:thriller espionage psychological', category: 'Mystery & Thriller' },
+
+  // Romance
+  { query: 'subject:romance bestseller contemporary historical', category: 'Romance' },
+  { query: 'subject:romance love stories popular', category: 'Romance' },
+
+  // Horror
+  { query: 'subject:horror bestseller gothic supernatural', category: 'Horror' },
+
+  // Historical Fiction
+  { query: 'subject:historical fiction bestseller war', category: 'Historical Fiction' },
+  { query: 'subject:historical fiction ancient medieval', category: 'Historical Fiction' },
+
+  // Young Adult
+  { query: 'subject:young adult bestseller popular', category: 'Young Adult' },
+  { query: 'subject:young adult fiction fantasy dystopian', category: 'Young Adult' },
 
   // Business & Economics
   { query: 'subject:business bestseller leadership strategy', category: 'Business' },
   { query: 'subject:business economics finance investing', category: 'Business' },
+  { query: 'subject:entrepreneurship startup innovation', category: 'Business' },
 
   // Technology & Programming
   { query: 'subject:computers programming bestseller', category: 'Technology' },
   { query: 'subject:technology artificial intelligence machine learning', category: 'Technology' },
+  { query: 'subject:software engineering web development', category: 'Technology' },
 
   // Self-Help & Personal Development
   { query: 'subject:self-help bestseller habits productivity', category: 'Self-Help' },
   { query: 'subject:self-help personal development mindfulness', category: 'Self-Help' },
+  { query: 'subject:self-help motivation success mindset', category: 'Self-Help' },
 
   // Science
   { query: 'subject:science popular bestseller', category: 'Science' },
   { query: 'subject:science physics cosmology evolution', category: 'Science' },
+  { query: 'subject:biology genetics astronomy earth', category: 'Science' },
 
   // History
   { query: 'subject:history bestseller civilization', category: 'History' },
   { query: 'subject:history war revolution modern', category: 'History' },
+  { query: 'subject:history ancient medieval world', category: 'History' },
 
   // Psychology
   { query: 'subject:psychology bestseller behavior cognitive', category: 'Psychology' },
   { query: 'subject:psychology thinking brain neuroscience', category: 'Psychology' },
 
+  // Philosophy
+  { query: 'subject:philosophy ethics stoicism existentialism', category: 'Philosophy' },
+
   // Biography & Memoir
   { query: 'subject:biography memoir bestseller', category: 'Biography' },
   { query: 'subject:biography autobiography inspiring', category: 'Biography' },
+  { query: 'subject:biography leaders presidents scientists', category: 'Biography' },
+
+  // True Crime
+  { query: 'subject:true crime bestseller investigation', category: 'True Crime' },
+
+  // Health & Wellness
+  { query: 'subject:health fitness nutrition wellness', category: 'Health & Wellness' },
+
+  // Cooking
+  { query: 'subject:cooking cookbooks bestseller food', category: 'Cooking' },
+
+  // Art & Design
+  { query: 'subject:art design photography architecture', category: 'Art & Design' },
+
+  // Travel
+  { query: 'subject:travel adventure memoir guide', category: 'Travel' },
+
+  // Religion & Spirituality
+  { query: 'subject:religion spirituality faith bestseller', category: 'Religion & Spirituality' },
+
+  // Education
+  { query: 'subject:education learning teaching study', category: 'Education' },
 ];
 
 // Generate daily queries with the current year for freshness
@@ -233,9 +305,10 @@ export async function getVolumeById(volumeId: string): Promise<GoogleBookVolume 
 export async function fetchTopBooks(
   booksPerCategory: number = 30,
   onProgress?: (message: string) => void,
+  existingGoogleIds?: Set<string>,
 ): Promise<NormalizedBook[]> {
   const allBooks: NormalizedBook[] = [];
-  const seenIds = new Set<string>();
+  const seenIds = new Set<string>(existingGoogleIds || []);
   let consecutiveFailures = 0;
   const MAX_CONSECUTIVE_FAILURES = 3; // Stop early if API keeps failing
 
@@ -248,8 +321,13 @@ export async function fetchTopBooks(
     try {
       const books = await fetchAllPages(query, booksPerCategory);
       consecutiveFailures = 0; // Reset on success
+      let newInBatch = 0;
+      let skippedInBatch = 0;
       for (const volume of books) {
-        if (seenIds.has(volume.id)) continue;
+        if (seenIds.has(volume.id)) {
+          skippedInBatch++;
+          continue;
+        }
         seenIds.add(volume.id);
 
         const normalized = await normalizeVolume(volume, category);
@@ -259,9 +337,14 @@ export async function fetchTopBooks(
             continue;
           }
           allBooks.push(normalized);
+          newInBatch++;
           onProgress?.(`  ✓ ${normalized.title} by ${normalized.author} (★${normalized.googleRating ?? '?'} · ${normalized.ratingsCount} ratings)`);
         }
       }
+      if (skippedInBatch > 0) {
+        onProgress?.(`  ⏭ Skipped ${skippedInBatch} already-imported books in ${category}`);
+      }
+      onProgress?.(`  📊 ${category}: ${newInBatch} new, ${skippedInBatch} skipped (total so far: ${allBooks.length})`);
     } catch (err: any) {
       consecutiveFailures++;
       onProgress?.(`  ✗ Error fetching ${category}: ${err.message}`);
@@ -301,9 +384,10 @@ export async function fetchTopBooks(
 export async function fetchDailyNewBooks(
   maxPerQuery: number = 20,
   onProgress?: (message: string) => void,
+  existingGoogleIds?: Set<string>,
 ): Promise<NormalizedBook[]> {
   const allBooks: NormalizedBook[] = [];
-  const seenIds = new Set<string>();
+  const seenIds = new Set<string>(existingGoogleIds || []);
   let consecutiveFailures = 0;
   const MAX_CONSECUTIVE_FAILURES = 3; // Stop early if API keeps failing
 
@@ -321,8 +405,9 @@ export async function fetchDailyNewBooks(
       });
       consecutiveFailures = 0; // Reset on success
       if (result.items) {
+        let skipped = 0;
         for (const volume of result.items) {
-          if (seenIds.has(volume.id)) continue;
+          if (seenIds.has(volume.id)) { skipped++; continue; }
           seenIds.add(volume.id);
           const normalized = await normalizeVolume(volume);
           if (normalized) {
@@ -330,6 +415,7 @@ export async function fetchDailyNewBooks(
             onProgress?.(`  ✓ ${normalized.title} by ${normalized.author}`);
           }
         }
+        if (skipped > 0) onProgress?.(`  ⏭ Skipped ${skipped} already-imported books`);
       }
     } catch (err: any) {
       consecutiveFailures++;
@@ -462,13 +548,15 @@ async function normalizeVolume(
   const price = priceInfo?.amount || null;
   const currency = priceInfo?.currencyCode || 'USD';
 
-  // Build Amazon URL — prefer direct product link for valid ISBN-10,
-  // otherwise use search URL which always shows results
-  const amazonUrl = isbn10 && isValidIsbn10(isbn10)
-    ? `https://www.amazon.com/dp/${isbn10}?tag=thebooktimes-20`
-    : isbn13
-      ? `https://www.amazon.com/s?k=${isbn13}&tag=thebooktimes-20`
-      : `https://www.amazon.com/s?k=${encodeURIComponent(info.title + ' ' + (info.authors?.[0] || ''))}&tag=thebooktimes-20`;
+  // Build Amazon URL — always use search URLs (ISBN-based) for reliability.
+  // /dp/ links break when ISBN-10 check digit is wrong or when Amazon doesn't
+  // have that exact ASIN. Search URLs always resolve to results.
+  const amazonUrl = buildAmazonSearchUrl({
+    isbn10,
+    isbn13,
+    title: info.title,
+    author: info.authors?.[0] || '',
+  });
 
   // Try to upgrade to HD cover (Open Library → Google zoom=0)
   let finalCoverUrl = validImage.url;

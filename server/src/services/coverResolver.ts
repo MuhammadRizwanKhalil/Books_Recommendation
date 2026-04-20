@@ -56,11 +56,18 @@ export async function resolveHDCover(
   const olCover = await tryOpenLibrary(isbn13, isbn10);
   if (olCover) return olCover;
 
-  // 2. Try Google Books zoom=0 (full-size, no crop)
+  // 2. Try Amazon product image (reliable for popular books)
+  const amazonCover = tryAmazonCoverImage(isbn13, isbn10);
+  if (amazonCover) {
+    const isValid = await validateCoverUrl(amazonCover.url);
+    if (isValid) return amazonCover;
+  }
+
+  // 3. Try Google Books zoom=0 (full-size, no crop)
   const googleHD = tryGoogleBooksHD(googleBooksId, currentCoverUrl);
   if (googleHD) return googleHD;
 
-  // 3. Keep original if nothing better found
+  // 4. Keep original if nothing better found
   return null;
 }
 
@@ -172,6 +179,49 @@ async function checkOpenLibraryCover(
     };
   } catch {
     return null; // Timeout or network error
+  }
+}
+
+// ── Amazon Product Images ───────────────────────────────────────────────────
+
+/**
+ * Build an Amazon product image URL from ISBN.
+ * Amazon hosts cover images at images-na.ssl-images-amazon.com using the ISBN
+ * as the product ASIN. Works for many popular books.
+ */
+function tryAmazonCoverImage(
+  isbn13?: string | null,
+  isbn10?: string | null,
+): CoverResult | null {
+  // ISBN-10 is the Amazon ASIN for most books
+  const asin = isbn10 || isbn13;
+  if (!asin) return null;
+
+  // Amazon image URL pattern — large size (._SL500_)
+  const url = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SL500_.jpg`;
+  return { url, source: 'openlibrary' as const }; // credited as external
+}
+
+/**
+ * Validate a cover URL by issuing a HEAD request.
+ * Returns true if the URL returns a valid image response > 1KB.
+ */
+async function validateCoverUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(OL_COVERS_TIMEOUT),
+      headers: { 'User-Agent': USER_AGENT },
+      redirect: 'follow',
+    });
+    if (!res.ok) return false;
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.startsWith('image/')) return false;
+    const cl = parseInt(res.headers.get('content-length') || '0', 10);
+    if (cl > 0 && cl < 1000) return false; // tiny placeholder
+    return true;
+  } catch {
+    return false;
   }
 }
 

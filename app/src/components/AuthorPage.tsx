@@ -1,6 +1,6 @@
-﻿import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, BookOpen, ArrowLeft, Globe, Award, TrendingUp, Calendar, ExternalLink, MapPin, Trophy } from 'lucide-react';
+import { Star, BookOpen, ArrowLeft, Globe, Award, TrendingUp, Calendar, ExternalLink, MapPin, Trophy, BadgeCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,15 +9,22 @@ import { authorsApi, type AuthorDetailResponse } from '@/api/client';
 import { useSEO } from '@/hooks/useSEO';
 import { motion } from 'framer-motion';
 import { handleImgError } from '@/lib/imageUtils';
+import { useAuth } from '@/components/AuthProvider';
+import { toast } from 'sonner';
 
 export function AuthorPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { user, openAuthModal } = useAuth();
   const [author, setAuthor] = useState<AuthorDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [claimStatus, setClaimStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [claimMethod, setClaimMethod] = useState<'email' | 'social_media' | 'publisher' | 'manual'>('email');
+  const [claimProof, setClaimProof] = useState('');
+  const [claimSubmitting, setClaimSubmitting] = useState(false);
 
   useSEO({
-    title: author ? `${author.name} â€” Books & Biography | The Book Times` : 'Author | The Book Times',
+    title: author ? `${author.name} — Books & Biography | The Book Times` : 'Author | The Book Times',
     description: author?.bio || (author ? `Explore all books by ${author.name} on The Book Times.` : ''),
     ...(author && {
       ogType: 'profile',
@@ -60,6 +67,48 @@ export function AuthorPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  useEffect(() => {
+    if (!author?.id || !user) {
+      setClaimStatus(null);
+      return;
+    }
+
+    authorsApi.getMyClaims(author.id)
+      .then((res) => {
+        const latest = res.claims[0];
+        setClaimStatus(latest?.status || null);
+      })
+      .catch(() => {
+        setClaimStatus(null);
+      });
+  }, [author?.id, user]);
+
+  async function submitClaim() {
+    if (!author?.id) return;
+    if (!user) {
+      openAuthModal('signin');
+      return;
+    }
+
+    setClaimSubmitting(true);
+    try {
+      const result = await authorsApi.submitClaim({
+        authorId: author.id,
+        verificationMethod: claimMethod,
+        proof: claimProof.trim() || undefined,
+      });
+      setClaimStatus(result.status);
+      setClaimProof('');
+      toast.success('Claim submitted', {
+        description: 'Your author verification request is now pending review.',
+      });
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit claim');
+    } finally {
+      setClaimSubmitting(false);
+    }
+  }
+
   // Sort books: top rated first
   const { topRated, otherBooks } = useMemo(() => {
     if (!author?.books?.length) return { topRated: [], otherBooks: [] };
@@ -76,7 +125,7 @@ export function AuthorPage() {
       <div className="min-h-screen">
         {/* Hero skeleton */}
         <div className="bg-gradient-to-b from-primary/5 via-primary/3 to-background">
-          <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24 md:pb-16">
+          <div className="container mx-auto px-4 pb-12 md:pb-16">
             <div className="max-w-5xl mx-auto">
               <Skeleton className="h-5 w-20 mb-8" />
               <div className="flex flex-col md:flex-row items-start gap-8">
@@ -132,9 +181,9 @@ export function AuthorPage() {
 
   return (
     <div className="min-h-screen">
-      {/* â”€â”€ Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Hero Section ─────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-b from-primary/5 via-primary/3 to-background border-b">
-        <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24 md:pb-16">
+        <div className="container mx-auto px-4 pb-12 md:pb-16">
           <div className="max-w-5xl mx-auto">
             {/* Breadcrumb */}
             <nav className="mb-6 -ml-2" aria-label="Breadcrumb">
@@ -172,6 +221,12 @@ export function AuthorPage() {
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif tracking-tight">
                     {author.name}
                   </h1>
+                  {author.isVerified && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary" data-testid="verified-author-badge">
+                      <BadgeCheck className="h-4 w-4" />
+                      <span>Verified Author</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stats row */}
@@ -210,7 +265,7 @@ export function AuthorPage() {
                     <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur rounded-full px-3 py-1.5 shadow-sm border">
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">
-                        {author.bornDate}{author.diedDate ? ` â€” ${author.diedDate}` : ''}
+                        {author.bornDate}{author.diedDate ? ` — ${author.diedDate}` : ''}
                       </span>
                     </div>
                   )}
@@ -288,13 +343,74 @@ export function AuthorPage() {
                     {author.bio}
                   </p>
                 )}
+
+                {!author.isVerified && (
+                  <div className="mt-2 p-3 border rounded-lg bg-background/80 max-w-2xl" data-testid="author-claim-panel">
+                    <p className="text-sm font-medium mb-2">Are you this author?</p>
+                    {claimStatus === 'pending' ? (
+                      <p className="text-sm text-muted-foreground" data-testid="author-claim-pending">Verification pending</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={claimMethod}
+                            onChange={(e) => setClaimMethod(e.target.value as 'email' | 'social_media' | 'publisher' | 'manual')}
+                            className="h-9 rounded-md border bg-background px-2 text-sm"
+                            aria-label="Claim verification method"
+                            data-testid="author-claim-method"
+                          >
+                            <option value="email">Email</option>
+                            <option value="social_media">Social media</option>
+                            <option value="publisher">Publisher</option>
+                            <option value="manual">Manual review</option>
+                          </select>
+                          <input
+                            value={claimProof}
+                            onChange={(e) => setClaimProof(e.target.value)}
+                            placeholder="Proof URL or verification details"
+                            className="h-9 min-w-[220px] flex-1 rounded-md border bg-background px-3 text-sm"
+                            data-testid="author-claim-proof"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={submitClaim}
+                          disabled={claimSubmitting}
+                          data-testid="author-claim-submit"
+                        >
+                          {claimSubmitting ? 'Submitting...' : 'Claim this profile'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ Top Rated Books â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Author Posts */}
+      {author.posts && author.posts.length > 0 && (
+        <section className="container mx-auto px-4 py-10 md:py-12" data-testid="author-posts-section">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-xl md:text-2xl font-bold mb-4">Author Updates</h2>
+            <div className="space-y-3">
+              {author.posts.map((post) => (
+                <Card key={post.id}>
+                  <CardContent className="p-4">
+                    <p className="font-semibold text-sm">{post.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(post.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{post.content}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Top Rated Books ──────────────────────────────────────────────── */}
       {topRated.length > 0 && (
         <section className="container mx-auto px-4 py-10 md:py-14">
           <div className="max-w-5xl mx-auto">
@@ -407,7 +523,7 @@ export function AuthorPage() {
         </section>
       )}
 
-      {/* â”€â”€ All Books Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── All Books Grid ───────────────────────────────────────────────── */}
       {otherBooks.length > 0 && (
         <section className="bg-muted/30">
           <div className="container mx-auto px-4 py-10 md:py-14">

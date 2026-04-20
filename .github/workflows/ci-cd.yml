@@ -35,10 +35,71 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: npx tsc --noEmit
 
+  # ── API Tests (Vitest) ────────────────────────────────────────────────────
+  test-api:
+    name: API Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tests
+        run: npm ci --legacy-peer-deps
+
+      - name: Run API tests
+        working-directory: tests
+        run: npx vitest run --config=vitest.config.ts
+        env:
+          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'https://thebooktimes.com' }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+  # ── E2E Tests (Playwright) ──────────────────────────────────────────────
+  test-e2e:
+    name: E2E Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tests
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: tests
+        run: npx playwright test --config=playwright.config.ts --project=chromium --reporter=html
+        env:
+          BASE_URL: ${{ secrets.TEST_BASE_URL || 'https://thebooktimes.com' }}
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+
   # ── Build Docker Images ──────────────────────────────────────────────────
   build:
     name: Build & Push Docker Images
-    needs: lint
+    needs: [lint, test-api, test-e2e]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     permissions:

@@ -166,7 +166,7 @@ export const bookSlugSchema = {
 export const createReviewSchema = {
   body: z.object({
     bookId: z.string().min(1, 'Book ID is required').max(100),
-    rating: z.number().int().min(1, 'Rating must be 1-5').max(5, 'Rating must be 1-5'),
+    rating: z.number().min(0.5, 'Rating must be 0.5-5').max(5, 'Rating must be 0.5-5').multipleOf(0.5, 'Rating must be in 0.5 increments'),
     title: z.string().max(200, 'Title must be under 200 characters').optional(),
     content: z.string().min(20, 'Review must be at least 20 characters').max(5000, 'Review must be under 5,000 characters'),
   }),

@@ -1,4 +1,5 @@
-import { Heart, BookOpen, Clock, LogOut, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Heart, BookOpen, Clock, LogOut, Star, Users } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -11,20 +12,31 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useWishlist } from '@/components/WishlistProvider';
+import { LinkedAccounts } from '@/components/LinkedAccounts';
+import { socialUsersApi, type SocialUserSummaryResponse } from '@/api/client';
 import { formatDate } from '@/lib/utils';
 
 export function UserProfile() {
   const { user, signOut, readingHistory } = useAuth();
   const { wishlist, removeFromWishlist } = useWishlist();
+  const [followers, setFollowers] = useState<SocialUserSummaryResponse[]>([]);
+  const [following, setFollowing] = useState<SocialUserSummaryResponse[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    socialUsersApi.getFollowers(user.id).then((res) => setFollowers(res.users || [])).catch(() => setFollowers([]));
+    socialUsersApi.getFollowing(user.id).then((res) => setFollowing(res.users || [])).catch(() => setFollowing([]));
+  }, [user]);
 
   if (!user) return null;
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full">
+        <Button variant="ghost" size="icon" className="relative rounded-full" aria-label="Open account menu" data-testid="account-menu-button">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback className="text-xs">
@@ -59,7 +71,7 @@ export function UserProfile() {
         </SheetHeader>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 px-6 pb-4">
+        <div className="grid grid-cols-5 gap-2 px-6 pb-4">
           <div className="text-center p-2 bg-muted/50 rounded-lg">
             <p className="text-lg font-bold">{wishlist.length}</p>
             <p className="text-xs text-muted-foreground">Wishlist</p>
@@ -71,6 +83,14 @@ export function UserProfile() {
           <div className="text-center p-2 bg-muted/50 rounded-lg">
             <p className="text-lg font-bold">{user.reviewCount ?? 0}</p>
             <p className="text-xs text-muted-foreground">Reviews</p>
+          </div>
+          <div className="text-center p-2 bg-muted/50 rounded-lg">
+            <p className="text-lg font-bold">{user.followerCount ?? followers.length}</p>
+            <p className="text-xs text-muted-foreground">Followers</p>
+          </div>
+          <div className="text-center p-2 bg-muted/50 rounded-lg">
+            <p className="text-lg font-bold">{user.followingCount ?? following.length}</p>
+            <p className="text-xs text-muted-foreground">Following</p>
           </div>
         </div>
 
@@ -91,6 +111,13 @@ export function UserProfile() {
             >
               <Clock className="h-4 w-4 mr-1.5" />
               History
+            </TabsTrigger>
+            <TabsTrigger
+              value="social"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-3"
+            >
+              <Users className="h-4 w-4 mr-1.5" />
+              Social
             </TabsTrigger>
           </TabsList>
 
@@ -167,6 +194,45 @@ export function UserProfile() {
                   ))}
                 </div>
               )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="social" className="mt-0">
+            <ScrollArea className="h-[calc(100vh-380px)]">
+              <div className="p-4 space-y-4">
+                <LinkedAccounts />
+                <Button asChild variant="outline" className="w-full">
+                  <Link to={`/users/${user.id}`}>View public profile</Link>
+                </Button>
+                <div>
+                  <p className="text-sm font-medium mb-2">Followers</p>
+                  <div className="space-y-2">
+                    {followers.length === 0 ? <p className="text-xs text-muted-foreground">No followers yet.</p> : followers.map((person) => (
+                      <Link key={person.id} to={`/users/${person.id}`} className="flex items-center gap-3 rounded-lg border p-2 hover:bg-muted/40">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={person.avatarUrl} alt={person.name} />
+                          <AvatarFallback>{person.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium truncate">{person.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2">Following</p>
+                  <div className="space-y-2">
+                    {following.length === 0 ? <p className="text-xs text-muted-foreground">You are not following anyone yet.</p> : following.map((person) => (
+                      <Link key={person.id} to={`/users/${person.id}`} className="flex items-center gap-3 rounded-lg border p-2 hover:bg-muted/40">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={person.avatarUrl} alt={person.name} />
+                          <AvatarFallback>{person.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium truncate">{person.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </ScrollArea>
           </TabsContent>
         </Tabs>

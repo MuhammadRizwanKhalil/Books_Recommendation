@@ -1,154 +1,263 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, TrendingUp, Star, Sparkles, ArrowRight, Users, Award } from 'lucide-react';
+import { BookOpen, TrendingUp, Star, Users, ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { usePublicStats } from '@/hooks/useBooks';
-import { scrollToElement } from '@/lib/utils';
+import { usePublicStats, useTrendingBooks } from '@/hooks/useBooks';
 import { useSettings } from '@/components/SettingsProvider';
 import { SearchDropdown } from '@/components/SearchDropdown';
-import { useTranslation } from '@/lib/i18n';
-import { motion } from 'framer-motion';
+import { useAppNav } from '@/App';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { Book } from '@/types';
 
 export function Hero() {
   const navigate = useNavigate();
+  const { openBook } = useAppNav();
   const { stats: publicStats } = usePublicStats();
+  const { books: heroBooks } = useTrendingBooks(8);
   const { getSetting } = useSettings();
-  const { t } = useTranslation();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const siteTagline = getSetting('site_tagline', 'Discover Your Next Great Read');
-  const siteDescription = getSetting('site_description', 'Discover your next great read. Explore 50,000+ books across every genre, with personalized suggestions tailored just for you.');
-  const heroBadge = getSetting('hero_badge_text', 'Smart Book Discovery');
-  const popularSearchesSetting = getSetting('popular_searches', 'Atomic Habits,Self Help,Business,Fiction,Technology');
+  const siteDescription = getSetting('site_description', 'Explore thousands of books across every genre. Personalized recommendations, reviews, and community — all in one place.');
 
-  const formatNumber = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`;
+  const fmtNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K+` : `${n}+`;
 
-  const allStats = [
-    publicStats && publicStats.totalBooks >= 100 ? { icon: BookOpen, label: t('hero.booksIndexed'), value: formatNumber(publicStats.totalBooks), color: 'text-blue-500 bg-blue-500/10' } : null,
-    publicStats && publicStats.totalReviews >= 10 ? { icon: TrendingUp, label: t('hero.totalReviews'), value: formatNumber(publicStats.totalReviews), color: 'text-emerald-500 bg-emerald-500/10' } : null,
-    publicStats && publicStats.totalReviews >= 10 ? { icon: Star, label: t('hero.avgRating'), value: `${publicStats.avgRating}/5`, color: 'text-amber-500 bg-amber-500/10' } : null,
-    publicStats && publicStats.totalAuthors >= 10 ? { icon: Users, label: 'Authors', value: formatNumber(publicStats.totalAuthors), color: 'text-violet-500 bg-violet-500/10' } : null,
-  ];
-  const stats = allStats.filter(Boolean) as { icon: typeof BookOpen; label: string; value: string; color: string }[];
+  const stats = [
+    publicStats && publicStats.totalBooks >= 100 ? { icon: BookOpen, label: 'Books', value: fmtNum(publicStats.totalBooks), color: 'text-blue-500' } : null,
+    publicStats && publicStats.totalReviews >= 10 ? { icon: Star, label: 'Reviews', value: fmtNum(publicStats.totalReviews), color: 'text-amber-500' } : null,
+    publicStats && publicStats.totalAuthors >= 10 ? { icon: Users, label: 'Authors', value: fmtNum(publicStats.totalAuthors), color: 'text-violet-500' } : null,
+    publicStats && publicStats.avgRating > 0 ? { icon: TrendingUp, label: 'Avg Rating', value: `${publicStats.avgRating}/5`, color: 'text-emerald-500' } : null,
+  ].filter(Boolean) as { icon: typeof BookOpen; label: string; value: string; color: string }[];
 
-  const popularSearches = popularSearchesSetting.split(',').map(s => s.trim()).filter(Boolean);
+  // Auto-rotate carousel every 5s
+  const startAutoRotate = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      if (!isPaused) {
+        setIsFlipped(false);
+        setActiveIndex(prev => (prev + 1) % Math.max(heroBooks.length, 1));
+      }
+    }, 5000);
+  }, [isPaused, heroBooks.length]);
 
-  const lastSpaceIdx = siteTagline.lastIndexOf(' ');
-  const taglinePart1 = lastSpaceIdx > 0 ? siteTagline.substring(0, lastSpaceIdx) : '';
-  const taglinePart2 = lastSpaceIdx > 0 ? siteTagline.substring(lastSpaceIdx + 1) : siteTagline;
+  useEffect(() => {
+    if (heroBooks.length > 1) startAutoRotate();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [startAutoRotate, heroBooks.length]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } },
-  };
+  const goTo = useCallback((idx: number) => {
+    setIsFlipped(false);
+    setActiveIndex(idx);
+    startAutoRotate();
+  }, [startAutoRotate]);
+
+  const goPrev = () => goTo((activeIndex - 1 + heroBooks.length) % heroBooks.length);
+  const goNext = () => goTo((activeIndex + 1) % heroBooks.length);
+
+  const activeBook = heroBooks[activeIndex] || null;
+
+  const words = siteTagline.split(' ');
+  const lastWord = words.pop() || '';
+  const firstPart = words.join(' ');
 
   return (
-    <section id="hero" className="relative min-h-[60vh] sm:min-h-[65vh] flex flex-col justify-center overflow-hidden" role="banner">
-      {/* Rich layered background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-background to-background" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.10),transparent_60%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--primary)/0.05),transparent_50%)]" />
+    <section className="relative min-h-[85vh] md:min-h-[80vh] flex items-center overflow-hidden" role="banner">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5 dark:to-primary/10" />
+      <div className="absolute top-0 right-0 w-1/2 h-full opacity-[0.03] dark:opacity-[0.05]">
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+      </div>
 
-      {/* Animated floating orbs */}
-      <div className="absolute top-20 right-[15%] w-72 h-72 rounded-full bg-primary/[0.04] blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-      <div className="absolute bottom-20 left-[10%] w-56 h-56 rounded-full bg-primary/[0.03] blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
-      
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:48px_48px]" />
-      
-      <motion.div
-        className="relative container mx-auto px-4 py-12 sm:py-16 md:py-20"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-7">
-          {/* Animated Badge */}
-          <motion.div className="flex justify-center" variants={itemVariants}>
-            <Badge variant="secondary" className="px-4 py-1.5 text-xs font-medium gap-1.5 shadow-sm border border-border/50 backdrop-blur-sm">
-              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-              {heroBadge}
-              <Award className="w-3 h-3 text-amber-500 ml-1" />
-            </Badge>
-          </motion.div>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          {/* Left: Content */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="space-y-6 lg:space-y-8"
+          >
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+              <Badge variant="secondary" className="px-4 py-1.5 text-xs font-medium tracking-wide bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3 mr-1.5" />
+                AI-Powered Book Discovery
+              </Badge>
+            </motion.div>
 
-          {/* Headline with gradient accent */}
-          <motion.div className="space-y-4" variants={itemVariants}>
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
-              {taglinePart1 && <>{taglinePart1}{' '}</>}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-primary/70 relative">
-                {taglinePart2}
-                <svg className="absolute -bottom-2 left-0 w-full h-3 text-primary/30" viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0 7 Q50 0 100 5 Q150 0 200 7" stroke="currentColor" strokeWidth="2.5" fill="none" /></svg>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+              {firstPart}{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-violet-500">
+                {lastWord}
               </span>
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+
+            <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
               {siteDescription}
             </p>
-          </motion.div>
 
-          {/* Search Bar */}
-          <motion.div className="max-w-2xl mx-auto" role="search" aria-label="Search books" variants={itemVariants}>
-            <SearchDropdown size="lg" />
-            <nav className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1.5" aria-label="Popular searches">
-              <span className="text-xs text-muted-foreground font-medium">{t('hero.popular')}</span>
-              {popularSearches.map((term) => (
-                <a
-                  key={term}
-                  href={`/search?q=${encodeURIComponent(term)}`}
-                  onClick={(e) => { e.preventDefault(); navigate(`/search?q=${encodeURIComponent(term)}`); }}
-                  className="text-xs text-primary/80 hover:text-primary hover:underline underline-offset-4 transition-colors"
-                >
-                  {term}
-                </a>
-              ))}
-            </nav>
-          </motion.div>
+            <div className="max-w-md">
+              <SearchDropdown />
+            </div>
 
-          {/* Stats row */}
-          <motion.div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 pt-2" variants={itemVariants}>
-            {stats.length > 0 && stats.map((stat, idx) => (
+            {stats.length > 0 && (
               <motion.div
-                key={stat.label}
-                className="flex items-center gap-2.5 group"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex flex-wrap gap-6 pt-2"
               >
-                <div className={`p-2.5 rounded-xl ${stat.color} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md`}>
-                  <stat.icon className="h-4 w-4" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xl sm:text-2xl font-bold tracking-tight leading-none">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</p>
-                </div>
+                {stats.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <s.icon className={`h-4 w-4 ${s.color}`} />
+                    <span className="text-sm font-semibold">{s.value}</span>
+                    <span className="text-xs text-muted-foreground">{s.label}</span>
+                  </div>
+                ))}
               </motion.div>
-            ))}
+            )}
           </motion.div>
 
-          {/* CTA buttons */}
-          <motion.div className="flex flex-row flex-wrap justify-center gap-3 pt-1" variants={itemVariants}>
-            <Button size="lg" className="h-11 px-8 text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300" asChild>
-              <a href="#trending" onClick={(e) => { e.preventDefault(); scrollToElement('trending'); }}>
-                {t('hero.exploreTrending')}
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </a>
-            </Button>
-            <Button size="lg" variant="outline" className="h-11 px-8 text-sm font-semibold hover:bg-primary/5 transition-all duration-300" asChild>
-              <a href="#categories" onClick={(e) => { e.preventDefault(); scrollToElement('categories'); }}>{t('sections.categories')}</a>
-            </Button>
-            <Button size="lg" variant="ghost" className="h-11 px-6 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300" onClick={() => navigate('/for-you')}>
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              For You
-            </Button>
+          {/* Right: 3D Flip Book Carousel */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="relative flex flex-col items-center"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            {activeBook && (
+              <div className="relative w-full max-w-sm mx-auto" style={{ perspective: '1200px' }}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`${activeBook.id}-${isFlipped}`}
+                    initial={{ rotateY: isFlipped ? -90 : 0, opacity: 0 }}
+                    animate={{ rotateY: 0, opacity: 1 }}
+                    exit={{ rotateY: isFlipped ? 0 : 90, opacity: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    style={{ transformStyle: 'preserve-3d' }}
+                    className="cursor-pointer"
+                    onClick={() => setIsFlipped(!isFlipped)}
+                  >
+                    {!isFlipped ? (
+                      <div className="relative group">
+                        <div className="relative overflow-hidden rounded-2xl shadow-2xl shadow-primary/10 ring-1 ring-white/10">
+                          <img
+                            src={activeBook.coverImage}
+                            alt={`${activeBook.title} by ${activeBook.author}`}
+                            className="w-full aspect-[2/3] object-cover"
+                            loading="eager"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                          <div className="absolute bottom-4 left-4 right-4 text-white">
+                            <p className="font-bold text-lg line-clamp-1">{activeBook.title}</p>
+                            <p className="text-sm text-white/80">{activeBook.author}</p>
+                          </div>
+                          {activeBook.googleRating && (
+                            <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-semibold">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              {activeBook.googleRating}
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm text-white/80 px-2 py-1 rounded-full text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                          Click to flip
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-card border rounded-2xl p-6 shadow-2xl shadow-primary/10 min-h-[400px] flex flex-col">
+                        <div className="flex items-start gap-4 mb-4">
+                          <img src={activeBook.coverImage} alt="" className="w-16 h-24 object-cover rounded-lg flex-shrink-0" />
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-lg leading-snug line-clamp-2">{activeBook.title}</h3>
+                            <p className="text-sm text-muted-foreground mt-0.5">by {activeBook.author}</p>
+                            {activeBook.googleRating && (
+                              <div className="flex items-center gap-1 mt-2">
+                                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                <span className="text-sm font-semibold">{activeBook.googleRating}</span>
+                                <span className="text-xs text-muted-foreground">({activeBook.ratingsCount.toLocaleString()} ratings)</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-5 flex-1">
+                          {activeBook.description?.replace(/<[^>]*>/g, '') || 'No description available.'}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {activeBook.categories.slice(0, 3).map(cat => (
+                            <Badge key={cat} variant="secondary" className="text-[10px]">{cat}</Badge>
+                          ))}
+                          {activeBook.pageCount && (
+                            <Badge variant="outline" className="text-[10px]">{activeBook.pageCount} pages</Badge>
+                          )}
+                        </div>
+                        <Button className="w-full mt-4 gap-2" onClick={(e) => { e.stopPropagation(); openBook(activeBook); }}>
+                          View Details <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+
+                {heroBooks.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                      className="absolute left-[-20px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-lg flex items-center justify-center hover:bg-background transition-colors z-20"
+                      aria-label="Previous book"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); goNext(); }}
+                      className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-lg flex items-center justify-center hover:bg-background transition-colors z-20"
+                      aria-label="Next book"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Thumbnail strip */}
+            {heroBooks.length > 1 && (
+              <div className="flex gap-2 mt-6 overflow-x-auto pb-2 max-w-full scrollbar-hide">
+                {heroBooks.map((book, idx) => (
+                  <button
+                    key={book.id}
+                    onClick={() => goTo(idx)}
+                    className={`relative flex-shrink-0 w-12 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                      idx === activeIndex ? 'border-primary shadow-lg shadow-primary/20 scale-110' : 'border-transparent opacity-60 hover:opacity-90'
+                    }`}
+                    aria-label={`Go to ${book.title}`}
+                  >
+                    <img src={book.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Progress indicator */}
+            {heroBooks.length > 1 && (
+              <div className="flex gap-1.5 mt-3">
+                {heroBooks.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`h-1 rounded-full transition-all duration-500 ${
+                      idx === activeIndex ? 'w-6 bg-primary' : 'w-1.5 bg-muted-foreground/20'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
-      </motion.div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent" />
+      </div>
     </section>
   );
 }

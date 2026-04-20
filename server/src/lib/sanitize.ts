@@ -67,6 +67,10 @@ function sanitizeValue(value: any, key?: string): any {
 /**
  * Express middleware that sanitizes req.body, req.query, and req.params.
  */
+export function sanitizeString(value: string): string {
+  return sanitizeValue(value);
+}
+
 export function sanitizeInput(req: Request, _res: Response, next: NextFunction): void {
   if (req.body && typeof req.body === 'object') {
     req.body = sanitizeValue(req.body);

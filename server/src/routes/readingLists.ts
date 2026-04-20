@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { dbGet, dbAll, dbRun } from '../database.js';
 import { logger } from '../lib/logger.js';
 import { authenticate } from '../middleware.js';
+import { recordUserActivity } from '../services/activityFeed.js';
 
 const router = Router();
 
@@ -26,6 +27,10 @@ function mapList(row: any) {
     description: row.description || null,
     coverImage: row.cover_image || null,
     isPublic: !!row.is_public,
+    isCommunity: !!row.is_community,
+    isFeatured: !!row.is_featured,
+    voteCount: row.vote_count || 0,
+    viewCount: row.view_count || 0,
     bookCount: row.book_count || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -150,10 +155,48 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/reading-lists/for-book/:bookId — All lists + containsBook flag ─
+router.get('/for-book/:bookId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const bookId = String(req.params.bookId);
+
+    const book = await dbGet<any>('SELECT id FROM books WHERE id = ?', [bookId]);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found' });
+      return;
+    }
+
+    const lists = await dbAll<any>(`
+      SELECT
+        rl.id,
+        rl.name,
+        rl.slug,
+        rl.book_count,
+        CASE WHEN rli.id IS NULL THEN FALSE ELSE TRUE END AS contains_book
+      FROM reading_lists rl
+      LEFT JOIN reading_list_items rli
+        ON rli.list_id = rl.id AND rli.book_id = ?
+      WHERE rl.user_id = ?
+      ORDER BY rl.updated_at DESC, rl.name ASC
+    `, [bookId, req.user!.userId]);
+
+    res.json(lists.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      containsBook: !!row.contains_book,
+      itemCount: row.book_count || 0,
+    })));
+  } catch (err: any) {
+    logger.error({ err }, 'Get reading lists for book error');
+    res.status(500).json({ error: 'Failed to fetch lists for book' });
+  }
+});
+
 // ── POST /api/reading-lists — Create a new reading list ──────────────────────
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
-    const { name, description, isPublic, coverImage } = req.body;
+    const { name, description, isPublic, coverImage, isCommunity } = req.body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       res.status(400).json({ error: 'List name is required' });
@@ -161,6 +204,18 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     }
     if (name.trim().length > 255) {
       res.status(400).json({ error: 'List name cannot exceed 255 characters' });
+      return;
+    }
+
+    const countRow = await dbGet<any>('SELECT COUNT(*) as total FROM reading_lists WHERE user_id = ?', [req.user!.userId]);
+    const currentCount = countRow?.total || 0;
+    if (req.user?.role !== 'admin' && currentCount >= 3) {
+      res.status(403).json({
+        error: 'Free tier allows up to 3 custom lists. Upgrade to create more.',
+        upgradeRequired: true,
+        limit: 3,
+        currentCount,
+      });
       return;
     }
 
@@ -180,13 +235,37 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       slug = `${baseSlug}-${tries}`;
     }
 
+    const publicFlag = isCommunity ? 1 : (isPublic !== false ? 1 : 0);
+
     await dbRun(`
-      INSERT INTO reading_lists (id, user_id, name, slug, description, cover_image, is_public)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [id, req.user!.userId, name.trim(), slug, description || null, coverImage || null, isPublic !== false ? 1 : 0]);
+      INSERT INTO reading_lists (id, user_id, name, slug, description, cover_image, is_public, is_community)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id,
+      req.user!.userId,
+      name.trim(),
+      slug,
+      description || null,
+      coverImage || null,
+      publicFlag,
+      isCommunity ? 1 : 0,
+    ]);
 
     const list = await dbGet<any>('SELECT * FROM reading_lists WHERE id = ?', [id]);
     res.status(201).json(mapList(list));
+
+    setImmediate(() => {
+      recordUserActivity({
+        userId: req.user!.userId,
+        type: 'list_created',
+        referenceId: id,
+        metadata: {
+          name: name.trim(),
+          isCommunity: !!isCommunity,
+          isPublic: !!publicFlag,
+        },
+      }).catch(() => undefined);
+    });
   } catch (err: any) {
     logger.error({ err }, 'Create reading list error');
     res.status(500).json({ error: 'Failed to create reading list' });
@@ -311,41 +390,42 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
 // LIST ITEMS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── POST /api/reading-lists/:id/books — Add a book to the list ───────────────
-router.post('/:id/books', authenticate, async (req: Request, res: Response) => {
+// ── POST /api/reading-lists/:id/books(/:bookId) — Add a book to the list ─────
+async function addBookToListHandler(req: Request, res: Response) {
   try {
+    const listId = String(req.params.id);
+    const targetBookId = String(req.params.bookId || req.body.bookId || '');
+    const { notes } = req.body || {};
+
     const list = await dbGet<any>(
       'SELECT id FROM reading_lists WHERE id = ? AND user_id = ?',
-      [req.params.id, req.user!.userId]
+      [listId, req.user!.userId]
     );
     if (!list) {
       res.status(404).json({ error: 'Reading list not found' });
       return;
     }
 
-    const { bookId, notes } = req.body;
-    if (!bookId) {
+    if (!targetBookId) {
       res.status(400).json({ error: 'bookId is required' });
       return;
     }
 
-    const book = await dbGet<any>('SELECT id FROM books WHERE id = ?', [bookId]);
+    const book = await dbGet<any>('SELECT id FROM books WHERE id = ?', [targetBookId]);
     if (!book) {
       res.status(404).json({ error: 'Book not found' });
       return;
     }
 
-    // Check if already in list
     const existing = await dbGet<any>(
       'SELECT id FROM reading_list_items WHERE list_id = ? AND book_id = ?',
-      [list.id, bookId]
+      [list.id, targetBookId]
     );
     if (existing) {
-      res.status(409).json({ error: 'Book already in this list' });
+      res.json({ success: true, itemId: existing.id, alreadyInList: true, message: 'Book already in list' });
       return;
     }
 
-    // Get next sort order
     const maxOrder = await dbGet<any>(
       'SELECT COALESCE(MAX(sort_order), -1) as max_order FROM reading_list_items WHERE list_id = ?',
       [list.id]
@@ -355,20 +435,22 @@ router.post('/:id/books', authenticate, async (req: Request, res: Response) => {
     await dbRun(`
       INSERT INTO reading_list_items (id, list_id, book_id, notes, sort_order)
       VALUES (?, ?, ?, ?, ?)
-    `, [itemId, list.id, bookId, notes || null, (maxOrder?.max_order ?? -1) + 1]);
+    `, [itemId, list.id, targetBookId, notes || null, (maxOrder?.max_order ?? -1) + 1]);
 
-    // Update book count
     await dbRun(
       'UPDATE reading_lists SET book_count = (SELECT COUNT(*) FROM reading_list_items WHERE list_id = ?) WHERE id = ?',
       [list.id, list.id]
     );
 
-    res.status(201).json({ success: true, itemId, message: 'Book added to list' });
+    res.json({ success: true, itemId, alreadyInList: false, message: 'Book added to list' });
   } catch (err: any) {
     logger.error({ err }, 'Add book to reading list error');
     res.status(500).json({ error: 'Failed to add book to list' });
   }
-});
+}
+
+router.post('/:id/books', authenticate, addBookToListHandler);
+router.post('/:id/books/:bookId', authenticate, addBookToListHandler);
 
 // ── DELETE /api/reading-lists/:id/books/:bookId — Remove a book ──────────────
 router.delete('/:id/books/:bookId', authenticate, async (req: Request, res: Response) => {
