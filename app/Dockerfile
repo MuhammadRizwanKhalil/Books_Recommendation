@@ -28,6 +28,7 @@ COPY . .
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npx vite build
 
 # ── Production stage: serve with nginx ───────────────────────────────────────
