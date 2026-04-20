@@ -100,7 +100,7 @@ async function processPendingBatches(): Promise<void> {
 
           // Update tracking record
           await dbRun(
-            `UPDATE ai_batch_jobs SET status = 'completed', processed = ?, stored = ?, failed = ?, completed_at = NOW()
+            `UPDATE ai_batch_jobs SET status = 'completed', processed = ?, \`stored\` = ?, failed = ?, completed_at = NOW()
              WHERE batch_id = ?`,
             [analysisMap.size, stored, failed, job.batch_id],
           ).catch(() => {});

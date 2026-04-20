@@ -14,7 +14,7 @@ export const migration052: Migration = {
         job_type ENUM('famous_reviews', 'mood_analysis', 'blog_generation') NOT NULL,
         total_requests INT NOT NULL DEFAULT 0,
         processed INT DEFAULT NULL,
-        stored INT DEFAULT NULL,
+        \`stored\` INT DEFAULT NULL,
         failed INT DEFAULT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'submitted',
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
