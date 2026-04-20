@@ -10,17 +10,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
-        timeout-minutes: 8
+        timeout-minutes: 12
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 8m
+          command_timeout: 12m
           script: |
             set -e
 
