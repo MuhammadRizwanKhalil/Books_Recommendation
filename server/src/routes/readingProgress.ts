@@ -164,7 +164,7 @@ router.get('/:bookId', authenticate, async (req: Request, res: Response) => {
 // ── PUT /api/reading-progress/:bookId — Set/update progress for a book ───────
 router.put('/:bookId', authenticate, async (req: Request, res: Response) => {
   try {
-    const { bookId } = req.params;
+    const bookId = req.params.bookId as string;
     const { status, currentPage, totalPages, startedAt, finishedAt, personalRating, notes, dnfPercentage, dnfReason } = req.body;
 
     // Validate book
@@ -314,7 +314,7 @@ router.put('/:bookId', authenticate, async (req: Request, res: Response) => {
 // ── PUT /api/reading-progress/:bookId/update — Update page/percentage progress ──
 router.put('/:bookId/update', authenticate, async (req: Request, res: Response) => {
   try {
-    const { bookId } = req.params;
+    const bookId = req.params.bookId as string;
     const currentPageRaw = parseNumericInput(req.body?.currentPage);
     const percentageRaw = parseNumericInput(req.body?.percentage);
     const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';

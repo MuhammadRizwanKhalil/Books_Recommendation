@@ -314,7 +314,7 @@ router.post('/book-clubs/:id/picks', authenticate, rateLimit('book-club-set-pick
       return;
     }
 
-    const role = await getViewerRole(req.params.id, req.user!.userId);
+    const role = await getViewerRole(req.params.id as string, req.user!.userId);
     if (!role || (role !== 'owner' && role !== 'moderator')) {
       res.status(403).json({ error: 'Only club owners or moderators can set picks' });
       return;
@@ -411,7 +411,7 @@ router.get('/book-clubs/:id/picks', optionalAuth, async (req: Request, res: Resp
     }
 
     if (!club.is_public) {
-      const role = viewerId ? await getViewerRole(req.params.id, viewerId) : null;
+      const role = viewerId ? await getViewerRole(req.params.id as string, viewerId) : null;
       if (!role) {
         res.status(404).json({ error: 'Book club not found' });
         return;

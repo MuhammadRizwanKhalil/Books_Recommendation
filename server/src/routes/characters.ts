@@ -27,7 +27,7 @@ async function resolveBook(bookIdOrSlug: string) {
 
 router.get('/books/:bookId/characters', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const book = await resolveBook(req.params.bookId);
+    const book = await resolveBook(req.params.bookId as string);
     if (!book) {
       res.status(404).json({ error: 'Book not found' });
       return;
@@ -77,7 +77,7 @@ router.post(
   }),
   async (req: Request, res: Response) => {
     try {
-      const book = await resolveBook(req.params.bookId);
+      const book = await resolveBook(req.params.bookId as string);
       if (!book) {
         res.status(404).json({ error: 'Book not found' });
         return;

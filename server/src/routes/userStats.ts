@@ -381,7 +381,7 @@ router.get('/:id/stats/public', async (req: Request, res: Response) => {
 // ── POST /api/users/:id/follow — Follow a user ───────────────────────────────
 router.post('/:id/follow', authenticate, async (req: Request, res: Response) => {
   try {
-    const targetUserId = req.params.id;
+    const targetUserId = req.params.id as string;
     const currentUserId = req.user!.userId;
 
     if (targetUserId === currentUserId) {
@@ -416,7 +416,7 @@ router.post('/:id/follow', authenticate, async (req: Request, res: Response) => 
 // ── DELETE /api/users/:id/follow — Unfollow a user ──────────────────────────
 router.delete('/:id/follow', authenticate, async (req: Request, res: Response) => {
   try {
-    const targetUserId = req.params.id;
+    const targetUserId = req.params.id as string;
     const currentUserId = req.user!.userId;
 
     await dbRun('DELETE FROM user_follows WHERE follower_id = ? AND following_id = ?', [currentUserId, targetUserId]);

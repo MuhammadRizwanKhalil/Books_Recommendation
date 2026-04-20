@@ -46,7 +46,7 @@ async function resolveBook(bookIdOrSlug: string) {
 
 router.get('/books/:bookId/prompts', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const book = await resolveBook(req.params.bookId);
+    const book = await resolveBook(req.params.bookId as string);
     if (!book) {
       res.status(404).json({ error: 'Book not found' });
       return;
@@ -134,7 +134,7 @@ router.get('/prompts/:id/responses', optionalAuth, async (req: Request, res: Res
 
 router.post('/books/:bookId/prompts', authenticate, rateLimit('book-prompt-create', 20, 60 * 60 * 1000), async (req: Request, res: Response) => {
   try {
-    const book = await resolveBook(req.params.bookId);
+    const book = await resolveBook(req.params.bookId as string);
     if (!book) {
       res.status(404).json({ error: 'Book not found' });
       return;

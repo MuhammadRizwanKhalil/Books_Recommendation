@@ -107,7 +107,7 @@ async function rebuildCommunityAverageArc(bookId: string): Promise<void> {
 
 router.get('/books/:id/story-arc', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const book = await resolveBook(req.params.id);
+    const book = await resolveBook(req.params.id as string);
     if (!book) {
       res.status(404).json({ error: 'Book not found' });
       return;
@@ -127,7 +127,7 @@ router.post(
   rateLimit('story-arc-vote', 50, 60 * 60 * 1000),
   async (req: Request, res: Response) => {
     try {
-      const book = await resolveBook(req.params.id);
+      const book = await resolveBook(req.params.id as string);
       if (!book) {
         res.status(404).json({ error: 'Book not found' });
         return;
@@ -182,7 +182,7 @@ router.post(
   rateLimit('story-arc-generate', 20, 60 * 60 * 1000),
   async (req: Request, res: Response) => {
     try {
-      const book = await resolveBook(req.params.id);
+      const book = await resolveBook(req.params.id as string);
       if (!book) {
         res.status(404).json({ error: 'Book not found' });
         return;

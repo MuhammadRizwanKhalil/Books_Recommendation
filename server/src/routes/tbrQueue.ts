@@ -226,7 +226,7 @@ router.put('/reorder', authenticate, async (req: Request, res: Response) => {
 router.delete('/:bookId', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const { bookId } = req.params;
+    const bookId = req.params.bookId as string;
 
     const existing = await dbGet<any>('SELECT id FROM tbr_queue WHERE user_id = ? AND book_id = ? LIMIT 1', [userId, bookId]);
     if (!existing) {
