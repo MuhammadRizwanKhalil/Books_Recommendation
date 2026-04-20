@@ -1,0 +1,79 @@
+services:
+  # ── MySQL Database ────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: thebooktimes-mysql-local
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: thebooktimes
+      MYSQL_USER: thebooktimes
+      MYSQL_PASSWORD: thebooktimes
+    ports:
+      - "53308:3306"
+    volumes:
+      - mysql-data-local:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # ── Backend API Server ───────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: development
+    container_name: thebooktimes-server-local
+    restart: unless-stopped
+    ports:
+      - "53001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: thebooktimes
+      MYSQL_PASSWORD: thebooktimes
+      MYSQL_DATABASE: thebooktimes
+      FRONTEND_URL: http://localhost:53073
+      JWT_SECRET: dev-docker-secret-change-in-production
+      ADMIN_EMAIL: admin@thebooktimes.com
+      ADMIN_PASSWORD: admin123456
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      IMPORT_JOB_ENABLED: "true"
+      IMPORT_RUN_ON_STARTUP: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      AI_BLOG_ENABLED: ${AI_BLOG_ENABLED:-false}
+      AI_BLOG_CRON_SCHEDULE: ${AI_BLOG_CRON_SCHEDULE:-0 9 * * *}
+      AI_BLOG_POSTS_PER_RUN: ${AI_BLOG_POSTS_PER_RUN:-1}
+      AI_ENRICHMENT_ENABLED: ${AI_ENRICHMENT_ENABLED:-true}
+      AI_ENRICHMENT_BATCH_SIZE: ${AI_ENRICHMENT_BATCH_SIZE:-100}
+    volumes:
+      - ./server/src:/app/src
+      - server-uploads-local:/app/uploads
+    depends_on:
+      - mysql
+
+  # ── Frontend Vite Dev Server ─────────────────────────────────────────────
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      target: development
+    container_name: thebooktimes-app-local
+    restart: unless-stopped
+    ports:
+      - "53073:5173"
+    environment:
+      VITE_API_URL: http://localhost:53001/api
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./app/src:/app/src
+      - ./app/public:/app/public
+    depends_on:
+      - server
+
+volumes:
+  mysql-data-local:
+    name: thebooktimes-mysql-local
+  server-uploads-local:
+    name: thebooktimes-uploads-local

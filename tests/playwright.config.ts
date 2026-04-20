@@ -8,8 +8,21 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { outputFolder: '../playwright-report' }], ['list']],
 
+  webServer: {
+    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    cwd: '../app',
+    reuseExistingServer: true,
+    timeout: 120_000,
+    url: 'http://127.0.0.1:4173',
+  },
+
   use: {
-    baseURL: process.env.BASE_URL || 'https://thebooktimes.com',
+    baseURL: process.env.BASE_URL || process.env.TEST_BASE_URL || 'http://127.0.0.1:4173',
+    storageState: './fixtures/storage/e2e-no-analytics.json',
+    extraHTTPHeaders: {
+      DNT: '1',
+      'X-E2E-Test': '1',
+    },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

@@ -18,6 +18,8 @@ const MIN_IMAGE_BYTES = 5_000;        // Images under 5 KB are likely placeholde
 const MAX_IMAGE_BYTES = 10_000_000;   // Skip images over 10 MB (corrupt / not a cover)
 const MIN_WIDTH = 80;                 // Minimum pixel width
 const MIN_HEIGHT = 100;               // Minimum pixel height
+const HD_MIN_WIDTH = 200;             // Minimum width for "good quality" cover
+const HD_MIN_HEIGHT = 300;            // Minimum height for "good quality" cover
 const REQUEST_TIMEOUT_MS = 10_000;    // 10 second timeout per image request
 
 // Known Google Books placeholder / "no cover" image patterns
@@ -40,6 +42,8 @@ export interface ImageValidationResult {
   contentLength?: number;
   width?: number;
   height?: number;
+  /** True when the image is valid but low resolution (e.g. Google zoom=1/5) */
+  isLowQuality?: boolean;
 }
 
 /**
@@ -54,16 +58,19 @@ export async function validateImageUrl(url: string): Promise<ImageValidationResu
   // Quick pattern check for known placeholders
   const lowerUrl = url.toLowerCase();
 
-  // Trust Google Books image URLs — their image server blocks HEAD requests from servers
-  // but images render fine in browsers. Skip full validation for these.
+  // Trust Google Books image URLs at zoom=0 (HD) — their servers often block HEAD
+  // requests but images render fine in browsers. For low-zoom (zoom=5, smallThumbnail),
+  // mark as valid but low quality so the cover upgrade pipeline can replace them.
   if (lowerUrl.includes('books.google.com/') || lowerUrl.includes('googleapis.com/books/')) {
-    // Just check it's not a known placeholder
+    // Check it's not a known placeholder
     for (const pattern of PLACEHOLDER_PATTERNS) {
       if (lowerUrl.includes(pattern)) {
         return { valid: false, url, reason: `URL matches placeholder pattern: ${pattern}` };
       }
     }
-    return { valid: true, url, contentType: 'image/jpeg' };
+    // Flag low-quality zoom levels (zoom=5 or smallThumbnail) — still valid but not HD
+    const isLowQuality = lowerUrl.includes('zoom=5') || lowerUrl.includes('zoom=1') || lowerUrl.includes('smallthumbnail');
+    return { valid: true, url, contentType: 'image/jpeg', isLowQuality };
   }
   for (const pattern of PLACEHOLDER_PATTERNS) {
     if (lowerUrl.includes(pattern)) {

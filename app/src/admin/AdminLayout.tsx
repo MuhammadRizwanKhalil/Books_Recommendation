@@ -2,7 +2,8 @@ import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, FolderTree, FileText, Star,
   Users, BarChart3, Mail, ChevronLeft, Menu, LogOut,
-  Megaphone, Sparkles, Settings, Download, X, PenTool,
+  Megaphone, Sparkles, Settings, Download, X, PenTool, AlertTriangle,
+  Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/SettingsProvider';
 import { LogoMark } from '@/components/ui/Logo';
 
-export type AdminPage = 'dashboard' | 'books' | 'authors' | 'categories' | 'blog' | 'reviews' | 'users' | 'analytics' | 'newsletter' | 'campaigns' | 'email-marketing' | 'import' | 'settings';
+export type AdminPage = 'dashboard' | 'books' | 'authors' | 'categories' | 'series' | 'blog' | 'reviews' | 'characters' | 'users' | 'analytics' | 'newsletter' | 'campaigns' | 'email-marketing' | 'import' | 'content-warnings' | 'settings' | 'editions' | 'awards' | 'ai-mood';
 
 interface AdminLayoutProps {
   activePage: AdminPage;
@@ -25,14 +26,20 @@ const navItems: { id: AdminPage; label: string; icon: React.ElementType }[] = [
   { id: 'books', label: 'Books', icon: BookOpen },
   { id: 'authors', label: 'Authors', icon: PenTool },
   { id: 'categories', label: 'Categories', icon: FolderTree },
+  { id: 'series', label: 'Series', icon: BookOpen },
+  { id: 'editions', label: 'Editions / Works', icon: BookOpen },
   { id: 'blog', label: 'Blog Posts', icon: FileText },
   { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'characters', label: 'Characters', icon: Users },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'newsletter', label: 'Newsletter', icon: Mail },
   { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+  { id: 'awards', label: 'Choice Awards', icon: Trophy },
+  { id: 'ai-mood', label: 'AI Mood', icon: Sparkles },
   { id: 'email-marketing', label: 'AI Email', icon: Sparkles },
   { id: 'import', label: 'Book Import', icon: Download },
+  { id: 'content-warnings', label: 'Content Warnings', icon: AlertTriangle },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

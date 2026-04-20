@@ -5,13 +5,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Book } from '@/types';
-import { formatPrice, formatRating, getStarRating, truncateText } from '@/lib/utils';
+import { formatPrice, formatRating, truncateText } from '@/lib/utils';
 import { getOptimizedImageUrl, getImageSrcSet, getImageSizes, FALLBACK_COVER } from '@/lib/imageUtils';
 import { prefetchBook } from '@/lib/prefetch';
 import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
+import { StarDisplay } from '@/components/ui/star-display';
 import { useAppNav } from '@/App';
 import { analyticsApi } from '@/api/client';
+import { isAnalyticsEnabled } from '@/lib/analytics';
+import { AddToListButton } from './AddToListButton';
 
 interface BookCardProps {
   book: Book;
@@ -53,7 +56,6 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
   const { openBook, navigate } = useAppNav();
   const { isAdmin } = useAuth();
   const isLiked = isInWishlist(book.id);
-  const stars = getStarRating(book.googleRating);
   const imgAlt = `${book.title} by ${book.author} - book cover`;
 
   const handlePrefetch = useCallback(() => {
@@ -62,6 +64,11 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
 
   const handleAffiliateClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (!isAnalyticsEnabled()) {
+      return;
+    }
+
     if (navigator.sendBeacon) {
       const data = JSON.stringify({ bookId: book.id, source: 'card' });
       navigator.sendBeacon(
@@ -91,18 +98,21 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
               variant="compact"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-2 top-2 h-9 w-9 rounded-full bg-white/80 backdrop-blur-sm opacity-100 md:opacity-0 transition-opacity duration-300 md:group-hover:opacity-100 shadow-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleWishlist(book);
-              }}
-              aria-label={isLiked ? `Remove ${book.title} from wishlist` : `Add ${book.title} to wishlist`}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-            </Button>
+            <div className="absolute right-2 top-2 flex flex-col gap-2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100">
+              <AddToListButton bookId={book.id} bookTitle={book.title} compact className="h-9 w-9" />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 rounded-full bg-white/80 shadow-sm backdrop-blur-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleWishlist(book);
+                }}
+                aria-label={isLiked ? `Remove ${book.title} from wishlist` : `Add ${book.title} to wishlist`}
+              >
+                <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+              </Button>
+            </div>
             {isAdmin && (
               <Button
                 size="icon"
@@ -187,15 +197,7 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
                 )}
                 
                 <div className="flex items-center gap-2" role="img" aria-label={`Rating: ${formatRating(book.googleRating)} out of 5 stars`}>
-                  <div className="flex items-center gap-0.5" aria-hidden="true">
-                    {Array.from({ length: stars.full }).map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                    {stars.half && <Star className="h-5 w-5 fill-yellow-400/50 text-yellow-400" />}
-                    {Array.from({ length: stars.empty }).map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-gray-300" />
-                    ))}
-                  </div>
+                  <StarDisplay rating={book.googleRating || 0} size="sm" />
                   <span className="font-medium">{formatRating(book.googleRating)}</span>
                   <span className="text-muted-foreground">({book.ratingsCount.toLocaleString()} ratings)</span>
                 </div>
@@ -208,7 +210,8 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
                   ))}
                 </div>
 
-                <div className="flex items-center gap-4 pt-4">
+                <div className="flex items-center gap-4 pt-4 flex-wrap">
+                  <AddToListButton bookId={book.id} bookTitle={book.title} />
                   {book.price && (
                     <span className="text-2xl font-bold">{formatPrice(book.price, book.currency)}</span>
                   )}
@@ -254,18 +257,21 @@ export const BookCard = memo(function BookCard({ book, variant = 'standard', sho
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm opacity-100 md:opacity-0 transition-opacity duration-300 md:group-hover:opacity-100 shadow-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWishlist(book);
-            }}
-            aria-label={isLiked ? `Remove ${book.title} from wishlist` : `Add ${book.title} to wishlist`}
-          >
-            <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-          </Button>
+          <div className="absolute right-2 top-2 flex flex-col gap-2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100">
+            <AddToListButton bookId={book.id} bookTitle={book.title} compact className="h-8 w-8" />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 rounded-full bg-white/80 shadow-sm backdrop-blur-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleWishlist(book);
+              }}
+              aria-label={isLiked ? `Remove ${book.title} from wishlist` : `Add ${book.title} to wishlist`}
+            >
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+            </Button>
+          </div>
           {isAdmin && (
             <Button
               size="icon"

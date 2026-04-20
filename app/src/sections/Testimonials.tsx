@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Star, Quote, Heart, MessageCircle } from 'lucide-react';
+import { Star, Quote } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 import { testimonialsApi } from '@/api/client';
 import type { TestimonialResponse } from '@/api/client';
@@ -27,34 +26,18 @@ export function Testimonials() {
       })
       .catch(() => setTestimonials([]));
   }, []);
+
   return (
-    <section id="testimonials" className="py-10 sm:py-14 md:py-16 bg-gradient-to-b from-muted/50 via-muted/30 to-background">
+    <section id="testimonials" className="py-12 md:py-16 bg-muted/30">
       <div className="container mx-auto px-4">
-        {/* Section Header */}
         <motion.div
-          className="text-center max-w-2xl mx-auto mb-8"
+          className="text-center max-w-2xl mx-auto mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
         >
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Badge variant="default" className="bg-gradient-to-r from-rose-500 to-pink-600 text-white border-0 text-xs px-3 py-1">
-              <Heart className="w-3 h-3 mr-1 fill-current" />
-              What Readers Say
-            </Badge>
-            <Badge variant="outline" className="text-xs text-rose-600 border-rose-500/30 bg-rose-500/5">
-              <MessageCircle className="w-3 h-3 mr-1" />
-              Verified
-            </Badge>
-          </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-serif mb-3">
-            Loved by Book Enthusiasts
-          </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Join thousands of readers who have discovered their next favorite book through our
-            smart recommendation engine.
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Loved by Readers</h2>
+          <p className="text-muted-foreground">Join thousands who've discovered their next favorite book through our platform.</p>
         </motion.div>
 
         {/* Testimonials Grid */}

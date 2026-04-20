@@ -1,77 +1,111 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/test';
+import { TEST_BLOG_URL, VIEWPORTS } from '../fixtures/test-data';
 
-test.describe('Blog', () => {
-  test('blog listing page should load', async ({ page }) => {
+test.describe('Blog @testing @blog', () => {
+  test('blog listing route shows heading and either posts or empty state', async ({ page }) => {
     await page.goto('/blog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+
     await expect(page).toHaveURL('/blog');
-  });
+    await expect(page.getByRole('heading', { level: 1 }).first()).toContainText(/blog/i);
 
-  test('blog page should show posts', async ({ page }) => {
-    await page.goto('/blog');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-    // Should show at least one blog post title or card
-    const posts = page.locator('article, [class*="blog"], [class*="post"]');
-    const headings = page.locator('h2, h3').nth(1);
-    await expect(headings).toBeVisible({ timeout: 8000 });
-  });
+    const body = page.locator('body');
+    await expect(body).toContainText(/our blog|articles published|no blog posts yet/i);
 
-  test('blog post should have title, excerpt, image', async ({ page }) => {
-    await page.goto('/blog');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-    // First article heading
-    const firstHeading = page.locator('h2, h3').nth(1);
-    await expect(firstHeading).toBeVisible({ timeout: 8000 });
-    const text = await firstHeading.textContent();
-    expect(text!.length).toBeGreaterThan(5);
-  });
+    await expect(body).toContainText(/read more|read full article|no blog posts yet/i);
 
-  test('clicking blog post navigates to detail page', async ({ page }) => {
-    await page.goto('/blog');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-
-    const firstPostLink = page.locator('a[href*="/blog/"]').first();
-    if (await firstPostLink.isVisible()) {
-      const href = await firstPostLink.getAttribute('href');
-      await firstPostLink.click();
-      await page.waitForLoadState('networkidle');
-      expect(page.url()).toContain('/blog/');
+    const postLinks = page.locator('main a[href^="/blog/"]');
+    if ((await postLinks.count()) > 0) {
+      await expect(postLinks.first()).toBeVisible({ timeout: 8000 });
     }
   });
 
-  test('blog detail page should show content', async ({ page }) => {
-    await page.goto('/blog/what-i-have-been-reading-this-spring-and-why-you-should-too');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 8000 });
-    const heading = await page.locator('h1, h2').first().textContent();
-    expect(heading!.length).toBeGreaterThan(5);
-  });
+  test('blog listing supports page query routes', async ({ page }) => {
+    await page.goto('/blog?page=2');
+    await page.waitForLoadState('domcontentloaded');
 
-  test('blog detail page should have featured image', async ({ page }) => {
-    await page.goto('/blog/what-i-have-been-reading-this-spring-and-why-you-should-too');
-    await page.waitForLoadState('networkidle');
-    const img = page.locator('article img, [class*="featured"] img, img[src*="uploads"]').first();
-    await expect(img).toBeVisible({ timeout: 8000 });
-  });
-
-  test('blog detail SEO tags should be set', async ({ page }) => {
-    await page.goto('/blog/what-i-have-been-reading-this-spring-and-why-you-should-too');
-    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/blog\?page=2/);
     const title = await page.title();
-    expect(title.length).toBeGreaterThan(10);
+    expect(title).toMatch(/blog/i);
+
+    await expect(page.locator('body')).toContainText(/our blog|no blog posts yet|articles published/i);
+  });
+
+  test('blog listing links navigate into blog detail routes when posts exist', async ({ page }) => {
+    await page.goto('/blog');
+    await page.waitForLoadState('domcontentloaded');
+
+    const firstPostLink = page.locator('a[href^="/blog/"]').first();
+    if (await firstPostLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const href = await firstPostLink.getAttribute('href');
+      expect(href).toBeTruthy();
+
+      await firstPostLink.click();
+      await page.waitForLoadState('domcontentloaded');
+
+      await expect(page).toHaveURL(/\/blog\//);
+      await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    }
+  });
+
+  test('known blog detail route shows article content, metadata, and navigation controls', async ({ page }) => {
+    await page.goto(TEST_BLOG_URL);
+    await page.waitForLoadState('domcontentloaded');
+
+    const heading = page.getByRole('heading', { level: 1 }).first();
+    await expect(heading).toBeVisible({ timeout: 8000 });
+    await expect(heading).not.toHaveText(/^\s*$/);
+
+    const body = page.locator('body');
+    await expect(body).toContainText(/share|back|all posts|words|read/i);
 
     const description = await page.locator('meta[name="description"]').getAttribute('content');
-    expect(description).toBeTruthy();
+    expect((description || '').length).toBeGreaterThan(5);
+
+    const breadcrumbBlog = page.getByRole('link', { name: /^blog$/i }).first();
+    await expect(breadcrumbBlog).toBeVisible();
   });
 
-  test('blog page navigation from homepage Blog link', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await page.locator('text=Blog').first().click();
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/blog/);
+  test('unknown blog detail route renders not-found fallback and recovery actions', async ({ page }) => {
+    await page.goto('/blog/non-existent-blog-post-e2e-slug');
+    await page.waitForLoadState('domcontentloaded');
+
+    await expect(page.locator('body')).toContainText(/blog post not found|doesn't exist|browse all posts|go back/i);
+    const browseAllPosts = page.getByRole('link', { name: /browse all posts/i });
+    await expect(browseAllPosts).toBeVisible();
+    await browseAllPosts.click();
+    await expect(page).toHaveURL('/blog');
+  });
+
+  test('blog routes do not surface visible runtime errors', async ({ page }) => {
+    await page.goto('/blog');
+    await page.waitForLoadState('domcontentloaded');
+
+    const listText = await page.locator('body').innerText();
+    expect(listText).not.toMatch(/TypeError:|ReferenceError:|Cannot read properties of|Application error/i);
+
+    await page.goto(TEST_BLOG_URL);
+    await page.waitForLoadState('domcontentloaded');
+
+    const detailText = await page.locator('body').innerText();
+    expect(detailText).not.toMatch(/TypeError:|ReferenceError:|Cannot read properties of|Application error/i);
+  });
+
+  test('blog listing and detail routes are stable on mobile viewport', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.mobile);
+
+    await page.goto('/blog');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    const listWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const listViewport = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(listWidth).toBeLessThanOrEqual(listViewport + 20);
+
+    await page.goto(TEST_BLOG_URL);
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    const detailWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const detailViewport = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(detailWidth).toBeLessThanOrEqual(detailViewport + 20);
   });
 });

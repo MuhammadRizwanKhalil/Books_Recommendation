@@ -190,6 +190,7 @@ rateLimitCleanupInterval.unref();
 
 export function rateLimit(action: string, maxAttempts: number, windowMs: number) {
   return (req: Request, res: Response, next: NextFunction): void => {
+    if (process.env.DISABLE_RATE_LIMIT === '1') { next(); return; }
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const key = `${action}:${ip}`;
     const now = Date.now();
@@ -235,6 +236,7 @@ export interface TierLimits {
  */
 export function rateLimitByTier(action: string, limits: TierLimits) {
   return (req: Request, res: Response, next: NextFunction): void => {
+    if (process.env.DISABLE_RATE_LIMIT === '1') { next(); return; }
     const now = Date.now();
 
     // Determine tier

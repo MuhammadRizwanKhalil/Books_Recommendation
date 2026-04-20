@@ -20,7 +20,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { blogApi, type BlogPostResponse } from '@/api/client';
+import { blogApi, blogMentionsApi, booksApi, type BlogPostResponse } from '@/api/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,6 +31,7 @@ interface BlogForm {
   content: string;
   excerpt: string;
   featuredImage: string;
+  featuredBookIds: string[];
   ogImage: string;
   canonicalUrl: string;
   focusKeyword: string;
@@ -51,8 +52,18 @@ interface ValidationErrors {
   [key: string]: string;
 }
 
+interface LinkedBookItem {
+  id: string;
+  title: string;
+  author?: string;
+  slug?: string;
+  coverImage?: string | null;
+  isAutoDetected?: boolean;
+}
+
 const emptyForm: BlogForm = {
   title: '', content: '', excerpt: '', featuredImage: '',
+  featuredBookIds: [],
   ogImage: '', canonicalUrl: '', focusKeyword: '', seoRobots: 'index, follow',
   metaTitle: '', metaDescription: '', tags: '', category: '',
   customLinkLabel: '', customLinkUrl: '', adminNotes: '',
@@ -120,6 +131,10 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
   const [postData, setPostData] = useState<BlogPostResponse | null>(null);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [bookQuery, setBookQuery] = useState('');
+  const [bookResults, setBookResults] = useState<LinkedBookItem[]>([]);
+  const [linkedBooks, setLinkedBooks] = useState<LinkedBookItem[]>([]);
+  const [searchingBooks, setSearchingBooks] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!postSlug;
 
@@ -136,6 +151,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
           content: post.content || '',
           excerpt: post.excerpt || '',
           featuredImage: post.featuredImage || '',
+          featuredBookIds: post.featuredBookIds || [],
           ogImage: post.ogImage || '',
           canonicalUrl: post.canonicalUrl || '',
           focusKeyword: post.focusKeyword || '',
@@ -162,6 +178,58 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
   }, [postSlug, navigate]);
 
   const hasChanges = JSON.stringify(form) !== JSON.stringify(originalForm);
+
+  useEffect(() => {
+    if (!postId) return;
+    blogMentionsApi.getForPost(postId)
+      .then((response) => {
+        setLinkedBooks(response.mentions.map((mention) => ({
+          id: mention.bookId,
+          title: mention.bookTitle,
+          coverImage: mention.coverImage,
+          isAutoDetected: mention.isAutoDetected,
+        })));
+        setForm((prev) => ({
+          ...prev,
+          featuredBookIds: response.mentions.filter((mention) => !mention.isAutoDetected).map((mention) => mention.bookId),
+        }));
+      })
+      .catch(() => {
+        // non-blocking for editor UX
+      });
+  }, [postId]);
+
+  useEffect(() => {
+    if (bookQuery.trim().length < 2) {
+      setBookResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearchingBooks(true);
+      try {
+        const response = await booksApi.searchSuggestions(bookQuery.trim());
+        const selectedIds = new Set(form.featuredBookIds);
+        setBookResults(
+          response.suggestions
+            .filter((book) => !selectedIds.has(book.id))
+            .map((book) => ({
+              id: book.id,
+              title: book.title,
+              author: book.author,
+              slug: book.slug,
+              coverImage: book.coverImage,
+            })),
+        );
+      } catch {
+        setBookResults([]);
+      } finally {
+        setSearchingBooks(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [bookQuery, form.featuredBookIds]);
 
   // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const validate = useCallback((): boolean => {
@@ -206,6 +274,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
         adminNotes: form.adminNotes || undefined,
         allowComments: form.allowComments,
         isFeatured: form.isFeatured,
+        featuredBookIds: form.featuredBookIds,
         status: statusOverride || form.status,
       };
 
@@ -290,7 +359,26 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
     if (errors[key]) setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
   }, [errors]);
 
+  const addLinkedBook = useCallback((book: LinkedBookItem) => {
+    if (form.featuredBookIds.includes(book.id)) return;
+    set('featuredBookIds', [...form.featuredBookIds, book.id]);
+    setLinkedBooks((prev) => {
+      if (prev.some((existing) => existing.id === book.id)) {
+        return prev.map((existing) => existing.id === book.id ? { ...existing, isAutoDetected: false } : existing);
+      }
+      return [...prev, book];
+    });
+    setBookQuery('');
+    setBookResults([]);
+  }, [form.featuredBookIds, set]);
+
+  const removeLinkedBook = useCallback((bookId: string) => {
+    set('featuredBookIds', form.featuredBookIds.filter((id) => id !== bookId));
+    setLinkedBooks((prev) => prev.filter((book) => book.id !== bookId));
+  }, [form.featuredBookIds, set]);
+
   const seoScore = computeSeoScore(form);
+  const seoWidthClass = ['w-0', 'w-[10%]', 'w-[20%]', 'w-[30%]', 'w-[40%]', 'w-[50%]', 'w-[60%]', 'w-[70%]', 'w-[80%]', 'w-[90%]', 'w-full'][seoScore] || 'w-0';
 
   // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -480,6 +568,70 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                   )}
                 </div>
 
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <Label htmlFor="featured-books-search">Featured / Mentioned Books</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Linked books will show this post in their Featured In section. Published posts also auto-detect mentions from content.
+                      </p>
+                    </div>
+                    <Badge variant="secondary">{form.featuredBookIds.length} linked</Badge>
+                  </div>
+
+                  <Input
+                    id="featured-books-search"
+                    value={bookQuery}
+                    onChange={(e) => setBookQuery(e.target.value)}
+                    placeholder="Search books by title or author..."
+                    aria-label="Search books to link to this post"
+                  />
+
+                  {searchingBooks && <p className="text-xs text-muted-foreground">Searching books…</p>}
+
+                  {bookResults.length > 0 && (
+                    <div className="rounded-md border divide-y">
+                      {bookResults.slice(0, 6).map((book) => (
+                        <button
+                          key={book.id}
+                          type="button"
+                          onClick={() => addLinkedBook(book)}
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{book.title}</p>
+                            {book.author && <p className="truncate text-xs text-muted-foreground">{book.author}</p>}
+                          </div>
+                          <Badge variant="outline">Add</Badge>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {linkedBooks.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {linkedBooks.map((book) => (
+                        <div key={book.id} className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm">
+                          <span className="max-w-[180px] truncate">{book.title}</span>
+                          {book.isAutoDetected && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Auto</Badge>}
+                          {!book.isAutoDetected && (
+                            <button
+                              type="button"
+                              onClick={() => removeLinkedBook(book.id)}
+                              className="text-muted-foreground hover:text-foreground"
+                              aria-label={`Remove ${book.title}`}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No books linked yet.</p>
+                  )}
+                </div>
+
                 {/* Toggles row */}
                 <div className="flex flex-wrap gap-6 pt-2">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -541,6 +693,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
                     type="file"
                     accept="image/*"
                     className="hidden"
+                    aria-label="Upload featured image"
                     onChange={handleFileInput}
                   />
                   {uploading ? (
@@ -700,8 +853,7 @@ export function AdminBlogEditor({ postSlug }: AdminBlogEditorProps) {
               <CardContent>
                 <div className="w-full bg-muted rounded-full h-2.5 mb-3">
                   <div
-                    className={`h-2.5 rounded-full transition-all ${seoScore >= 7 ? 'bg-green-500' : seoScore >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                    style={{ width: `${seoScore * 10}%` }}
+                    className={`h-2.5 rounded-full transition-all ${seoWidthClass} ${seoScore >= 7 ? 'bg-green-500' : seoScore >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`}
                   />
                 </div>
                 <ul className="text-xs text-muted-foreground space-y-1">

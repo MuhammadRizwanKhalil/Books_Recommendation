@@ -40,6 +40,7 @@ const upload = multer({
 
 import { generateBlogPost } from '../services/blogGenerator.js';
 import { testOpenAIConnection } from '../services/openai.js';
+import { syncBlogBookMentions } from '../services/blogBookMentions.js';
 import { config } from '../config.js';
 
 // POST /api/blog/generate-ai — Generate an AI blog post (admin only)
@@ -267,11 +268,14 @@ router.post('/', authenticate, requireAdmin, async (req: Request, res: Response)
       status || 'DRAFT', status === 'PUBLISHED' ? (publishedAt || new Date().toISOString()) : (publishedAt || null),
     ]);
 
-    if (featuredBookIds && Array.isArray(featuredBookIds)) {
-      for (const bookId of featuredBookIds) {
+    const resolvedFeaturedBookIds = Array.isArray(featuredBookIds) ? featuredBookIds : [];
+    if (resolvedFeaturedBookIds.length > 0) {
+      for (const bookId of resolvedFeaturedBookIds) {
         await dbRun('INSERT IGNORE INTO blog_featured_books (blog_id, book_id) VALUES (?, ?)', [id, bookId]);
       }
     }
+
+    await syncBlogBookMentions(id, content, resolvedFeaturedBookIds, (status || 'DRAFT') === 'PUBLISHED');
 
     const post = await dbGet<any>('SELECT * FROM blog_posts WHERE id = ?', [id]);
     res.status(201).json(await mapPostToResponse(post));
@@ -284,7 +288,8 @@ router.post('/', authenticate, requireAdmin, async (req: Request, res: Response)
 // ── PUT /api/blog/:id (Admin) ───────────────────────────────────────────────
 router.put('/:id', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const existingPost = await dbGet<any>('SELECT * FROM blog_posts WHERE id = ?', [req.params.id]);
+    const postId = String(req.params.id);
+    const existingPost = await dbGet<any>('SELECT * FROM blog_posts WHERE id = ?', [postId]);
     if (!existingPost) {
       res.status(404).json({ error: 'Blog post not found' });
       return;
@@ -376,14 +381,18 @@ router.put('/:id', authenticate, requireAdmin, async (req: Request, res: Respons
       req.params.id,
     ]);
 
+    let resolvedFeaturedBookIds = await getFeaturedBookIds(postId);
     if (featuredBookIds && Array.isArray(featuredBookIds)) {
-      await dbRun('DELETE FROM blog_featured_books WHERE blog_id = ?', [req.params.id]);
-      for (const bookId of featuredBookIds) {
-        await dbRun('INSERT IGNORE INTO blog_featured_books (blog_id, book_id) VALUES (?, ?)', [req.params.id, bookId]);
+      await dbRun('DELETE FROM blog_featured_books WHERE blog_id = ?', [postId]);
+      resolvedFeaturedBookIds = featuredBookIds;
+      for (const bookId of resolvedFeaturedBookIds) {
+        await dbRun('INSERT IGNORE INTO blog_featured_books (blog_id, book_id) VALUES (?, ?)', [postId, bookId]);
       }
     }
 
-    const post = await dbGet<any>('SELECT * FROM blog_posts WHERE id = ?', [req.params.id]);
+    await syncBlogBookMentions(postId, content ?? existingPost.content, resolvedFeaturedBookIds, (status ?? existingPost.status) === 'PUBLISHED');
+
+    const post = await dbGet<any>('SELECT * FROM blog_posts WHERE id = ?', [postId]);
     res.json(await mapPostToResponse(post));
   } catch (err: any) {
     logger.error({ err: err }, 'Blog update error');

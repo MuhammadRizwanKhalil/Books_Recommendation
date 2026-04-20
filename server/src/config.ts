@@ -77,14 +77,20 @@ export const config = {
     cronSchedule: process.env.IMPORT_CRON_SCHEDULE || '0 3 * * *',
     timezone: process.env.IMPORT_CRON_TIMEZONE || 'UTC',
     runOnStartup: process.env.IMPORT_RUN_ON_STARTUP === 'true',
-    booksPerCategory: Math.max(1, parseInt(process.env.IMPORT_BOOKS_PER_CATEGORY || '30', 10) || 30),
-    dailyBooksPerQuery: Math.max(1, parseInt(process.env.IMPORT_DAILY_PER_QUERY || '20', 10) || 20),
+    booksPerCategory: Math.max(1, parseInt(process.env.IMPORT_BOOKS_PER_CATEGORY || '40', 10) || 40),
+    dailyBooksPerQuery: Math.max(1, parseInt(process.env.IMPORT_DAILY_PER_QUERY || '30', 10) || 30),
   },
 
   // AI Blog auto-posting cron
   aiBlog: {
     enabled: process.env.AI_BLOG_ENABLED === 'true',
-    cronSchedule: process.env.AI_BLOG_CRON_SCHEDULE || '0 9 * * 1',  // Weekly on Monday 9 AM
+    cronSchedule: process.env.AI_BLOG_CRON_SCHEDULE || '0 9 * * *',  // Daily at 9 AM UTC
     postsPerRun: Math.max(1, parseInt(process.env.AI_BLOG_POSTS_PER_RUN || '1', 10) || 1),
+  },
+
+  // AI Enrichment — auto-submit newly imported books for batch AI analysis
+  aiEnrichment: {
+    enabled: process.env.AI_ENRICHMENT_ENABLED !== 'false',  // Enabled by default when OPENAI_API_KEY is set
+    batchSize: Math.max(1, parseInt(process.env.AI_ENRICHMENT_BATCH_SIZE || '100', 10) || 100),
   },
 };

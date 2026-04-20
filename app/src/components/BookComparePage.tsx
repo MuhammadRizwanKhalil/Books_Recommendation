@@ -127,7 +127,7 @@ export function BookComparePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24">
+      <div className="container mx-auto px-4 pb-12">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2">

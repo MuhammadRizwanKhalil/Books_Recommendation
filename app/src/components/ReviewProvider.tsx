@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { reviewsApi, type ReviewResponse } from '@/api/client';
+import { reviewsApi, type ReviewResponse, type ReviewFilterParams } from '@/api/client';
 import { toast } from 'sonner';
 
 export interface Review {
@@ -12,6 +12,12 @@ export interface Review {
   title: string;
   content: string;
   helpful: number;
+  hasSpoiler: boolean;
+  spoilerText: string | null;
+  authorResponse?: {
+    content: string;
+    respondedAt: string;
+  } | null;
   createdAt: string;
 }
 
@@ -20,15 +26,23 @@ interface ReviewStats {
   count: number;
 }
 
+interface ReviewPagination {
+  total: number;
+  totalFiltered: number;
+  page: number;
+  totalPages: number;
+}
+
 interface ReviewContextType {
   getReviewsForBook: (bookId: string) => Review[];
   getAverageRating: (bookId: string) => { avg: number; count: number };
+  getPagination: (bookId: string) => ReviewPagination | null;
   addReview: (review: Omit<Review, 'id' | 'helpful' | 'createdAt'>) => void;
-  editReview: (reviewId: string, bookId: string, data: { rating: number; title: string; content: string }) => Promise<void>;
+  editReview: (reviewId: string, bookId: string, data: { rating: number; title: string; content: string; hasSpoiler?: boolean; spoilerText?: string | null }) => Promise<void>;
   deleteReview: (reviewId: string, bookId: string) => Promise<void>;
   markHelpful: (reviewId: string) => void;
   hasUserReviewed: (bookId: string, userId: string) => boolean;
-  fetchReviewsForBook: (bookId: string) => Promise<void>;
+  fetchReviewsForBook: (bookId: string, filters?: ReviewFilterParams) => Promise<void>;
   reviewsLoading: boolean;
 }
 
@@ -45,27 +59,37 @@ function mapApiReview(r: ReviewResponse, bookId?: string): Review {
     title: r.title || '',
     content: r.content,
     helpful: r.helpfulCount || 0,
+    hasSpoiler: !!r.hasSpoiler,
+    spoilerText: r.spoilerText || null,
+    authorResponse: r.authorResponse || null,
     createdAt: r.createdAt,
   };
 }
 
 export function ReviewProvider({ children }: { children: React.ReactNode }) {
-  const [cache, setCache] = useState<Record<string, { reviews: Review[]; stats: ReviewStats }>>({});
+  const [cache, setCache] = useState<Record<string, { reviews: Review[]; stats: ReviewStats; pagination?: ReviewPagination }>>({});
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const fetchedRef = useRef<Set<string>>(new Set());
 
-  const fetchReviewsForBook = useCallback(async (bookId: string) => {
-    if (fetchedRef.current.has(bookId)) return;
+  const fetchReviewsForBook = useCallback(async (bookId: string, filters?: ReviewFilterParams) => {
+    // Skip cache for filtered requests
+    if (!filters && fetchedRef.current.has(bookId)) return;
     setReviewsLoading(true);
     try {
-      const res = await reviewsApi.forBook(bookId);
+      const res = await reviewsApi.forBook(bookId, filters);
       const reviews = res.reviews.map((r) => mapApiReview(r, bookId));
       const stats: ReviewStats = {
         avg: res.stats?.averageRating || 0,
         count: res.stats?.totalReviews || reviews.length,
       };
-      setCache((prev) => ({ ...prev, [bookId]: { reviews, stats } }));
-      fetchedRef.current.add(bookId);
+      const pagination: ReviewPagination = {
+        total: res.pagination.total,
+        totalFiltered: res.pagination.totalFiltered,
+        page: res.pagination.page,
+        totalPages: res.pagination.totalPages,
+      };
+      setCache((prev) => ({ ...prev, [bookId]: { reviews, stats, pagination } }));
+      if (!filters) fetchedRef.current.add(bookId);
     } catch {
       // API unavailable — leave cache empty for this book
     } finally {
@@ -91,6 +115,13 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
     [cache]
   );
 
+  const getPagination = useCallback(
+    (bookId: string): ReviewPagination | null => {
+      return cache[bookId]?.pagination || null;
+    },
+    [cache]
+  );
+
   const addReview = useCallback(
     async (review: Omit<Review, 'id' | 'helpful' | 'createdAt'>) => {
       try {
@@ -99,6 +130,8 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
           rating: review.rating,
           title: review.title,
           content: review.content,
+          hasSpoiler: review.hasSpoiler,
+          spoilerText: review.spoilerText || undefined,
         });
         toast.success('Review submitted!', {
           description: 'Thank you for sharing your thoughts.',
@@ -115,7 +148,7 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
   );
 
   const editReview = useCallback(
-    async (reviewId: string, bookId: string, data: { rating: number; title: string; content: string }) => {
+    async (reviewId: string, bookId: string, data: { rating: number; title: string; content: string; hasSpoiler?: boolean; spoilerText?: string | null }) => {
       try {
         await reviewsApi.update(reviewId, data);
         toast.success('Review updated!', { description: 'Your changes have been saved. The review may need re-approval.' });
@@ -171,6 +204,7 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
       value={{
         getReviewsForBook,
         getAverageRating,
+        getPagination,
         addReview,
         editReview,
         deleteReview,

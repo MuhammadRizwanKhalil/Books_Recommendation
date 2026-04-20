@@ -1,8 +1,8 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   BookOpen, Plus, Trash2, Globe, Lock, ArrowLeft,
-  MoreHorizontal, Pencil, Share2, Star, Calendar,
+  MoreHorizontal, Pencil, Share2, Star, Calendar, Sparkles, ThumbsUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +24,9 @@ import { useSEO } from '@/hooks/useSEO';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// My Reading Lists â€” overview page
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
+// My Reading Lists — overview page
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export function ReadingListsPage() {
   const { user } = useAuth();
@@ -36,12 +36,15 @@ export function ReadingListsPage() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newIsPublic, setNewIsPublic] = useState(true);
+  const [newIsCommunity, setNewIsCommunity] = useState(false);
   const [creating, setCreating] = useState(false);
 
   useSEO({
     title: 'My Reading Lists | The Book Times',
     description: 'Create and manage your personal book reading lists and share them with the community.',
   });
+
+  const getListHref = (list: ReadingListResponse) => list.isCommunity ? `/lists/${list.id}` : `/lists/mine/${list.id}`;
 
   const fetchLists = useCallback(async () => {
     try {
@@ -67,15 +70,18 @@ export function ReadingListsPage() {
       const list = await readingListsApi.create({
         name: newName.trim(),
         description: newDesc.trim() || undefined,
-        isPublic: newIsPublic,
+        isPublic: newIsCommunity ? true : newIsPublic,
+        isCommunity: newIsCommunity,
       });
       setLists(prev => [list, ...prev]);
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
-      toast.success('Reading list created!');
-    } catch {
-      toast.error('Failed to create reading list');
+      setNewIsPublic(true);
+      setNewIsCommunity(false);
+      toast.success(list.isCommunity ? 'Community list created!' : 'Reading list created!');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create reading list');
     } finally {
       setCreating(false);
     }
@@ -103,7 +109,7 @@ export function ReadingListsPage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-bold font-serif mb-3">Reading Lists</h1>
           <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-            Create curated collections of books — track what you want to read, share recommendations with friends, or organize by mood and genre.
+            Create curated collections of books � track what you want to read, share recommendations with friends, or organize by mood and genre.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-8">
             {['Summer 2026 Reads', 'Book Club Picks', 'Sci-Fi Essentials', 'Must-Read Non-Fiction'].map((name) => (
@@ -122,16 +128,23 @@ export function ReadingListsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24">
+      <div className="container mx-auto px-4 pb-12">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold font-serif">My Reading Lists</h1>
               <p className="text-muted-foreground mt-1">Organize your books into collections</p>
             </div>
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4 mr-2" /> New List
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link to="/lists/discover">
+                  <Sparkles className="h-4 w-4 mr-2" /> Discover Community Lists
+                </Link>
+              </Button>
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4 mr-2" /> New List
+              </Button>
+            </div>
           </div>
 
           {loading ? (
@@ -160,7 +173,7 @@ export function ReadingListsPage() {
                   <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5">
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
-                        <Link to={`/lists/${list.id}`} className="flex-1 group">
+                        <Link to={getListHref(list)} className="flex-1 group">
                           <CardTitle className="text-lg group-hover:text-primary transition-colors">
                             {list.name}
                           </CardTitle>
@@ -173,7 +186,7 @@ export function ReadingListsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                              <Link to={`/lists/${list.id}`}>
+                              <Link to={getListHref(list)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit
                               </Link>
                             </DropdownMenuItem>
@@ -191,7 +204,7 @@ export function ReadingListsPage() {
                       {list.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{list.description}</p>
                       )}
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                         <Badge variant="secondary" className="gap-1">
                           <BookOpen className="h-3 w-3" />
                           {list.bookCount} {list.bookCount === 1 ? 'book' : 'books'}
@@ -200,6 +213,16 @@ export function ReadingListsPage() {
                           {list.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                           {list.isPublic ? 'Public' : 'Private'}
                         </Badge>
+                        {list.isCommunity && (
+                          <Badge variant="outline" className="gap-1">
+                            <Sparkles className="h-3 w-3" /> Community
+                          </Badge>
+                        )}
+                        {list.isCommunity && (
+                          <Badge variant="outline" className="gap-1">
+                            <ThumbsUp className="h-3 w-3" /> {list.voteCount || 0} votes
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -218,8 +241,9 @@ export function ReadingListsPage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1 block">Name</label>
+              <label htmlFor="newListName" className="text-sm font-medium mb-1 block">Name</label>
               <Input
+                id="newListName"
                 placeholder="e.g., Summer 2025 Reads"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
@@ -227,8 +251,9 @@ export function ReadingListsPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Description (optional)</label>
+              <label htmlFor="newListDesc" className="text-sm font-medium mb-1 block">Description (optional)</label>
               <Textarea
+                id="newListDesc"
                 placeholder="What's this list about?"
                 value={newDesc}
                 onChange={e => setNewDesc(e.target.value)}
@@ -239,12 +264,28 @@ export function ReadingListsPage() {
               <input
                 type="checkbox"
                 id="isPublic"
-                checked={newIsPublic}
+                checked={newIsCommunity ? true : newIsPublic}
                 onChange={e => setNewIsPublic(e.target.checked)}
                 className="rounded"
+                disabled={newIsCommunity}
               />
               <label htmlFor="isPublic" className="text-sm">
                 Make this list public (anyone with the link can view it)
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isCommunity"
+                checked={newIsCommunity}
+                onChange={e => {
+                  setNewIsCommunity(e.target.checked);
+                  if (e.target.checked) setNewIsPublic(true);
+                }}
+                className="rounded"
+              />
+              <label htmlFor="isCommunity" className="text-sm">
+                Community voteable list (public ranking others can vote on)
               </label>
             </div>
           </div>
@@ -260,9 +301,9 @@ export function ReadingListsPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Reading List Detail â€” view & manage one list
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
+// Reading List Detail — view & manage one list
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export function ReadingListDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -275,7 +316,7 @@ export function ReadingListDetailPage() {
   const [editDesc, setEditDesc] = useState('');
 
   useSEO({
-    title: list ? `${list.name} â€” Reading List | The Book Times` : 'Reading List | The Book Times',
+    title: list ? `${list.name} — Reading List | The Book Times` : 'Reading List | The Book Times',
     description: list?.description || 'A curated reading list on The Book Times.',
   });
 
@@ -337,7 +378,7 @@ export function ReadingListDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24">
+      <div className="container mx-auto px-4 pb-12">
         <div className="max-w-4xl mx-auto space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
@@ -366,7 +407,7 @@ export function ReadingListDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24">
+      <div className="container mx-auto px-4 pb-12">
         <div className="max-w-4xl mx-auto">
           {/* Back */}
           <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2">
@@ -526,9 +567,9 @@ export function ReadingListDetailPage() {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Public Reading List â€” shared view (no auth needed)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════════════════
+// Public Reading List — shared view (no auth needed)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export function PublicReadingListPage() {
   const { userId, slug } = useParams<{ userId: string; slug: string }>();
@@ -537,7 +578,7 @@ export function PublicReadingListPage() {
   const [error, setError] = useState<string | null>(null);
 
   useSEO({
-    title: list ? `${list.name} by ${list.userName} â€” Reading List | The Book Times` : 'Reading List | The Book Times',
+    title: list ? `${list.name} by ${list.userName} — Reading List | The Book Times` : 'Reading List | The Book Times',
     description: list?.description || 'A curated reading list on The Book Times.',
     ...(list && {
       ogType: 'website',
@@ -573,7 +614,7 @@ export function PublicReadingListPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 pt-20 pb-12 md:pt-24">
+      <div className="container mx-auto px-4 pb-12">
         <div className="max-w-4xl mx-auto space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />

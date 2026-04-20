@@ -24,13 +24,15 @@ async function generateAuthorSlug(name: string): Promise<string> {
 
 // ── Helper: map DB row to response ──────────────────────────────────────────
 function mapAuthorToResponse(author: any) {
+  const socialLinks = safeJsonParse(author.social_links, {});
+
   return {
     id: author.id,
     name: author.name,
     slug: author.slug,
     bio: author.bio || null,
     imageUrl: author.image_url || null,
-    websiteUrl: author.website_url || null,
+    websiteUrl: author.website_url || author.website || null,
     twitterUrl: author.twitter_url || null,
     instagramUrl: author.instagram_url || null,
     goodreadsUrl: author.goodreads_url || null,
@@ -39,6 +41,9 @@ function mapAuthorToResponse(author: any) {
     facebookUrl: author.facebook_url || null,
     youtubeUrl: author.youtube_url || null,
     tiktokUrl: author.tiktok_url || null,
+    socialLinks,
+    isVerified: !!author.claimed_by,
+    claimedBy: author.claimed_by || null,
     bornDate: author.born_date || null,
     diedDate: author.died_date || null,
     nationality: author.nationality || null,
@@ -159,6 +164,15 @@ router.get('/:slug', async (req: Request, res: Response) => {
       FROM books WHERE author_id = ? AND status = 'PUBLISHED' AND google_rating IS NOT NULL
     `, [author.id]);
 
+    const authorPosts = await dbAll<any>(
+      `SELECT id, title, content, created_at
+       FROM author_posts
+       WHERE author_id = ? AND is_published = TRUE
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [author.id],
+    );
+
     res.json({
       ...mapAuthorToResponse(author),
       bookCount: totalBooks,
@@ -179,6 +193,12 @@ router.get('/:slug', async (req: Request, res: Response) => {
         price: book.price,
         currency: book.currency,
         amazonUrl: book.amazon_url,
+      })),
+      posts: authorPosts.map((post: any) => ({
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        createdAt: post.created_at,
       })),
       pagination: { page, limit, total: totalBooks, totalPages: Math.ceil(totalBooks / limit) },
     });

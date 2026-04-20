@@ -117,7 +117,7 @@ export function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-12">
+    <div className="min-h-screen pb-12">
       <div className="container mx-auto px-4">
         {/* Search Header */}
         <div className="max-w-3xl mx-auto mb-8">
@@ -287,6 +287,18 @@ export function SearchPage() {
               </div>
             ))}
           </div>
+        ) : query.trim().length > 0 && query.trim().length < 3 ? (
+          // Professional: require minimum 3 characters
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="p-4 rounded-full bg-yellow-500/10 mb-4">
+              <Search className="h-10 w-10 text-yellow-600 dark:text-yellow-500" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Search term too short</h3>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Please enter at least 3 characters for accurate search results.
+            </p>
+            <Button variant="outline" onClick={() => setQuery('')}>Clear</Button>
+          </div>
         ) : books.length > 0 ? (
           <BookGrid books={books} loading={false} columns={viewMode === 'list' ? 2 : 4} />
         ) : hasSearched ? (
@@ -317,7 +329,7 @@ export function SearchPage() {
             </div>
             <h3 className="text-xl font-semibold mb-2">Search our library</h3>
             <p className="text-muted-foreground max-w-md">
-              Enter a book title, author name, or browse by category to find your next great read.
+              Enter at least 3 characters for a book title, author name, or keywords.
             </p>
           </div>
         )}

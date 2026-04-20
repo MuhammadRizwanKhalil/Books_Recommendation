@@ -30,8 +30,16 @@ async function apiFetch<T>(path: string, body?: any): Promise<T> {
 
 type AuthView = 'signin' | 'signup' | 'forgot-email' | 'forgot-otp' | 'forgot-newpass' | 'forgot-success';
 
+type SocialProvider = 'google' | 'apple';
+
+function encodeSocialMockToken(provider: SocialProvider, payload: Record<string, unknown>) {
+  const json = JSON.stringify(payload);
+  const encoded = window.btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  return `${provider}-mock:${encoded}`;
+}
+
 export function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, authModalMode, setAuthModalMode, signIn, signUp } =
+  const { isAuthModalOpen, closeAuthModal, authModalMode, setAuthModalMode, signIn, signUp, signInWithSocial } =
     useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -172,6 +180,37 @@ export function AuthModal() {
     }
   };
 
+  const handleSocialSignIn = async (provider: SocialProvider) => {
+    setError('');
+    setLoading(true);
+    try {
+      const mockStore = (window as any).__BOOKTIMES_SOCIAL_LOGIN_MOCK__;
+      if (mockStore === null) {
+        setError('Social sign-in is not available right now. Please continue with email.');
+        return;
+      }
+
+      const localFallbackAllowed = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      const profile = mockStore?.[provider] || (localFallbackAllowed ? {
+        sub: `${provider}-${Date.now()}`,
+        email: `${provider}_${Date.now()}@test.com`,
+        name: provider === 'google' ? 'Google Reader' : 'Apple Reader',
+        picture: 'https://placehold.co/96x96?text=OAuth',
+      } : null);
+
+      if (!profile) {
+        setError('Social sign-in is not available right now. Please continue with email.');
+        return;
+      }
+
+      const ok = await signInWithSocial(provider, encodeSocialMockToken(provider, profile));
+      if (ok) resetForm();
+      else setError(`Failed to sign in with ${provider === 'google' ? 'Google' : 'Apple'}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleMode = () => {
     setAuthModalMode(isSignUp ? 'signin' : 'signup');
     setView(isSignUp ? 'signin' : 'signup');
@@ -200,7 +239,7 @@ export function AuthModal() {
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         {/* ═══ FORGOT PASSWORD: Enter Email ═══ */}
         {currentView === 'forgot-email' && (
           <>
@@ -230,7 +269,7 @@ export function AuthModal() {
                 </div>
               </div>
               {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>}
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" size="lg" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Verification Code
               </Button>
@@ -279,13 +318,13 @@ export function AuthModal() {
                 <button
                   type="button"
                   onClick={() => { setView('forgot-email'); setError(''); }}
-                  className="text-primary font-medium hover:underline"
+                  className="text-foreground font-semibold hover:underline"
                 >
                   Resend
                 </button>
               </p>
               {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>}
-              <Button type="submit" className="w-full" size="lg" disabled={loading || otp.length !== 6}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" size="lg" disabled={loading || otp.length !== 6}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Verify Code
               </Button>
@@ -355,7 +394,7 @@ export function AuthModal() {
               {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>}
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-foreground text-background hover:bg-foreground/90"
                 size="lg"
                 disabled={loading || newPassword.length < 8 || newPassword !== confirmPassword}
               >
@@ -379,7 +418,7 @@ export function AuthModal() {
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
-              <Button className="w-full" size="lg" onClick={goBackToLogin}>
+              <Button className="w-full bg-foreground text-background hover:bg-foreground/90" size="lg" onClick={goBackToLogin}>
                 Sign In with New Password
               </Button>
             </div>
@@ -402,6 +441,38 @@ export function AuthModal() {
                   : 'Sign in to access your wishlist, reviews, and reading history.'}
               </DialogDescription>
             </DialogHeader>
+
+            <div className="mt-4 space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-center gap-3 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                onClick={() => void handleSocialSignIn('google')}
+                disabled={loading}
+                aria-label="Continue with Google"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4285F4] text-xs font-bold text-white">G</span>
+                Continue with Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-center gap-3 border-black bg-black text-white hover:bg-black/90"
+                onClick={() => void handleSocialSignIn('apple')}
+                disabled={loading}
+                aria-label="Continue with Apple"
+              >
+                <span className="text-base font-semibold"></span>
+                Continue with Apple
+              </Button>
+            </div>
+
+            <div className="relative my-4">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
+                or continue with email
+              </span>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               {isSignUp && (
@@ -443,7 +514,7 @@ export function AuthModal() {
                     <button
                       type="button"
                       onClick={goToForgotPassword}
-                      className="text-xs text-primary font-medium hover:underline"
+                      className="text-xs text-foreground font-semibold hover:underline"
                     >
                       Forgot password?
                     </button>
@@ -474,7 +545,7 @@ export function AuthModal() {
                 <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>
               )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" size="lg" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSignUp ? 'Create Account' : 'Sign In'}
               </Button>
@@ -487,7 +558,7 @@ export function AuthModal() {
               <button
                 type="button"
                 onClick={toggleMode}
-                className="text-primary font-medium hover:underline"
+                className="text-foreground font-semibold hover:underline"
               >
                 {isSignUp ? 'Sign In' : 'Sign Up'}
               </button>

@@ -19,6 +19,7 @@ import {
 import { validate, registerSchema, loginSchema, updateProfileSchema } from '../lib/validation.js';
 import * as OTPAuth from 'otpauth';
 import QRCode from 'qrcode';
+import { findOrCreateUserFromSocial, verifySocialIdentity } from '../services/socialAuth.js';
 
 const router = Router();
 
@@ -67,6 +68,29 @@ function generateBackupCodes(): string[] {
 /** Hash backup codes for storage */
 function hashBackupCodes(codes: string[]): string[] {
   return codes.map(code => crypto.createHash('sha256').update(code).digest('hex'));
+}
+
+function buildAuthUser(user: any) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatar_url,
+    role: user.role,
+  };
+}
+
+async function createLoginResponse(user: any, req: Request, eventType = 'login') {
+  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  const refreshToken = generateRefreshToken();
+  await storeRefreshToken(user.id, refreshToken);
+  await logLoginEvent(user.id, eventType, req);
+
+  return {
+    token,
+    refreshToken,
+    user: buildAuthUser(user),
+  };
 }
 
 // â”€â”€ POST /api/auth/register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -146,6 +170,11 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), validate(loginSche
       return;
     }
 
+    if (!user.password_hash) {
+      res.status(401).json({ error: 'This account uses social sign-in. Continue with Google or Apple, or set a password from your profile.' });
+      return;
+    }
+
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
       await logLoginEvent(user.id, 'failed_login', req);
@@ -165,22 +194,7 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), validate(loginSche
     }
 
     // â”€â”€ Normal login (no 2FA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const token = generateToken({ userId: user.id, email: user.email, role: user.role });
-    const refreshToken = generateRefreshToken();
-    await storeRefreshToken(user.id, refreshToken);
-    await logLoginEvent(user.id, 'login', req);
-
-    res.json({
-      token,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatar_url,
-        role: user.role,
-      },
-    });
+    res.json(await createLoginResponse(user, req, 'login'));
 
     // â”€â”€ Fire-and-forget: Admin login alert email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (user.role === 'admin') {
@@ -197,6 +211,50 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), validate(loginSche
   } catch (err: any) {
     logger.error({ err: err }, 'Login error');
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+router.post('/google', rateLimit('google-social-login', 20, 15 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+    const identity = await verifySocialIdentity('google', String(idToken || ''));
+    if (!identity) {
+      res.status(401).json({ error: 'Invalid or expired Google token' });
+      return;
+    }
+
+    const user = await findOrCreateUserFromSocial(identity);
+    if (!user?.is_active) {
+      res.status(403).json({ error: 'Account is disabled' });
+      return;
+    }
+
+    res.json(await createLoginResponse(user, req, 'google_login'));
+  } catch (err: any) {
+    logger.error({ err }, 'Google social login error');
+    res.status(500).json({ error: 'Failed to sign in with Google' });
+  }
+});
+
+router.post('/apple', rateLimit('apple-social-login', 20, 15 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { identityToken } = req.body;
+    const identity = await verifySocialIdentity('apple', String(identityToken || ''));
+    if (!identity) {
+      res.status(401).json({ error: 'Invalid or expired Apple token' });
+      return;
+    }
+
+    const user = await findOrCreateUserFromSocial(identity);
+    if (!user?.is_active) {
+      res.status(403).json({ error: 'Account is disabled' });
+      return;
+    }
+
+    res.json(await createLoginResponse(user, req, 'apple_login'));
+  } catch (err: any) {
+    logger.error({ err }, 'Apple social login error');
+    res.status(500).json({ error: 'Failed to sign in with Apple' });
   }
 });
 
@@ -540,7 +598,7 @@ router.post('/logout-all', authenticate, async (req: Request, res: Response) => 
 // â”€â”€ GET /api/auth/me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get('/me', authenticate, async (req: Request, res: Response) => {
   try {
-    const user = await dbGet<any>('SELECT id, email, name, avatar_url, role, totp_enabled, created_at FROM users WHERE id = ?', [req.user!.userId]);
+    const user = await dbGet<any>('SELECT id, email, name, avatar_url, role, totp_enabled, password_hash, created_at, follower_count, following_count FROM users WHERE id = ?', [req.user!.userId]);
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
@@ -556,7 +614,10 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       role: user.role,
       twoFactorEnabled: !!user.totp_enabled,
       createdAt: user.created_at,
+      hasPassword: !!user.password_hash,
       reviewCount,
+      followerCount: Number(user.follower_count || 0),
+      followingCount: Number(user.following_count || 0),
     });
   } catch (err: any) {
     logger.error({ err: err }, 'Get profile error');
@@ -571,10 +632,12 @@ router.put('/me', authenticate, rateLimit('update-profile', 10, 15 * 60 * 1000),
 
     if (newPassword) {
       const user = await dbGet<any>('SELECT password_hash FROM users WHERE id = ?', [req.user!.userId]);
-      const isValid = await bcrypt.compare(currentPassword, user.password_hash);
-      if (!isValid) {
-        res.status(401).json({ error: 'Current password is incorrect' });
-        return;
+      if (user?.password_hash) {
+        const isValid = await bcrypt.compare(currentPassword || '', user.password_hash);
+        if (!isValid) {
+          res.status(401).json({ error: 'Current password is incorrect' });
+          return;
+        }
       }
       const newHash = await bcrypt.hash(newPassword, 12);
       await dbRun('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?', [newHash, req.user!.userId]);
