@@ -7,6 +7,11 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
+# Ensure only one deploy runs at a time (cancel previous if new push)
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
