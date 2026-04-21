@@ -2516,7 +2516,7 @@ export const readingChallengeApi = {
   /** Get current user's challenge for a year */
   get: (year?: number) => {
     const params = year ? `?year=${year}` : '';
-    return apiFetch<ReadingChallengeResponse>(`/reading-challenge${params}`);
+    return apiFetch<ReadingChallengeResponse | null>(`/reading-challenge${params}`);
   },
 
   /** Create a new reading challenge */

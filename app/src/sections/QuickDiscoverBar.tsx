@@ -25,23 +25,25 @@ export function QuickDiscoverBar() {
   return (
     <section className="py-6 border-b bg-muted/30" aria-label="Quick discover">
       <div className="container mx-auto px-4">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 snap-x">
-          {items.map((item, idx) => (
-            <motion.button
-              key={item.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04, duration: 0.3 }}
-              onClick={() => navigate(item.href)}
-              className="flex-shrink-0 snap-start group relative flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200 min-w-[90px]"
-            >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:shadow-lg transition-all duration-200`}>
-                <item.icon className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xs font-medium text-foreground whitespace-nowrap">{item.label}</span>
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{item.desc}</span>
-            </motion.button>
-          ))}
+        <div className="overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
+          <div className="flex w-max min-w-full justify-center gap-3 snap-x">
+            {items.map((item, idx) => (
+              <motion.button
+                key={item.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.04, duration: 0.3 }}
+                onClick={() => navigate(item.href)}
+                className="flex-shrink-0 snap-start group relative flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl bg-background border hover:border-primary/30 hover:shadow-md transition-all duration-200 min-w-[90px]"
+              >
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:shadow-lg transition-all duration-200`}>
+                  <item.icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-medium text-foreground whitespace-nowrap">{item.label}</span>
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{item.desc}</span>
+              </motion.button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

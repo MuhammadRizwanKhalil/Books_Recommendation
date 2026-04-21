@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { handleImgError } from '@/lib/imageUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { booksApi, type BookResponse } from '@/api/client';
 import { useSEO } from '@/hooks/useSEO';
@@ -183,7 +184,7 @@ export function BookComparePage() {
                       <Link to={`/book/${book.slug}`} className="block">
                         <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted shadow-md mx-auto max-w-[160px]">
                           {book.coverImage ? (
-                            <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover" />
+                            <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover" onError={handleImgError} />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/20">
                               <BookOpen className="h-10 w-10 text-muted-foreground/40" />
@@ -338,7 +339,7 @@ export function BookComparePage() {
                       >
                         <div className="w-10 h-14 rounded overflow-hidden bg-muted shrink-0">
                           {book.coverImage && (
-                            <img src={book.coverImage} alt="" className="w-full h-full object-cover" />
+                            <img src={book.coverImage} alt="" className="w-full h-full object-cover" onError={handleImgError} />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">

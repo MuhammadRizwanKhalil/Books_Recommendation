@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  ExternalLink,
   ShoppingCart,
   Sparkles,
   Trophy,
@@ -40,6 +39,23 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 16;
+
+  const sortedBooks = useMemo(() => {
+    return [...books].sort((a, b) => {
+      const ratingDiff = (b.googleRating || 0) - (a.googleRating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return b.computedScore - a.computedScore;
+    });
+  }, [books]);
+
+  const featuredBook = useMemo(() => {
+    if (sortedBooks.length === 0) return null;
+    const now = new Date();
+    const weekNumber = Math.floor(
+      (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    return sortedBooks[weekNumber % sortedBooks.length];
+  }, [sortedBooks]);
 
   useSEO({
     title: category.metaTitle || `${category.name} Books | The Book Times`,
@@ -85,23 +101,6 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
       },
     ],
   });
-
-  const sortedBooks = useMemo(() => {
-    return [...books].sort((a, b) => {
-      const ratingDiff = (b.googleRating || 0) - (a.googleRating || 0);
-      if (ratingDiff !== 0) return ratingDiff;
-      return b.computedScore - a.computedScore;
-    });
-  }, [books]);
-
-  const featuredBook = useMemo(() => {
-    if (sortedBooks.length === 0) return null;
-    const now = new Date();
-    const weekNumber = Math.floor(
-      (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)
-    );
-    return sortedBooks[weekNumber % sortedBooks.length];
-  }, [sortedBooks]);
 
   const top20Books = sortedBooks.slice(0, 20);
   const recentBooks = readingHistory.slice(0, 8);
@@ -167,105 +166,110 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
             <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 right-1/4 w-60 h-60 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 px-6 py-10 md:py-14 flex flex-col items-center text-center">
-              {/* Breadcrumb */}
-              <nav aria-label="Breadcrumb" className="mb-6">
-                <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <li><Link to="/" className="hover:text-foreground transition-colors">Home</Link></li>
-                  <li><ChevronRight className="h-3 w-3" /></li>
-                  <li><Link to="/categories" className="hover:text-foreground transition-colors">Categories</Link></li>
-                  <li><ChevronRight className="h-3 w-3" /></li>
-                  <li className="text-foreground font-medium">{category.name}</li>
-                </ol>
-              </nav>
+            <div className="relative z-10 px-6 py-10 md:py-14">
+              {/* Two-column layout: text left, book right — each centered in its column */}
+              <div className={`grid gap-10 md:gap-12 items-center ${featuredBook ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
 
-              {/* Featured book cover — centered, elevated */}
-              {featuredBook && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
-                  className="relative mb-8 cursor-pointer group"
-                  onClick={() => onBookClick(featuredBook)}
-                >
-                  <div className="relative w-44 sm:w-52 md:w-60 mx-auto">
-                    {/* Soft shadow beneath */}
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-black/15 dark:bg-black/30 rounded-full blur-xl" />
-                    <img
-                      src={featuredBook.coverImage}
-                      alt={`${featuredBook.title} by ${featuredBook.author} — Featured ${category.name} book`}
-                      className="relative w-full rounded-2xl shadow-2xl ring-1 ring-black/5 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.25)] transition-all duration-500 group-hover:-translate-y-2"
-                      loading="eager"
-                      onError={handleImgError}
-                    />
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg border-0 whitespace-nowrap">
-                      <Sparkles className="h-3 w-3 mr-1" /> Featured Pick
+                {/* LEFT — heading, breadcrumb, description, stats */}
+                <div className="flex flex-col items-center md:items-start text-center md:text-left order-2 md:order-1">
+                  {/* Breadcrumb */}
+                  <nav aria-label="Breadcrumb" className="mb-5">
+                    <ol className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <li><Link to="/" className="hover:text-foreground transition-colors">Home</Link></li>
+                      <li><ChevronRight className="h-3 w-3" /></li>
+                      <li><Link to="/categories" className="hover:text-foreground transition-colors">Categories</Link></li>
+                      <li><ChevronRight className="h-3 w-3" /></li>
+                      <li className="text-foreground font-medium">{category.name}</li>
+                    </ol>
+                  </nav>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                  >
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+                      {category.name}
+                      <span className="text-muted-foreground font-normal text-lg sm:text-xl md:text-2xl ml-3">Books</span>
+                    </h1>
+
+                    {category.description && (
+                      <p className="text-muted-foreground mt-4 text-base md:text-lg leading-relaxed max-w-xl">
+                        {category.description}
+                      </p>
+                    )}
+                  </motion.div>
+
+                  {/* Stats row */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 mt-6"
+                  >
+                    <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {sortedBooks.length} Books
                     </Badge>
-                  </div>
+                    {top20Books[0] && (
+                      <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
+                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                        Top Rated: {formatRating(top20Books[0].googleRating)}
+                      </Badge>
+                    )}
+                    {top20Books.length > 1 && (
+                      <Badge variant="outline" className="gap-1.5 py-1.5 px-4 text-sm">
+                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                        {top20Books.length} Highly Rated
+                      </Badge>
+                    )}
+                  </motion.div>
+                </div>
 
-                  {/* Featured book info card — centered below cover */}
-                  <div className="mt-5 bg-card/90 backdrop-blur-sm border rounded-xl px-4 py-3 shadow-lg max-w-xs mx-auto">
-                    <p className="font-bold text-sm line-clamp-1">{featuredBook.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">by {featuredBook.author}</p>
-                    <div className="flex items-center justify-center gap-3 mt-2">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs font-semibold">{formatRating(featuredBook.googleRating)}</span>
-                      </div>
-                      {featuredBook.price ? (
-                        <span className="text-xs font-bold text-primary">{formatPrice(featuredBook.price, featuredBook.currency)}</span>
-                      ) : null}
-                      {featuredBook.ratingsCount > 0 && (
-                        <span className="text-[10px] text-muted-foreground">({formatNumber(featuredBook.ratingsCount)} ratings)</span>
-                      )}
+                {/* RIGHT — featured book, centered in column */}
+                {featuredBook && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
+                    className="flex flex-col items-center justify-center order-1 md:order-2 cursor-pointer group"
+                    onClick={() => onBookClick(featuredBook)}
+                  >
+                    <div className="relative w-44 sm:w-52 md:w-56 lg:w-60">
+                      {/* Soft shadow beneath */}
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-black/15 dark:bg-black/30 rounded-full blur-xl" />
+                      <img
+                        src={featuredBook.coverImage}
+                        alt={`${featuredBook.title} by ${featuredBook.author} — Featured ${category.name} book`}
+                        className="relative w-full rounded-2xl shadow-2xl ring-1 ring-black/5 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.25)] transition-all duration-500 group-hover:-translate-y-2"
+                        loading="eager"
+                        onError={handleImgError}
+                      />
+                      <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg border-0 whitespace-nowrap">
+                        <Sparkles className="h-3 w-3 mr-1" /> Featured Pick
+                      </Badge>
                     </div>
-                  </div>
-                </motion.div>
-              )}
 
-              {/* Category title & description — centered */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-                className="max-w-2xl"
-              >
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-                  {category.name}
-                  <span className="text-muted-foreground font-normal text-lg sm:text-xl md:text-2xl ml-3">Books</span>
-                </h1>
-
-                {category.description && (
-                  <p className="text-muted-foreground mt-4 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-                    {category.description}
-                  </p>
+                    {/* Featured book info card — under cover, centered */}
+                    <div className="mt-5 bg-card/90 backdrop-blur-sm border rounded-xl px-4 py-3 shadow-lg max-w-xs w-full text-center">
+                      <p className="font-bold text-sm line-clamp-1">{featuredBook.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">by {featuredBook.author}</p>
+                      <div className="flex items-center justify-center gap-3 mt-2">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-semibold">{formatRating(featuredBook.googleRating)}</span>
+                        </div>
+                        {featuredBook.price ? (
+                          <span className="text-xs font-bold text-primary">{formatPrice(featuredBook.price, featuredBook.currency)}</span>
+                        ) : null}
+                        {featuredBook.ratingsCount > 0 && (
+                          <span className="text-[10px] text-muted-foreground">({formatNumber(featuredBook.ratingsCount)} ratings)</span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </motion.div>
-
-              {/* Stats row — centered */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                className="flex flex-wrap items-center justify-center gap-3 mt-6"
-              >
-                <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {sortedBooks.length} Books
-                </Badge>
-                {top20Books[0] && (
-                  <Badge variant="secondary" className="gap-1.5 py-1.5 px-4 text-sm">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    Top Rated: {formatRating(top20Books[0].googleRating)}
-                  </Badge>
-                )}
-                {top20Books.length > 1 && (
-                  <Badge variant="outline" className="gap-1.5 py-1.5 px-4 text-sm">
-                    <Trophy className="h-3.5 w-3.5 text-amber-500" />
-                    {top20Books.length} Highly Rated
-                  </Badge>
-                )}
-              </motion.div>
+              </div>
             </div>
           </div>
         </motion.section>

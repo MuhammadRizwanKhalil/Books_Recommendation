@@ -1,10 +1,12 @@
 import type { Book, Category, BlogPost } from '@/types';
+import { FALLBACK_COVER } from './imageUtils';
 
 /**
  * Map an API book row (camelCase or snake_case) → frontend Book type.
  * This is the single source of truth for API → UI mapping.
  */
 export function mapBook(b: any): Book {
+  const cover = b.coverImage || b.cover_image || '';
   return {
     id: String(b.id),
     googleBooksId: b.googleBooksId || b.google_books_id || '',
@@ -12,7 +14,7 @@ export function mapBook(b: any): Book {
     subtitle: b.subtitle || '',
     author: b.author,
     description: b.description || '',
-    coverImage: b.coverImage || b.cover_image || '',
+    coverImage: cover || FALLBACK_COVER,
     publisher: b.publisher || '',
     publishedDate: b.publishedDate || b.published_date || '',
     pageCount: b.pageCount || b.page_count || 0,

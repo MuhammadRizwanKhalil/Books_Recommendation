@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coverImagesApi, type BookImageResponse } from '@/api/client';
+import { handleImgError } from '@/lib/imageUtils';
 
 interface CoverZoomProps {
   bookId: string;
@@ -90,7 +91,7 @@ export function CoverZoom({ bookId, title, fallbackCoverImage }: CoverZoomProps)
         data-testid="cover-zoom-trigger"
         aria-label={`Zoom cover for ${title}`}
       >
-        <img src={fallbackCoverImage} alt={`${title} cover`} className="h-full w-full object-cover" />
+        <img src={fallbackCoverImage} alt={`${title} cover`} className="h-full w-full object-cover" onError={handleImgError} />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" aria-hidden="true" />
         <span className="absolute bottom-2 right-2 rounded-full bg-background/90 px-2 py-1 text-xs font-medium inline-flex items-center gap-1">
           <ZoomIn className="h-3.5 w-3.5" />

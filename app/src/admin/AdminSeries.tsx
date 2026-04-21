@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { handleImgError } from '@/lib/imageUtils';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from '@/components/ui/dialog';
@@ -228,7 +229,7 @@ export function AdminSeries() {
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
                           {s.coverImage && (
-                            <img src={s.coverImage} alt={s.name} className="w-8 h-12 rounded object-cover" />
+                            <img src={s.coverImage} alt={s.name} className="w-8 h-12 rounded object-cover" onError={handleImgError} />
                           )}
                           <div>
                             <p className="font-medium">{s.name}</p>
@@ -311,7 +312,7 @@ export function AdminSeries() {
               <Label>Cover Image URL</Label>
               <Input value={form.coverImage} onChange={(e) => setForm({ ...form, coverImage: e.target.value })} placeholder="https://..." />
               {form.coverImage && (
-                <img src={form.coverImage} alt="Preview" className="w-16 h-24 rounded object-cover mt-1" />
+                <img src={form.coverImage} alt="Preview" className="w-16 h-24 rounded object-cover mt-1" onError={handleImgError} />
               )}
             </div>
             <div className="space-y-2">
@@ -385,7 +386,7 @@ export function AdminSeries() {
                 {bookResults.map((b: any) => (
                   <div key={b.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 cursor-pointer" onClick={() => addBookToSeries(b.id)}>
                     {b.coverImage && (
-                      <img src={b.coverImage} alt={b.title} className="w-8 h-12 rounded object-cover" />
+                      <img src={b.coverImage} alt={b.title} className="w-8 h-12 rounded object-cover" onError={handleImgError} />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{b.title}</p>
@@ -411,7 +412,7 @@ export function AdminSeries() {
                   <div key={b.id} className="flex items-center gap-3 p-3 border rounded-lg">
                     <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                     {b.coverImage && (
-                      <img src={b.coverImage} alt={b.title} className="w-8 h-12 rounded object-cover shrink-0" />
+                      <img src={b.coverImage} alt={b.title} className="w-8 h-12 rounded object-cover shrink-0" onError={handleImgError} />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{b.title}</p>

@@ -87,7 +87,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     );
 
     if (!challenge) {
-      res.status(404).json({ error: 'No reading challenge found for this year' });
+      res.json(null);
       return;
     }
 

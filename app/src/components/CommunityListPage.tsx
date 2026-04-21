@@ -8,6 +8,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useSEO } from '@/hooks/useSEO';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { handleImgError } from '@/lib/imageUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -159,7 +160,7 @@ export function CommunityListPage() {
                   </div>
                   <Link to={`/book/${item.slug}`} className="block h-20 w-14 overflow-hidden rounded-md bg-muted shadow-sm">
                     {item.coverImage ? (
-                      <img src={item.coverImage} alt={item.title} className="h-full w-full object-cover" />
+                      <img src={item.coverImage} alt={item.title} className="h-full w-full object-cover" onError={handleImgError} />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center"><BookOpen className="h-5 w-5 text-muted-foreground" /></div>
                     )}

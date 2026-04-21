@@ -129,22 +129,24 @@ export function FeatureHub() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {visibleFeatures.map((feature, idx) => (
-            <motion.button
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.04, duration: 0.3 }}
-              onClick={() => navigate(feature.href)}
-              className={`group p-5 rounded-2xl border bg-gradient-to-br ${feature.gradient} text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/20`}
-            >
-              <feature.icon className="h-6 w-6 text-primary mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-semibold text-sm mb-1">{feature.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
-            </motion.button>
-          ))}
+        <div className="overflow-x-auto scrollbar-hide pb-3 -mx-4 px-4 scroll-fade">
+          <div className="flex w-max min-w-full justify-center gap-4 snap-x">
+            {visibleFeatures.map((feature, idx) => (
+              <motion.button
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.04, duration: 0.3 }}
+                onClick={() => navigate(feature.href)}
+                className={`group flex-shrink-0 snap-start w-[220px] sm:w-[240px] h-[190px] p-5 rounded-2xl border bg-gradient-to-br ${feature.gradient} text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/20 flex flex-col`}
+              >
+                <feature.icon className="h-6 w-6 text-primary mb-3 group-hover:scale-110 transition-transform" />
+                <h3 className="font-semibold text-sm mb-1 line-clamp-1">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 mt-auto">{feature.description}</p>
+              </motion.button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

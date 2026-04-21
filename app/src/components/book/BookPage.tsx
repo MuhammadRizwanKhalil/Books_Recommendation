@@ -1,4 +1,4 @@
-﻿import { Heart, ExternalLink, ShoppingCart, ChevronLeft, Share2, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
+﻿import { Heart, ExternalLink, ShoppingCart, ChevronLeft, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -22,7 +22,6 @@ import { InlineRatingWidget } from './InlineRatingWidget';
 import { StarDisplay } from '@/components/ui/star-display';
 import { useWishlist } from '@/components/WishlistProvider';
 import { useAuth } from '@/components/AuthProvider';
-import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useSEO } from '@/hooks/useSEO';
@@ -93,21 +92,6 @@ export function BookPage({ book, onBack }: BookPageProps) {
     }
   }, [book.id]);
 
-  const handleShare = async () => {
-    const bookUrl = `${window.location.origin}/book/${book.slug}`;
-    const shareData = {
-      title: book.title,
-      text: `Check out "${book.title}" by ${book.author}`,
-      url: bookUrl,
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch { /* cancelled */ }
-    } else {
-      navigator.clipboard.writeText(bookUrl);
-      toast.success('Link copied to clipboard!');
-    }
-  };
-
   const handleAffiliateClick = () => {
     if (!isAnalyticsEnabled()) return;
     if (navigator.sendBeacon) {
@@ -128,52 +112,50 @@ export function BookPage({ book, onBack }: BookPageProps) {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-background"
     >
-      {/* Sticky back bar */}
+      {/* Unified top bar: Back + inline breadcrumb + admin edit (one row, no duplication) */}
       <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-lg border-b">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
+        <div className="container mx-auto px-4 py-2.5 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0 -ml-2">
             <ChevronLeft className="h-4 w-4" />
             Back
           </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <span className="text-sm text-muted-foreground truncate flex-1">{book.title}</span>
+          <Separator orientation="vertical" className="h-5 hidden sm:block" />
+          <nav aria-label="Breadcrumb" className="flex-1 min-w-0 hidden sm:block">
+            <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
+              {book.categories.length > 0 && (
+                <>
+                  <li aria-hidden className="select-none">/</li>
+                  <li className="truncate max-w-[140px]">
+                    <Link
+                      to={`/category/${book.categories[0].toLowerCase().replace(/\s+/g, '-')}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {book.categories[0]}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li aria-hidden className="select-none">/</li>
+              <li className="text-foreground font-medium truncate">{book.title}</li>
+            </ol>
+          </nav>
+          <span className="sm:hidden flex-1 min-w-0 text-sm font-medium truncate">{book.title}</span>
           {isAdmin && (
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 shrink-0 border-orange-300 text-orange-600 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:hover:bg-orange-950"
+              className="gap-1.5 shrink-0 border-orange-300 text-orange-600 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:hover:bg-orange-950"
               onClick={() => routerNavigate(`/admin/books/edit/${encodeURIComponent(book.slug || book.id)}`)}
             >
               <Pencil className="h-3.5 w-3.5" />
-              Edit Book
+              <span className="hidden sm:inline">Edit Book</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* Breadcrumbs */}
-      <nav className="container mx-auto px-4 pt-4 pb-0" aria-label="Breadcrumb">
-        <ol className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-          <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
-          {book.categories.length > 0 && (
-            <>
-              <li className="select-none">/</li>
-              <li>
-                <Link
-                  to={`/category/${book.categories[0].toLowerCase().replace(/\s+/g, '-')}`}
-                  className="hover:text-primary transition-colors"
-                >
-                  {book.categories[0]}
-                </Link>
-              </li>
-            </>
-          )}
-          <li className="select-none">/</li>
-          <li className="text-foreground font-medium truncate max-w-[200px]">{book.title}</li>
-        </ol>
-      </nav>
-
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-4 pb-8 sm:pt-6">
         {/* ====== MAIN LAYOUT ====== */}
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
@@ -192,25 +174,24 @@ export function BookPage({ book, onBack }: BookPageProps) {
               />
             </motion.div>
 
-            {/* Quick Actions */}
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={isLiked ? 'default' : 'outline'}
-                className="flex-1 gap-2"
-                onClick={() => toggleWishlist(book)}
-              >
-                <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                {isLiked ? 'In Wishlist' : 'Add to Wishlist'}
-              </Button>
-              <AddToListButton bookId={book.id} bookTitle={book.title} className="flex-1" />
-              <TBRQueueButton bookId={book.id} className="flex-1" />
-              <Button variant="outline" size="icon" onClick={handleShare}>
-                <Share2 className="h-4 w-4" />
-              </Button>
+            {/* Quick Actions — primary status + compact icon row */}
+            <div className="space-y-2">
+              <ReadingStatusButton bookId={book.id} className="w-full" />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={isLiked ? 'default' : 'outline'}
+                  size="icon"
+                  aria-label={isLiked ? 'Remove from wishlist' : 'Add to wishlist'}
+                  title={isLiked ? 'In wishlist' : 'Add to wishlist'}
+                  className="shrink-0"
+                  onClick={() => toggleWishlist(book)}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                </Button>
+                <TBRQueueButton bookId={book.id} className="flex-1" />
+                <AddToListButton bookId={book.id} bookTitle={book.title} className="flex-1" />
+              </div>
             </div>
-
-            {/* Reading Status */}
-            <ReadingStatusButton bookId={book.id} className="w-full" />
 
             {/* Private personal tags */}
             <TagManager bookId={book.slug || book.id} />
@@ -226,7 +207,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
               url={`${window.location.origin}/book/${book.slug}`}
               title={`${book.title} by ${book.author}`}
               description={book.description?.slice(0, 200)}
-              variant="full"
+              variant="icons"
             />
 
             {/* Affiliate Links */}

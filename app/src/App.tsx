@@ -46,25 +46,23 @@ import { TrendingPage } from '@/components/TrendingPage';
 import { CategoriesPage } from '@/components/CategoriesPage';
 import { GenreOnboardingModal } from '@/components/GenreOnboardingModal';
 import { Navigation } from '@/sections/Navigation';
-import { Hero } from '@/sections/Hero';
+import { HeroV2 } from '@/sections/HeroV2';
 import { Footer } from '@/sections/Footer';
 
 // â”€â”€ Lazy-loaded below-fold sections (reduces initial bundle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const Trending = lazy(() => import('@/sections/Trending').then(m => ({ default: m.Trending })));
 const QuickDiscoverBar = lazy(() => import('@/sections/QuickDiscoverBar').then(m => ({ default: m.QuickDiscoverBar })));
-const FeatureHub = lazy(() => import('@/sections/FeatureHub').then(m => ({ default: m.FeatureHub })));
+const PersonalDashboard = lazy(() => import('@/sections/PersonalDashboard').then(m => ({ default: m.PersonalDashboard })));
+const Trending = lazy(() => import('@/sections/Trending').then(m => ({ default: m.Trending })));
 const Categories = lazy(() => import('@/sections/Categories').then(m => ({ default: m.Categories })));
-const NewReleases = lazy(() => import('@/sections/NewReleases').then(m => ({ default: m.NewReleases })));
-const TopRated = lazy(() => import('@/sections/TopRated').then(m => ({ default: m.TopRated })));
+const DiscoverShelves = lazy(() => import('@/sections/DiscoverShelves').then(m => ({ default: m.DiscoverShelves })));
+const FeatureHub = lazy(() => import('@/sections/FeatureHub').then(m => ({ default: m.FeatureHub })));
 const Testimonials = lazy(() => import('@/sections/Testimonials').then(m => ({ default: m.Testimonials })));
 const FeaturedAuthors = lazy(() => import('@/sections/FeaturedAuthors').then(m => ({ default: m.FeaturedAuthors })));
-const Blog = lazy(() => import('@/sections/Blog').then(m => ({ default: m.Blog })));
+const BlogStrip = lazy(() => import('@/sections/BlogStrip').then(m => ({ default: m.BlogStrip })));
 const Newsletter = lazy(() => import('@/sections/Newsletter').then(m => ({ default: m.Newsletter })));
 const BookOfTheDay = lazy(() => import('@/sections/BookOfTheDay').then(m => ({ default: m.BookOfTheDay })));
-const RecentlyViewed = lazy(() => import('@/sections/RecentlyViewed').then(m => ({ default: m.RecentlyViewed })));
-const ReadingStats = lazy(() => import('@/sections/ReadingStats').then(m => ({ default: m.ReadingStats })));
+const PopularSearches = lazy(() => import('@/sections/PopularSearches').then(m => ({ default: m.PopularSearches })));
 const Top20Carousel = lazy(() => import('@/sections/Top20Carousel').then(m => ({ default: m.Top20Carousel })));
-const ChallengeWidget = lazy(() => import('@/components/ChallengeWidget').then(m => ({ default: m.ChallengeWidget })));
 import type { AdminPage } from '@/admin/AdminLayout';
 import { LegalPage } from '@/components/LegalPage';
 import { AdminBar } from '@/components/AdminBar';
@@ -113,14 +111,6 @@ function SectionFallback() {
   return (
     <div className="flex items-center justify-center py-12">
       <div className="animate-pulse h-6 w-32 bg-muted rounded" />
-    </div>
-  );
-}
-
-function SectionDivider() {
-  return (
-    <div className="container mx-auto px-4" aria-hidden="true">
-      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
     </div>
   );
 }
@@ -235,88 +225,73 @@ function HomePage() {
   });
 
   return (
-    <main>
-      {/* 1. Hero – full-width split layout with 3D flip book carousel */}
-      <ErrorBoundary section="Hero"><Hero /></ErrorBoundary>
+    <main className="bg-background">
+      {/* 1. Hero — focused, premium, single CTA-pair */}
+      <ErrorBoundary section="Hero"><HeroV2 /></ErrorBoundary>
 
-      {/* 2. Quick Discover Bar – horizontal scrollable feature pills */}
+      {/* 2. Quick Discover — horizontal pill navigation to key surfaces */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Quick Discover"><QuickDiscoverBar /></ErrorBoundary>
       </Suspense>
 
-      {/* 3. Recently viewed – personalized (only shows when user has history) */}
+      {/* 3. Personal Dashboard — auth-only consolidated block (recently viewed + shelf + challenge) */}
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Recently Viewed"><RecentlyViewed /></ErrorBoundary>
+        <ErrorBoundary section="Personal Dashboard"><PersonalDashboard /></ErrorBoundary>
       </Suspense>
 
-      {/* 4. Trending – magazine-style layout */}
+      {/* 4. Trending — primary public discovery anchor */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Trending"><Trending /></ErrorBoundary>
       </Suspense>
 
-      {/* 5. Book of the Day – editorial spotlight */}
+      {/* 5. Book of the Day — premium editorial spotlight */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Book of the Day"><BookOfTheDay /></ErrorBoundary>
       </Suspense>
 
-      <SectionDivider />
-
-      {/* 6. Categories – genre browsing grid */}
+      {/* 6. Categories — minimal genre browsing grid */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Categories"><Categories /></ErrorBoundary>
       </Suspense>
 
-      {/* 7. New Releases – fresh titles with period tabs */}
+      {/* 7. Discover Shelves — tabbed New Releases + Top Rated (replaces two duplicate-looking sections) */}
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="New Releases"><NewReleases /></ErrorBoundary>
+        <ErrorBoundary section="Discover Shelves"><DiscoverShelves /></ErrorBoundary>
       </Suspense>
 
-      <SectionDivider />
-
-      {/* 8. Top Rated – podium + auto-scroll */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Top Rated"><TopRated /></ErrorBoundary>
-      </Suspense>
-
-      {/* 9. Feature Hub – gateway to all platform features */}
+      {/* 8. Feature Hub — what The Book Times can do for you */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Feature Hub"><FeatureHub /></ErrorBoundary>
       </Suspense>
 
-      <SectionDivider />
-
-      {/* 10. Reading Challenge – engagement widget */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Challenge Widget"><ChallengeWidget /></ErrorBoundary>
-      </Suspense>
-
-      {/* 11. Featured Authors – auto-scrolling cards */}
+      {/* 9. Featured Authors — community / human element */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Featured Authors"><FeaturedAuthors /></ErrorBoundary>
       </Suspense>
 
-      {/* 12. Testimonials – social proof + stats */}
+      {/* 11. Top 20 Books — editor's choice carousel */}
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Top 20 Books"><Top20Carousel /></ErrorBoundary>
+      </Suspense>
+
+      {/* 12. Testimonials — social proof */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Testimonials"><Testimonials /></ErrorBoundary>
       </Suspense>
 
-      <SectionDivider />
-
-      {/* 13. Blog – magazine layout */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Blog"><Blog /></ErrorBoundary>
-      </Suspense>
-
-      {/* 14. Reading Stats – personal reading tracker */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Reading Stats"><ReadingStats /></ErrorBoundary>
-      </Suspense>
-
-      <SectionDivider />
-
-      {/* 15. Newsletter – final CTA */}
+      {/* 12. Newsletter — primary conversion section */}
       <Suspense fallback={<SectionFallback />}>
         <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
+      </Suspense>
+
+      {/* 13. Popular Searches — SEO + internal linking */}
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
+      </Suspense>
+
+      {/* 14. Latest from the Blog — compact strip at very bottom */}
+      <Suspense fallback={<SectionFallback />}>
+        <ErrorBoundary section="Blog Strip"><BlogStrip /></ErrorBoundary>
       </Suspense>
     </main>
   );
@@ -351,7 +326,7 @@ function CategoryRoute() {
 
   if (!category) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
@@ -360,7 +335,7 @@ function CategoryRoute() {
   }
 
   return (
-    <main className="pt-16">
+    <main>
       <ErrorBoundary section="Category">
         <CategoryPage category={category} onBack={goHome} onBookClick={openBook} />
       </ErrorBoundary>
@@ -711,7 +686,40 @@ function App() {
     const checkAdminPath = async () => {
       const path = location.pathname;
       if (!path || path === '/') return;
-      if (['/search', '/admin', '/category', '/book', '/blog', '/legal'].some(r => path.startsWith(r))) return;
+      if ([
+        '/search',
+        '/admin',
+        '/category',
+        '/categories',
+        '/book',
+        '/series',
+        '/discover',
+        '/author',
+        '/author-portal',
+        '/users',
+        '/discussions',
+        '/book-clubs',
+        '/giveaways',
+        '/owned-books',
+        '/my-tags',
+        '/journal',
+        '/quizzes',
+        '/awards',
+        '/lists',
+        '/compare',
+        '/up-next',
+        '/for-you',
+        '/feed',
+        '/reading-challenge',
+        '/my-stats',
+        '/year-in-books',
+        '/import',
+        '/pricing',
+        '/settings',
+        '/trending',
+        '/blog',
+        '/legal',
+      ].some((routePrefix) => path.startsWith(routePrefix))) return;
       const slug = path.slice(1);
       if (!slug || slug.length < 6) return;
       try {

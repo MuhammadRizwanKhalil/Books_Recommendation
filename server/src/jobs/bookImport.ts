@@ -63,7 +63,7 @@ export async function initImportJobsTable() {
     CREATE TABLE IF NOT EXISTS import_jobs (
       id VARCHAR(36) PRIMARY KEY,
       type VARCHAR(20) NOT NULL,
-      status VARCHAR(20) NOT NULL DEFAULT 'running',
+      status VARCHAR(20) NOT NULL DEFAULT 'processing',
       total_fetched INT NOT NULL DEFAULT 0,
       new_inserted INT NOT NULL DEFAULT 0,
       updated INT NOT NULL DEFAULT 0,
@@ -73,6 +73,34 @@ export async function initImportJobsTable() {
       completed_at DATETIME
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+
+  // Backward-compat: import_jobs may already exist from Goodreads/other flows
+  // with a different schema. Ensure the columns this job needs are present.
+  const hasColumn = async (column: string) => {
+    const row = await dbGet<any>(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'import_jobs'
+         AND COLUMN_NAME = ?
+       LIMIT 1`,
+      [column]
+    );
+    return !!row;
+  };
+
+  const ensureColumn = async (column: string, alterSql: string) => {
+    if (!(await hasColumn(column))) {
+      await dbRun(`ALTER TABLE import_jobs ${alterSql}`);
+    }
+  };
+
+  await ensureColumn('type', 'ADD COLUMN type VARCHAR(20) NULL AFTER id');
+  await ensureColumn('total_fetched', 'ADD COLUMN total_fetched INT NOT NULL DEFAULT 0');
+  await ensureColumn('new_inserted', 'ADD COLUMN new_inserted INT NOT NULL DEFAULT 0');
+  await ensureColumn('updated', 'ADD COLUMN `updated` INT NOT NULL DEFAULT 0');
+  await ensureColumn('skipped', 'ADD COLUMN skipped INT NOT NULL DEFAULT 0');
+  await ensureColumn('errors', 'ADD COLUMN errors TEXT NULL');
 
   const safeIdx = async (sql: string) => { try { await dbRun(sql); } catch { /* exists */ } };
   await safeIdx('CREATE INDEX idx_import_jobs_type ON import_jobs(type)');
@@ -513,10 +541,49 @@ export async function runImportJob(
     onProgress?.(msg);
   };
 
-  // Log job start
+  // Log job start (supports both legacy and current import_jobs schemas)
+  const hasImportJobsColumn = async (column: string) => {
+    const row = await dbGet<any>(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'import_jobs'
+         AND COLUMN_NAME = ?
+       LIMIT 1`,
+      [column]
+    );
+    return !!row;
+  };
+
+  const insertColumns = ['id', 'type', 'status', 'started_at'];
+  const insertValues: any[] = [jobId, type, 'processing', new Date()];
+
+  if (await hasImportJobsColumn('user_id')) {
+    const logUser =
+      await dbGet<any>(`SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1`, []) ||
+      await dbGet<any>('SELECT id FROM users ORDER BY created_at ASC LIMIT 1', []);
+
+    if (!logUser?.id) {
+      throw new Error('Cannot create import job log row: import_jobs.user_id exists but no users are available');
+    }
+
+    insertColumns.push('user_id');
+    insertValues.push(logUser.id);
+  }
+
+  if (await hasImportJobsColumn('source')) {
+    insertColumns.push('source');
+    insertValues.push('goodreads');
+  }
+
+  if (await hasImportJobsColumn('file_name')) {
+    insertColumns.push('file_name');
+    insertValues.push(`google-books-${type}-import`);
+  }
+
   await dbRun(
-    `INSERT INTO import_jobs (id, type, status, started_at) VALUES (?, ?, 'running', NOW())`,
-    [jobId, type]
+    `INSERT INTO import_jobs (${insertColumns.join(', ')}) VALUES (${insertColumns.map(() => '?').join(', ')})`,
+    insertValues,
   );
 
   log(`Starting ${type} import job (id: ${jobId})...`);
@@ -668,7 +735,7 @@ export function isImportRunning(): boolean {
 export async function resetImportState(): Promise<void> {
   isRunning = false;
   await dbRun(
-    `UPDATE import_jobs SET status = 'failed', errors = '["Force-reset by admin"]', completed_at = NOW() WHERE status = 'running'`,
+    `UPDATE import_jobs SET status = 'failed', errors = '["Force-reset by admin"]', completed_at = NOW() WHERE status IN ('running', 'processing')`,
     []
   );
   logger.info('[BookImport] Import state force-reset (running flag cleared, stuck DB jobs marked failed)');
@@ -695,7 +762,7 @@ export async function startImportCron(schedule?: string) {
 
   // Clean up any jobs stuck in 'running' from a previous process crash
   await dbRun(
-    `UPDATE import_jobs SET status = 'failed', errors = '["Server restarted while job was running"]', completed_at = NOW() WHERE status = 'running'`,
+    `UPDATE import_jobs SET status = 'failed', errors = '["Server restarted while job was running"]', completed_at = NOW() WHERE status IN ('running', 'processing')`,
     []
   );
 

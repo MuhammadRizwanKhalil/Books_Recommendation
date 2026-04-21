@@ -252,15 +252,16 @@ export function Navigation() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[min(80vw,20rem)] px-5 pt-6 pb-6">
-                {/* Mobile brand header */}
-                <div className="flex items-center gap-2.5 pb-4 mb-2 border-b">
+              <SheetContent side="right" className="w-[min(80vw,20rem)] p-0 flex flex-col">
+                {/* Mobile brand header (sticky inside drawer) */}
+                <div className="flex items-center gap-2.5 px-5 pt-6 pb-4 border-b shrink-0">
                   <div className="p-2 rounded-xl bg-primary">
                     <LogoMark size={20} className="text-primary-foreground" />
                   </div>
                   <span className="text-lg font-serif font-bold tracking-tight">{siteName}</span>
                 </div>
-                <div className="flex flex-col gap-6 mt-4">
+                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+                <div className="flex flex-col gap-6">
                   {/* Mobile Search */}
                   <SearchDropdown
                     onClose={() => setIsMobileOpen(false)}
@@ -403,6 +404,7 @@ export function Navigation() {
                       </>
                     )}
                   </div>
+                </div>
                 </div>
               </SheetContent>
             </Sheet>
