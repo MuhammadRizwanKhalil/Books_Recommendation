@@ -50,6 +50,7 @@ services:
 
   # ── Backend API Server ───────────────────────────────────────────────────
   server:
+    image: ${SERVER_IMAGE:-ghcr.io/muhammadrizwankhalil/books_recommendation/server:latest}
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -111,6 +112,7 @@ services:
 
   # ── Frontend (nginx + static SPA) ───────────────────────────────────────
   app:
+    image: ${APP_IMAGE:-ghcr.io/muhammadrizwankhalil/books_recommendation/app:latest}
     build:
       context: ./app
       dockerfile: Dockerfile

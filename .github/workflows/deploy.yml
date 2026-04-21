@@ -9,267 +9,201 @@ concurrency:
   group: deploy-production
   cancel-in-progress: true
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+env:
+  REGISTRY: ghcr.io
+  # GHCR requires lowercase image names
+  IMAGE_BASE: ghcr.io/muhammadrizwankhalil/books_recommendation
 
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # Build images on the GitHub runner (7GB RAM, 4 CPUs) instead of the
+  # tiny 1GB production VPS where `vite build` gets OOM-killed.
+  # ──────────────────────────────────────────────────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute tags
+        id: meta
+        run: |
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          target: production
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}/server:latest
+            ${{ env.IMAGE_BASE }}/server:${{ steps.meta.outputs.sha }}
+          cache-from: type=registry,ref=${{ env.IMAGE_BASE }}/server:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_BASE }}/server:buildcache,mode=max
+
+      - name: Build & push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          target: production
+          push: true
+          build-args: |
+            VITE_API_URL=/api
+            BUILD_ID=${{ steps.meta.outputs.sha }}
+          tags: |
+            ${{ env.IMAGE_BASE }}/app:latest
+            ${{ env.IMAGE_BASE }}/app:${{ steps.meta.outputs.sha }}
+          cache-from: type=registry,ref=${{ env.IMAGE_BASE }}/app:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_BASE }}/app:buildcache,mode=max
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Pull pre-built images on the production server and bring stack up.
+  # No building happens on the VPS.
+  # ──────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Server
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          SHA: ${{ needs.build.outputs.sha }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 18m
+          envs: SHA
+          command_timeout: 8m
           script: |
             #!/bin/bash
-            # ═══════════════════════════════════════════════════════════════
-            # The Book Times — Production Deploy Script
-            # Designed for 1-vCPU / 1GB RAM servers
-            # ═══════════════════════════════════════════════════════════════
-
-            # CRITICAL: pipefail makes `cmd | tee | tail` return cmd's exit
-            # code instead of tail's. Without this, build failures are
-            # silently swallowed and the workflow reports success.
             set -o pipefail
 
             DEPLOY_DIR=$(echo "${{ secrets.DEPLOY_PATH }}" | tr -d '[:space:]')
             COMPOSE_FILE="docker-compose.prod.yml"
             LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
 
-            # ── Helpers ─────────────────────────────────────────────────
             log()  { echo "[$(date +%H:%M:%S)] $1" | tee -a "$LOG_FILE"; }
             ok()   { echo "[$(date +%H:%M:%S)] ✅ $1" | tee -a "$LOG_FILE"; }
             warn() { echo "[$(date +%H:%M:%S)] ⚠️  $1" | tee -a "$LOG_FILE"; }
             fail() { echo "[$(date +%H:%M:%S)] ❌ $1" | tee -a "$LOG_FILE"; }
 
-            # ── Step 0: Pre-flight checks ───────────────────────────────
-            log "═══ DEPLOY STARTED ═══"
+            log "═══ DEPLOY STARTED (sha=$SHA) ═══"
 
-            if [ ! -d "$DEPLOY_DIR" ]; then
-              fail "Deploy directory $DEPLOY_DIR does not exist"
-              exit 1
-            fi
+            if [ ! -d "$DEPLOY_DIR" ]; then fail "Deploy dir missing"; exit 1; fi
             cd "$DEPLOY_DIR"
+            if [ ! -f ".env" ]; then fail ".env missing"; exit 1; fi
+            if [ ! -f "$COMPOSE_FILE" ]; then fail "$COMPOSE_FILE missing"; exit 1; fi
 
-            if [ ! -f ".env" ]; then
-              fail ".env file missing in $DEPLOY_DIR"
-              exit 1
-            fi
-
-            if [ ! -f "$COMPOSE_FILE" ]; then
-              fail "$COMPOSE_FILE missing in $DEPLOY_DIR"
-              exit 1
-            fi
-
-            # ── Step 1: System diagnostics ──────────────────────────────
-            log "── System Info ──"
             log "Disk: $(df -h / | tail -1 | awk '{print $5 " used, " $4 " free"}')"
             log "Memory: $(free -m | awk '/Mem:/{printf "%dMB used / %dMB total, %dMB available", $3, $2, $7}')"
-            log "Swap: $(free -m | awk '/Swap:/{printf "%dMB used / %dMB total", $3, $2}')"
-            log "Load: $(cat /proc/loadavg | awk '{print $1, $2, $3}')"
-            log "Docker: $(docker --version 2>&1 | head -1)"
 
-            DISK_FREE=$(df / | tail -1 | awk '{print $4}')
-            if [ "$DISK_FREE" -lt 1048576 ]; then
-              warn "Low disk space: less than 1GB free"
-            fi
-
-            MEM_AVAIL=$(free -m | awk '/Mem:/{print $7}')
-            if [ "$MEM_AVAIL" -lt 200 ]; then
-              warn "Low memory: ${MEM_AVAIL}MB available"
-            fi
-
-            # ── Step 2: Record current state for rollback ───────────────
-            log "── Recording current state ──"
-            PREV_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-            log "Previous commit: $PREV_COMMIT"
-
-            PREV_SERVER_IMAGE=$(docker inspect thebooktimes-server --format '{{.Image}}' 2>/dev/null || echo "none")
-            PREV_APP_IMAGE=$(docker inspect thebooktimes-app --format '{{.Image}}' 2>/dev/null || echo "none")
-            log "Previous server image: ${PREV_SERVER_IMAGE:0:20}..."
-            log "Previous app image: ${PREV_APP_IMAGE:0:20}..."
-
-            # Snapshot which containers are currently running
-            log "Current containers:"
-            docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
-
-            # ── Step 3: Pull latest code ────────────────────────────────
+            # ── Pull latest code (for compose file + .env structure) ──
             log "── Pulling code ──"
-            if ! git fetch origin master 2>&1 | tee -a "$LOG_FILE"; then
-              fail "git fetch failed"
+            git fetch origin master 2>&1 | tee -a "$LOG_FILE"
+            git reset --hard origin/master 2>&1 | tee -a "$LOG_FILE"
+            ok "Code at $(git rev-parse --short HEAD)"
+
+            # ── Login to GHCR ──
+            log "── Logging into GHCR ──"
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+              -u "${{ github.actor }}" --password-stdin 2>&1 | tee -a "$LOG_FILE"
+
+            # ── Pin image tags to this commit so compose pulls exactly these ──
+            export SERVER_IMAGE="ghcr.io/muhammadrizwankhalil/books_recommendation/server:${SHA}"
+            export APP_IMAGE="ghcr.io/muhammadrizwankhalil/books_recommendation/app:${SHA}"
+            log "SERVER_IMAGE=$SERVER_IMAGE"
+            log "APP_IMAGE=$APP_IMAGE"
+
+            # Persist for future restarts (e.g. after server reboot)
+            grep -v '^SERVER_IMAGE=\|^APP_IMAGE=' .env > .env.tmp || true
+            echo "SERVER_IMAGE=$SERVER_IMAGE" >> .env.tmp
+            echo "APP_IMAGE=$APP_IMAGE"       >> .env.tmp
+            mv .env.tmp .env
+
+            # ── Pull images ──
+            log "── Pulling images ──"
+            if ! docker compose -f "$COMPOSE_FILE" pull server app 2>&1 | tee -a "$LOG_FILE"; then
+              fail "Image pull failed"
               exit 1
             fi
+            ok "Images pulled"
 
-            NEW_COMMIT=$(git rev-parse origin/master)
-            if [ "$PREV_COMMIT" = "$NEW_COMMIT" ]; then
-              log "No new commits — still deploying to ensure containers match"
-            else
-              log "Updating: $PREV_COMMIT → $NEW_COMMIT"
-              log "Changes: $(git log --oneline ${PREV_COMMIT}..origin/master 2>/dev/null | head -10)"
-            fi
-
-            if ! git reset --hard origin/master 2>&1 | tee -a "$LOG_FILE"; then
-              fail "git reset failed"
-              exit 1
-            fi
-            ok "Code updated to $(git rev-parse --short HEAD)"
-
-            # ── Step 4: Free resources before building ──────────────────
-            log "── Freeing resources ──"
-            docker image prune -f 2>/dev/null | tail -1 || true
-            docker builder prune -f --keep-storage=1GB 2>/dev/null | tail -1 || true
-            sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1 || true
-            log "Post-cleanup disk: $(df -h / | tail -1 | awk '{print $4 " free"}')"
-            log "Post-cleanup memory: $(free -m | awk '/Mem:/{printf "%dMB available", $7}')"
-
-            # ── Step 5: Build images (one at a time for low-RAM) ────────
-            log "── Building server image ──"
-            if ! docker compose -f "$COMPOSE_FILE" build --progress=plain server 2>&1 | tee -a "$LOG_FILE" | tail -20; then
-              fail "Server build failed!"
-              log "── SERVER BUILD LOG (last 40 lines) ──"
-              tail -40 "$LOG_FILE"
-              exit 1
-            fi
-            ok "Server image built"
-
-            # Free memory between builds
-            sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1 || true
-
-            log "── Building app image ──"
-            # Export commit SHA so Dockerfile can stamp it into sw.js,
-            # invalidating PWA service-worker caches on every deploy.
-            export BUILD_ID=$(git rev-parse --short HEAD)
-            log "BUILD_ID: $BUILD_ID"
-            if ! docker compose -f "$COMPOSE_FILE" build --progress=plain app 2>&1 | tee -a "$LOG_FILE" | tail -20; then
-              fail "App build failed!"
-              log "── APP BUILD LOG (last 40 lines) ──"
-              tail -40 "$LOG_FILE"
-
-              # Rollback: restore previous code so containers can restart cleanly
-              warn "Rolling back to previous commit $PREV_COMMIT"
-              git reset --hard "$PREV_COMMIT" 2>/dev/null || true
-
-              # Restart existing containers (they still use old images)
-              log "Restarting existing containers with old images..."
-              docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || true
-
-              exit 1
-            fi
-            ok "App image built"
-
-            # ── Step 5b: Verify images were actually rebuilt ────────────
-            # Catches the case where build was a no-op cache hit but code
-            # has changed (rare, but devastating when it happens).
-            NEW_SERVER_IMAGE=$(docker compose -f "$COMPOSE_FILE" images -q server 2>/dev/null | head -1)
-            NEW_APP_IMAGE=$(docker compose -f "$COMPOSE_FILE" images -q app 2>/dev/null | head -1)
-            log "New server image: ${NEW_SERVER_IMAGE:0:20}..."
-            log "New app image:    ${NEW_APP_IMAGE:0:20}..."
-
-            # ── Step 6: Stop old containers and start new ones ──────────
+            # ── Start containers (force-recreate ensures fresh process) ──
             log "── Starting containers ──"
-
-            # --force-recreate ensures containers are replaced even if image
-            # SHA is unchanged (e.g. config-only changes, or to guarantee a
-            # fresh process after a rebuild that cache-hit every layer).
             if ! docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans 2>&1 | tee -a "$LOG_FILE"; then
-              fail "docker compose up failed!"
-
-              log "── Container status after failure ──"
+              fail "docker compose up failed"
               docker compose -f "$COMPOSE_FILE" ps -a 2>&1 | tee -a "$LOG_FILE"
-              log "── Server logs ──"
               docker compose -f "$COMPOSE_FILE" logs --tail=50 server 2>&1 | tee -a "$LOG_FILE" || true
-              log "── App logs ──"
-              docker compose -f "$COMPOSE_FILE" logs --tail=20 app 2>&1 | tee -a "$LOG_FILE" || true
-
+              docker compose -f "$COMPOSE_FILE" logs --tail=20 app    2>&1 | tee -a "$LOG_FILE" || true
               exit 1
             fi
 
-            # ── Step 7: Wait for health checks ──────────────────────────
-            log "── Waiting for services ──"
-
-            # Wait for server to be healthy (up to 90s = 18 checks × 5s)
-            SERVER_HEALTHY=false
+            # ── Health checks ──
+            log "── Waiting for server health ──"
             for i in $(seq 1 18); do
               STATUS=$(docker inspect --format='{{.State.Health.Status}}' thebooktimes-server 2>/dev/null || echo "missing")
-              if [ "$STATUS" = "healthy" ]; then
-                SERVER_HEALTHY=true
-                ok "Server healthy after $((i * 5))s"
-                break
-              fi
+              if [ "$STATUS" = "healthy" ]; then ok "Server healthy after $((i*5))s"; break; fi
               STATE=$(docker inspect --format='{{.State.Status}}' thebooktimes-server 2>/dev/null || echo "unknown")
               if [ "$STATE" = "exited" ] || [ "$STATE" = "dead" ]; then
-                fail "Server container died (state: $STATE)"
-                log "── Server logs ──"
+                fail "Server died ($STATE)"
                 docker logs thebooktimes-server 2>&1 | tail -40 | tee -a "$LOG_FILE"
                 exit 1
               fi
-              log "  Server: $STATUS (state: $STATE) — waiting... ${i}/18"
+              log "  Server: $STATUS — waiting... ${i}/18"
               sleep 5
             done
 
-            if [ "$SERVER_HEALTHY" != "true" ]; then
-              fail "Server failed to become healthy within 90s"
-              log "── Server logs ──"
-              docker logs thebooktimes-server 2>&1 | tail -40 | tee -a "$LOG_FILE"
-              exit 1
-            fi
-
-            # Wait for app to be healthy (up to 60s = 12 checks × 5s)
-            APP_HEALTHY=false
             for i in $(seq 1 12); do
               STATUS=$(docker inspect --format='{{.State.Health.Status}}' thebooktimes-app 2>/dev/null || echo "missing")
-              if [ "$STATUS" = "healthy" ]; then
-                APP_HEALTHY=true
-                ok "App healthy after $((i * 5))s"
-                break
-              fi
-              STATE=$(docker inspect --format='{{.State.Status}}' thebooktimes-app 2>/dev/null || echo "unknown")
-              if [ "$STATE" = "exited" ] || [ "$STATE" = "dead" ]; then
-                fail "App container died (state: $STATE)"
-                docker logs thebooktimes-app 2>&1 | tail -20 | tee -a "$LOG_FILE"
-                exit 1
-              fi
+              if [ "$STATUS" = "healthy" ]; then ok "App healthy after $((i*5))s"; break; fi
               log "  App: $STATUS — waiting... ${i}/12"
               sleep 5
             done
 
-            if [ "$APP_HEALTHY" != "true" ]; then
-              fail "App failed to become healthy within 60s"
-              docker logs thebooktimes-app 2>&1 | tail -20 | tee -a "$LOG_FILE"
+            # ── Verify endpoints ──
+            API_STATUS=$(curl -sf --max-time 10 http://localhost:8080/api/health 2>/dev/null || true)
+            if echo "$API_STATUS" | grep -q '"status":"ok"'; then ok "API healthy"; else warn "API: $API_STATUS"; fi
+
+            FRONTEND_CODE=$(curl -sf --max-time 10 -o /dev/null -w '%{http_code}' http://localhost:8080/ 2>/dev/null || echo "ERR")
+            if [ "$FRONTEND_CODE" = "200" ]; then ok "Frontend HTTP $FRONTEND_CODE"; else warn "Frontend HTTP $FRONTEND_CODE"; fi
+
+            # ── Verify deployed image SHA matches what we just pushed ──
+            DEPLOYED_APP=$(docker inspect thebooktimes-app --format '{{index .Config.Image}}' 2>/dev/null)
+            if [ "$DEPLOYED_APP" = "$APP_IMAGE" ]; then
+              ok "App image confirmed: $DEPLOYED_APP"
+            else
+              fail "App image mismatch! Expected $APP_IMAGE, got $DEPLOYED_APP"
               exit 1
             fi
 
-            # ── Step 8: Verify endpoints ────────────────────────────────
-            log "── Health checks ──"
-
-            API_STATUS=$(curl -sf --max-time 10 http://localhost:8080/api/health 2>/dev/null)
-            if echo "$API_STATUS" | grep -q '"status":"ok"'; then
-              ok "API: healthy"
-            else
-              warn "API health check unexpected response: $API_STATUS"
-            fi
-
-            FRONTEND_CODE=$(curl -sf --max-time 10 -o /dev/null -w '%{http_code}' http://localhost:8080/ 2>/dev/null)
-            if [ "$FRONTEND_CODE" = "200" ]; then
-              ok "Frontend: HTTP $FRONTEND_CODE"
-            else
-              warn "Frontend returned HTTP $FRONTEND_CODE"
-            fi
-
-            # ── Step 9: Post-deploy cleanup ─────────────────────────────
-            log "── Cleanup ──"
+            # ── Cleanup old images ──
             docker image prune -f 2>/dev/null | tail -1 || true
 
-            # ── Step 10: Summary ────────────────────────────────────────
             log ""
             log "═══════════════════════════════════════════════"
-            log "  DEPLOY COMPLETE"
-            log "  Commit: $(git rev-parse --short HEAD)"
+            log "  DEPLOY COMPLETE — sha=$SHA"
             log "  Disk: $(df -h / | tail -1 | awk '{print $4 " free"}')"
             log "  Memory: $(free -m | awk '/Mem:/{printf "%dMB available", $7}')"
             log "═══════════════════════════════════════════════"
-
             docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}" 2>&1
-            log "Deploy log saved to: $LOG_FILE"
