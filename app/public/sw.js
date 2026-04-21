@@ -1,7 +1,9 @@
 ﻿// The Book Times Service Worker
 // Provides offline caching, asset pre-caching, and API cache-first strategies
 
-const CACHE_VERSION = 'thebooktimes-v1';
+// __BUILD_ID__ is replaced at Docker build time with the commit SHA so each
+// deploy invalidates old caches. Falls back to a stable id for local dev.
+const CACHE_VERSION = 'thebooktimes-__BUILD_ID__';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;

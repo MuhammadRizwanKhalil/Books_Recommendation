@@ -26,9 +26,12 @@ CMD ["npx", "vite", "--host", "0.0.0.0"]
 FROM deps AS build
 COPY . .
 ARG VITE_API_URL=/api
+ARG BUILD_ID=dev
 ENV VITE_API_URL=${VITE_API_URL}
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=512"
+# Inject build id into service worker so each deploy invalidates PWA caches
+RUN sed -i "s/__BUILD_ID__/${BUILD_ID}/g" public/sw.js
 RUN npx vite build
 
 # ── Production stage: serve with nginx ───────────────────────────────────────

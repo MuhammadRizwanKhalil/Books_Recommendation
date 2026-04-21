@@ -29,6 +29,11 @@ jobs:
             # Designed for 1-vCPU / 1GB RAM servers
             # ═══════════════════════════════════════════════════════════════
 
+            # CRITICAL: pipefail makes `cmd | tee | tail` return cmd's exit
+            # code instead of tail's. Without this, build failures are
+            # silently swallowed and the workflow reports success.
+            set -o pipefail
+
             DEPLOY_DIR=$(echo "${{ secrets.DEPLOY_PATH }}" | tr -d '[:space:]')
             COMPOSE_FILE="docker-compose.prod.yml"
             LOG_FILE="/tmp/deploy-$(date +%Y%m%d-%H%M%S).log"
@@ -133,6 +138,10 @@ jobs:
             sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1 || true
 
             log "── Building app image ──"
+            # Export commit SHA so Dockerfile can stamp it into sw.js,
+            # invalidating PWA service-worker caches on every deploy.
+            export BUILD_ID=$(git rev-parse --short HEAD)
+            log "BUILD_ID: $BUILD_ID"
             if ! docker compose -f "$COMPOSE_FILE" build --progress=plain app 2>&1 | tee -a "$LOG_FILE" | tail -20; then
               fail "App build failed!"
               log "── APP BUILD LOG (last 40 lines) ──"
@@ -150,11 +159,21 @@ jobs:
             fi
             ok "App image built"
 
+            # ── Step 5b: Verify images were actually rebuilt ────────────
+            # Catches the case where build was a no-op cache hit but code
+            # has changed (rare, but devastating when it happens).
+            NEW_SERVER_IMAGE=$(docker compose -f "$COMPOSE_FILE" images -q server 2>/dev/null | head -1)
+            NEW_APP_IMAGE=$(docker compose -f "$COMPOSE_FILE" images -q app 2>/dev/null | head -1)
+            log "New server image: ${NEW_SERVER_IMAGE:0:20}..."
+            log "New app image:    ${NEW_APP_IMAGE:0:20}..."
+
             # ── Step 6: Stop old containers and start new ones ──────────
             log "── Starting containers ──"
 
-            # Use --remove-orphans to clean up stale containers
-            if ! docker compose -f "$COMPOSE_FILE" up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE"; then
+            # --force-recreate ensures containers are replaced even if image
+            # SHA is unchanged (e.g. config-only changes, or to guarantee a
+            # fresh process after a rebuild that cache-hit every layer).
+            if ! docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans 2>&1 | tee -a "$LOG_FILE"; then
               fail "docker compose up failed!"
 
               log "── Container status after failure ──"

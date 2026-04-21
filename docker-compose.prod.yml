@@ -117,6 +117,7 @@ services:
       target: production
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
+        BUILD_ID: ${BUILD_ID:-dev}
     container_name: thebooktimes-app
     restart: always
     ports:
