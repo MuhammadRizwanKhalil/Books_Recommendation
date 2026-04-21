@@ -83,28 +83,35 @@ export function PaceIndicator({ bookId }: PaceIndicatorProps) {
   const userVote = data?.userVote || null;
 
   return (
-    <div className="space-y-2" data-testid="pace-indicator-section">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-          <Gauge className="h-4 w-4" />
-          Pacing
-          {totalVotes > 0 && (
-            <span className="text-xs font-normal normal-case">
-              ({totalVotes} vote{totalVotes !== 1 ? 's' : ''})
-            </span>
-          )}
-        </h3>
+    <div
+      className="rounded-2xl border bg-gradient-to-br from-sky-50/60 via-background to-violet-50/40 dark:from-sky-950/20 dark:via-background dark:to-violet-950/20 p-4 sm:p-5 space-y-4"
+      data-testid="pace-indicator-section"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <Gauge className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold leading-tight">Reading Pace</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {totalVotes > 0
+                ? `${totalVotes} reader${totalVotes !== 1 ? 's' : ''} weighed in`
+                : 'How fast does it read?'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {totalVotes === 0 ? (
-        <p className="text-sm text-muted-foreground italic" data-testid="pace-empty">
+        <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground text-center" data-testid="pace-empty">
           {user
-            ? 'No pace data yet — be the first to vote!'
-            : 'No pace data yet. Sign in to vote!'}
-        </p>
+            ? 'No pace data yet — tap a pace below to be the first to vote.'
+            : 'No pace data yet. Sign in to vote.'}
+        </div>
       ) : (
         <div
-          className="flex rounded-full overflow-hidden h-6 bg-muted"
+          className="flex rounded-full overflow-hidden h-9 bg-muted shadow-inner"
           role="group"
           aria-label={`Pace: ${slow.percentage}% slow, ${medium.percentage}% medium, ${fast.percentage}% fast`}
           data-testid="pace-bar"
@@ -123,53 +130,58 @@ export function PaceIndicator({ bookId }: PaceIndicatorProps) {
                 onClick={() => user && handleVote(pace)}
                 disabled={!user || voting}
                 className={cn(
-                  'relative flex items-center justify-center text-white text-xs font-medium transition-all cursor-pointer',
+                  'relative flex items-center justify-center gap-1.5 text-white text-xs font-semibold transition-all',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
                   config.bgClass,
-                  !user && 'cursor-default',
-                  userVote === pace && `ring-2 ring-offset-1 ${config.activeClass}`,
+                  user ? 'cursor-pointer hover:brightness-110' : 'cursor-default',
+                  userVote === pace && `ring-2 ring-offset-2 ring-offset-background ${config.activeClass}`,
                 )}
                 style={{ flex: segment.percentage }}
                 aria-label={`${config.label}: ${segment.percentage}% (${segment.votes} votes)${userVote === pace ? ', your vote' : ''}`}
                 data-testid={`pace-segment-${pace}`}
                 title={`${config.label}: ${segment.percentage}% (${segment.votes} votes)`}
               >
-                <span className="truncate px-1">
-                  {segment.percentage >= 15 && (
-                    <>{config.emoji} {segment.percentage}%</>
-                  )}
-                </span>
+                {segment.percentage >= 12 && (
+                  <span className="truncate px-1.5 inline-flex items-center gap-1">
+                    <span aria-hidden>{config.emoji}</span>
+                    <span className="tabular-nums">{segment.percentage}%</span>
+                  </span>
+                )}
               </motion.button>
             );
           })}
         </div>
       )}
 
-      {/* Legend + vote buttons for empty/low-vote scenarios or direct voting */}
-      <div className="flex justify-between text-xs text-muted-foreground" data-testid="pace-legend">
+      {/* Legend / vote chips */}
+      <div className="grid grid-cols-3 gap-2" data-testid="pace-legend">
         {(['slow', 'medium', 'fast'] as PaceValue[]).map((pace) => {
           const config = PACE_CONFIG[pace];
           const segment = pace === 'slow' ? slow : pace === 'medium' ? medium : fast;
+          const isActive = userVote === pace;
           return (
             <button
               key={pace}
               onClick={() => user && handleVote(pace)}
               disabled={!user || voting}
               className={cn(
-                'flex items-center gap-1 py-1 px-2 rounded-md transition-colors',
-                user && 'hover:bg-muted cursor-pointer',
-                !user && 'cursor-default',
-                userVote === pace && 'font-semibold text-foreground bg-muted',
+                'group flex flex-col items-center gap-1 rounded-xl border bg-background px-2 py-2.5 transition-all',
+                user && 'hover:border-foreground/30 hover:shadow-sm cursor-pointer',
+                !user && 'cursor-default opacity-90',
+                isActive && 'border-foreground/40 ring-2 ring-offset-1 shadow-sm',
+                isActive && config.activeClass,
               )}
-              aria-label={`Vote ${config.label}${userVote === pace ? ' (your vote)' : ''}`}
+              aria-label={`Vote ${config.label}${isActive ? ' (your vote)' : ''}`}
               data-testid={`pace-label-${pace}`}
             >
-              <span
-                className={cn('w-2 h-2 rounded-full', config.bgClass)}
-                aria-hidden="true"
-              />
-              {config.emoji} {config.label}
-              {totalVotes > 0 && <span className="ml-0.5">{segment.percentage}%</span>}
+              <span className="text-lg leading-none" aria-hidden>{config.emoji}</span>
+              <span className="text-xs font-semibold">{config.label}</span>
+              {totalVotes > 0 && (
+                <span className="text-[11px] text-muted-foreground tabular-nums">{segment.percentage}%</span>
+              )}
+              {isActive && (
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">Your vote</span>
+              )}
             </button>
           );
         })}

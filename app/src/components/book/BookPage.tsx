@@ -42,6 +42,7 @@ import { isAnalyticsEnabled } from '@/lib/analytics';
 import { StoryArcChart } from './StoryArcChart';
 import { AIInsights } from './AIInsights';
 import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface BookPageProps {
   book: Book;
@@ -160,12 +161,13 @@ export function BookPage({ book, onBack }: BookPageProps) {
         <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10">
 
           {/* LEFT COLUMN â€” Image + Affiliate */}
-          <div className="space-y-5 lg:max-w-none">
+          <div className="space-y-5 flex flex-col items-center lg:items-stretch lg:max-w-none">
             {/* Cover with zoom modal */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
+              className="w-full max-w-[260px] sm:max-w-[300px] lg:max-w-none"
             >
               <CoverZoom
                 bookId={book.id}
@@ -174,44 +176,52 @@ export function BookPage({ book, onBack }: BookPageProps) {
               />
             </motion.div>
 
-            {/* Quick Actions — primary status + compact icon row */}
-            <div className="space-y-2">
-              <ReadingStatusButton bookId={book.id} className="w-full" />
-              <div className="flex items-center gap-2">
+            {/* Reader actions panel */}
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 sm:p-5 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Reader Actions</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Track your reading, save this book, and share it.</p>
+              </div>
+
+              <ReadingStatusButton bookId={book.id} className="w-full justify-between" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                 <Button
                   variant={isLiked ? 'default' : 'outline'}
-                  size="icon"
-                  aria-label={isLiked ? 'Remove from wishlist' : 'Add to wishlist'}
-                  title={isLiked ? 'In wishlist' : 'Add to wishlist'}
-                  className="shrink-0"
+                  className="w-full justify-start gap-2"
                   onClick={() => toggleWishlist(book)}
                 >
                   <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                  {isLiked ? 'In Wishlist' : 'Add to Wishlist'}
                 </Button>
-                <TBRQueueButton bookId={book.id} className="flex-1" />
-                <AddToListButton bookId={book.id} bookTitle={book.title} className="flex-1" />
+                <TBRQueueButton bookId={book.id} className="w-full justify-start" />
+                <AddToListButton bookId={book.id} bookTitle={book.title} className="w-full justify-start" />
+              </div>
+
+              <OwnedBookButton bookId={book.id} />
+
+              <div className="pt-1">
+                <SocialShare
+                  url={`${window.location.origin}/book/${book.slug}`}
+                  title={`${book.title} by ${book.author}`}
+                  description={book.description?.slice(0, 200)}
+                  variant="full"
+                />
               </div>
             </div>
 
             {/* Private personal tags */}
-            <TagManager bookId={book.slug || book.id} />
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4">
+              <TagManager bookId={book.slug || book.id} />
+            </div>
 
             {/* Progress tracker for currently-reading books */}
-            <ProgressTracker bookId={book.id} totalPages={book.pageCount} />
-
-            {/* Owned books tracking */}
-            <OwnedBookButton bookId={book.id} />
-
-            {/* Social Sharing */}
-            <SocialShare
-              url={`${window.location.origin}/book/${book.slug}`}
-              title={`${book.title} by ${book.author}`}
-              description={book.description?.slice(0, 200)}
-              variant="icons"
-            />
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4">
+              <ProgressTracker bookId={book.id} totalPages={book.pageCount} />
+            </div>
 
             {/* Affiliate Links */}
-            <div className="p-4 bg-muted/50 rounded-xl space-y-3">
+            <div className="w-full max-w-[420px] lg:max-w-none p-4 bg-muted/50 rounded-xl space-y-3">
               <h3 className="font-semibold text-sm">Buy This Book</h3>
               {book.price && (
                 <div className="flex items-baseline gap-2">
@@ -276,7 +286,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Book Details Card */}
-            <div className="p-4 bg-muted/50 rounded-xl space-y-3">
+            <div className="w-full max-w-[420px] lg:max-w-none p-4 bg-muted/50 rounded-xl space-y-3">
               <h3 className="font-semibold text-sm">Book Details</h3>
               <div className="grid gap-3 text-sm">
                 {book.publisher && (
@@ -323,7 +333,9 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Editions Browser */}
-            <EditionsBrowser bookId={book.id} />
+            <div className="w-full max-w-[420px] lg:max-w-none">
+              <EditionsBrowser bookId={book.id} />
+            </div>
 
           </div>
 
@@ -370,14 +382,12 @@ export function BookPage({ book, onBack }: BookPageProps) {
                   <SeriesBadge series={book.series} />
                 </div>
               )}
-              {/* Mood Tags */}
-              <div className="mt-4">
-                <MoodTags bookId={book.id} />
-              </div>
-              {/* Pace Indicator */}
-              <div className="mt-4">
-                <PaceIndicator bookId={book.id} />
-              </div>
+            </div>
+
+            {/* Reader sentiment row — Moods + Pace side-by-side on larger screens */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MoodTags bookId={book.id} />
+              <PaceIndicator bookId={book.id} />
             </div>
 
             {/* Rating Bar */}
@@ -394,74 +404,45 @@ export function BookPage({ book, onBack }: BookPageProps) {
               <InlineRatingWidget bookSlug={book.slug} userRating={book.userRating} />
             </div>
 
-            {/* Reading Counts */}
-            <ReadingCounts bookId={book.id} />
+            {/* Structured content hub instead of many stacked sections and separator lines */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 gap-1 bg-muted/60 p-1.5 rounded-xl">
+                <TabsTrigger value="overview" className="h-9">Overview</TabsTrigger>
+                <TabsTrigger value="community" className="h-9">Community</TabsTrigger>
+                <TabsTrigger value="reviews" className="h-9">Reviews</TabsTrigger>
+                <TabsTrigger value="tools" className="h-9">Tools</TabsTrigger>
+              </TabsList>
 
-            {/* Friends reading this */}
-            <FriendsReadingThis bookId={book.id} />
+              <TabsContent value="overview" className="mt-4 space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
+                <ReadingCounts bookId={book.id} />
+                <FriendsReadingThis bookId={book.id} />
+                <ContentWarnings bookId={book.id} />
+                <StoryArcChart bookId={book.id} />
+                <AIInsights bookId={book.id} />
+                <CharactersList bookId={book.id} />
+                <DescriptionSection description={book.description} />
+                {book.authorsData && book.authorsData.length > 0 && (
+                  <AuthorSection authors={book.authorsData} />
+                )}
+                <BookRecommendations bookId={book.id} />
+                <FeaturedInBlog bookId={book.id} />
+                <BookQuotes bookId={book.id} />
+              </TabsContent>
 
-            {/* Content Warnings (collapsed by default) */}
-            <ContentWarnings bookId={book.id} />
+              <TabsContent value="community" className="mt-4 space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
+                <BookDiscussions bookId={book.id} />
+                <CommunityPrompts bookId={book.id} />
+              </TabsContent>
 
-            {/* Story arc visualization */}
-            <StoryArcChart bookId={book.id} />
+              <TabsContent value="reviews" className="mt-4 rounded-2xl border bg-card p-4 sm:p-6">
+                <BookReviews bookId={book.id} />
+              </TabsContent>
 
-            {/* AI insights */}
-            <AIInsights bookId={book.id} />
-
-            {/* Characters */}
-            <CharactersList bookId={book.id} />
-
-            {/* Description */}
-            <DescriptionSection description={book.description} />
-
-            <Separator />
-
-            {/* About the Author */}
-            {book.authorsData && book.authorsData.length > 0 && (
-              <>
-                <AuthorSection authors={book.authorsData} />
-                <Separator />
-              </>
-            )}
-
-            {/* Recommendations (moved above reviews for better engagement) */}
-            <BookRecommendations bookId={book.id} />
-
-            {/* Featured in blog cross-links */}
-            <FeaturedInBlog bookId={book.id} />
-
-            <Separator />
-
-            {/* Memorable Quotes */}
-            <BookQuotes bookId={book.id} />
-
-            <Separator />
-
-            {/* Personal reading journal */}
-            <ReadingJournal bookId={book.id} />
-
-            <Separator />
-
-            {/* Quizzes & Trivia */}
-            <BookQuizzes bookId={book.id} />
-
-            <Separator />
-
-            {/* Discussion forums */}
-            <BookDiscussions bookId={book.id} />
-
-            <Separator />
-
-            {/* Community prompts */}
-            <CommunityPrompts bookId={book.id} />
-
-            <Separator />
-
-            {/* Reviews */}
-            <div>
-              <BookReviews bookId={book.id} />
-            </div>
+              <TabsContent value="tools" className="mt-4 space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
+                <ReadingJournal bookId={book.id} />
+                <BookQuizzes bookId={book.id} />
+              </TabsContent>
+            </Tabs>
           </motion.div>
         </div>
       </div>

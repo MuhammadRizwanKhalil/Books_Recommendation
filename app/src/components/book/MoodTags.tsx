@@ -47,35 +47,42 @@ export function MoodTags({ bookId }: MoodTagsProps) {
   const hasMore = moods.length > 5;
 
   return (
-    <div className="space-y-3" data-testid="mood-tags-section">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-          <Smile className="h-4 w-4" />
-          Moods
-          {totalVotes > 0 && (
-            <span className="text-xs font-normal normal-case">
-              ({totalVotes} vote{totalVotes !== 1 ? 's' : ''})
-            </span>
-          )}
-        </h3>
+    <div
+      className="rounded-2xl border bg-gradient-to-br from-rose-50/60 via-background to-amber-50/40 dark:from-rose-950/20 dark:via-background dark:to-amber-950/20 p-4 sm:p-5 space-y-4"
+      data-testid="mood-tags-section"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <Smile className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold leading-tight">Reader Moods</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {totalVotes > 0
+                ? `${totalVotes} vote${totalVotes !== 1 ? 's' : ''} from readers`
+                : 'How does this book feel?'}
+            </p>
+          </div>
+        </div>
         {user ? (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setVoteModalOpen(true)}
-            className="text-xs h-7"
+            className="h-8 shrink-0"
             data-testid="mood-vote-button"
           >
-            Vote on moods
+            Vote
           </Button>
         ) : null}
       </div>
 
       {moods.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic" data-testid="mood-empty">
+        <p className="text-sm text-muted-foreground" data-testid="mood-empty">
           {user
-            ? 'Be the first to add moods — click "Vote on moods" above!'
-            : 'No moods yet. Sign in to be the first to tag this book!'}
+            ? 'Be the first to add moods — tap Vote above.'
+            : 'No moods yet. Sign in to be the first to tag this book.'}
         </p>
       ) : (
         <>
@@ -90,7 +97,7 @@ export function MoodTags({ bookId }: MoodTagsProps) {
           {hasMore && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-xs text-primary hover:underline flex items-center gap-1"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
               data-testid="mood-show-all"
             >
               {expanded ? (
@@ -121,27 +128,27 @@ function MoodPill({ mood }: { mood: BookMoodEntry }) {
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
-      className="relative overflow-hidden rounded-full border border-border px-3 py-1.5 text-sm flex items-center gap-1.5 select-none min-w-fit"
+      className="relative overflow-hidden rounded-full border bg-background/80 backdrop-blur px-3 py-1.5 text-sm flex items-center gap-1.5 select-none min-w-fit shadow-sm"
       aria-label={`${mood.name} ${mood.percentage}%${mood.userVoted ? ', you voted' : ''}`}
       data-testid={`mood-pill-${mood.slug}`}
     >
       {/* Percentage background bar */}
       <div
-        className={`absolute inset-y-0 left-0 opacity-15 rounded-full transition-all duration-500`}
+        className="absolute inset-y-0 left-0 opacity-25 rounded-full transition-all duration-500"
         style={{
           width: `${mood.percentage}%`,
-          backgroundColor: mood.color,
+          background: `linear-gradient(90deg, ${mood.color}, ${mood.color}aa)`,
         }}
       />
-      <span className="relative z-10" aria-hidden="true">{mood.emoji}</span>
+      <span className="relative z-10 text-base leading-none" aria-hidden="true">{mood.emoji}</span>
       <span className="relative z-10 font-medium">{mood.name}</span>
-      <span className="relative z-10 text-xs text-muted-foreground">{mood.percentage}%</span>
+      <span className="relative z-10 text-[11px] font-semibold text-muted-foreground tabular-nums">{mood.percentage}%</span>
       {mood.userVoted && (
         <span
-          className="relative z-10 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
+          className="relative z-10 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground"
           data-testid="mood-user-voted"
         >
-          You voted
+          ✓ You
         </span>
       )}
     </motion.div>
