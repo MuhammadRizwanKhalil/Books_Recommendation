@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface PaceIndicatorProps {
   bookId: string;
+  compact?: boolean;
 }
 
 const PACE_CONFIG: Record<PaceValue, { label: string; emoji: string; color: string; bgClass: string; activeClass: string }> = {
@@ -16,7 +17,7 @@ const PACE_CONFIG: Record<PaceValue, { label: string; emoji: string; color: stri
   fast: { label: 'Fast', emoji: '🚀', color: '#EF4444', bgClass: 'bg-red-500', activeClass: 'ring-red-500' },
 };
 
-export function PaceIndicator({ bookId }: PaceIndicatorProps) {
+export function PaceIndicator({ bookId, compact = false }: PaceIndicatorProps) {
   const { user } = useAuth();
   const [data, setData] = useState<PaceResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,37 @@ export function PaceIndicator({ bookId }: PaceIndicatorProps) {
   const medium = data?.medium || { votes: 0, percentage: 0 };
   const fast = data?.fast || { votes: 0, percentage: 0 };
   const userVote = data?.userVote || null;
+
+  // Compact inline variant — small segmented bar with legend
+  if (compact) {
+    if (totalVotes === 0) return null;
+    const dominant = (['slow', 'medium', 'fast'] as PaceValue[])
+      .map((p) => ({ p, pct: p === 'slow' ? slow.percentage : p === 'medium' ? medium.percentage : fast.percentage }))
+      .sort((a, b) => b.pct - a.pct)[0];
+    const dominantConfig = PACE_CONFIG[dominant.p];
+    return (
+      <div className="flex items-center gap-2 flex-wrap" data-testid="pace-indicator-compact">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <Gauge className="h-3 w-3" />
+          Pace
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs">
+          <span aria-hidden>{dominantConfig.emoji}</span>
+          <span className="font-medium">{dominantConfig.label}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">{dominant.pct}%</span>
+        </span>
+        <div className="flex h-1.5 w-24 overflow-hidden rounded-full bg-muted" aria-hidden>
+          {(['slow', 'medium', 'fast'] as PaceValue[]).map((pace) => {
+            const segment = pace === 'slow' ? slow : pace === 'medium' ? medium : fast;
+            if (segment.percentage === 0) return null;
+            const config = PACE_CONFIG[pace];
+            return <div key={pace} className={config.bgClass} style={{ flex: segment.percentage }} />;
+          })}
+        </div>
+        <span className="text-[11px] text-muted-foreground">· {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+      </div>
+    );
+  }
 
   return (
     <div

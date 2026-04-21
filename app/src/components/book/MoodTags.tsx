@@ -9,9 +9,10 @@ import { MoodVoteModal } from './MoodVoteModal';
 
 interface MoodTagsProps {
   bookId: string;
+  compact?: boolean;
 }
 
-export function MoodTags({ bookId }: MoodTagsProps) {
+export function MoodTags({ bookId, compact = false }: MoodTagsProps) {
   const { user } = useAuth();
   const [data, setData] = useState<BookMoodsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,37 @@ export function MoodTags({ bookId }: MoodTagsProps) {
   const totalVotes = data?.totalVotes || 0;
   const displayedMoods = expanded ? moods : moods.slice(0, 5);
   const hasMore = moods.length > 5;
+
+  // Compact inline variant — no card, no header, just a tight pill row
+  if (compact) {
+    if (moods.length === 0) return null;
+    const topMoods = moods.slice(0, 4);
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap" data-testid="mood-tags-compact">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <Smile className="h-3 w-3" />
+          Moods
+        </span>
+        {topMoods.map((mood) => (
+          <span
+            key={mood.id}
+            className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
+            data-testid={`mood-pill-compact-${mood.slug}`}
+          >
+            <span aria-hidden>{mood.emoji}</span>
+            <span className="font-medium">{mood.name}</span>
+            <span className="text-[10px] text-muted-foreground tabular-nums">{mood.percentage}%</span>
+          </span>
+        ))}
+        {moods.length > topMoods.length && (
+          <span className="text-[11px] text-muted-foreground">+{moods.length - topMoods.length}</span>
+        )}
+        {totalVotes > 0 && (
+          <span className="text-[11px] text-muted-foreground">· {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
