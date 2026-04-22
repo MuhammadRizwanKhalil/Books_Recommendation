@@ -65,7 +65,7 @@ export function ReadingStatsPage() {
   // Unauthenticated
   if (!isAuthenticated) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 text-center space-y-4" data-testid="stats-auth-required">
           <BarChart3 className="h-12 w-12 text-primary mx-auto" />
           <h1 className="text-3xl font-bold">Reading Statistics</h1>
@@ -82,7 +82,7 @@ export function ReadingStatsPage() {
 
   if (loading) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
@@ -92,7 +92,7 @@ export function ReadingStatsPage() {
 
   if (error) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 text-center space-y-4" data-testid="stats-error">
           <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto" />
           <h1 className="text-2xl font-bold">Something went wrong</h1>
@@ -108,7 +108,7 @@ export function ReadingStatsPage() {
   const hasData = stats.booksRead > 0;
 
   return (
-    <main className="pt-16">
+    <main>
       <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8" data-testid="reading-stats-page">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

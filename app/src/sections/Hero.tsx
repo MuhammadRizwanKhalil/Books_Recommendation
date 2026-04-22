@@ -49,8 +49,8 @@ export function Hero() {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-background to-background" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.10),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--primary)/0.05),transparent_50%)]" />
-      <div className="absolute top-20 right-[15%] w-72 h-72 rounded-full bg-primary/[0.04] blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-      <div className="absolute bottom-20 left-[10%] w-56 h-56 rounded-full bg-primary/[0.03] blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      <div className="absolute top-20 right-[15%] h-72 w-72 rounded-full bg-primary/[0.04] blur-3xl animate-pulse [animation-duration:4s] motion-reduce:animate-none" />
+      <div className="absolute bottom-20 left-[10%] h-56 w-56 rounded-full bg-primary/[0.03] blur-3xl animate-pulse [animation-duration:6s] [animation-delay:2s] motion-reduce:animate-none" />
       <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:48px_48px]" />
 
       <motion.div
@@ -62,9 +62,9 @@ export function Hero() {
         <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-7">
           <motion.div className="flex justify-center" variants={itemVariants}>
             <Badge variant="secondary" className="px-4 py-1.5 text-xs font-medium gap-1.5 shadow-sm border border-border/50 backdrop-blur-sm">
-              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+              <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse motion-reduce:animate-none" />
               {heroBadge}
-              <Award className="w-3 h-3 text-amber-500 ml-1" />
+              <Award className="ml-1 h-3 w-3 text-amber-500" />
             </Badge>
           </motion.div>
 
@@ -90,7 +90,7 @@ export function Hero() {
                   key={term}
                   href={`/search?q=${encodeURIComponent(term)}`}
                   onClick={(e) => { e.preventDefault(); navigate(`/search?q=${encodeURIComponent(term)}`); }}
-                  className="text-xs text-primary/80 hover:text-primary hover:underline underline-offset-4 transition-colors"
+                  className="rounded-sm text-xs text-primary/80 underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {term}
                 </a>
@@ -107,7 +107,7 @@ export function Hero() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
               >
-                <div className={`p-2.5 rounded-xl ${stat.color} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md`}>
+                <div className={`rounded-xl p-2.5 ${stat.color} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md motion-reduce:transition-none motion-reduce:group-hover:scale-100`}>
                   <stat.icon className="h-4 w-4" />
                 </div>
                 <div className="text-left">
@@ -118,17 +118,17 @@ export function Hero() {
             ))}
           </motion.div>
 
-          <motion.div className="flex flex-row flex-wrap justify-center gap-3 pt-1" variants={itemVariants}>
-            <Button size="lg" className="h-11 px-8 text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300" asChild>
+          <motion.div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 pt-1" variants={itemVariants}>
+            <Button size="lg" className="h-11 w-full px-8 text-sm font-semibold shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-primary/40 motion-reduce:transition-none motion-reduce:hover:scale-100 sm:w-auto" asChild>
               <a href="#trending" onClick={(e) => { e.preventDefault(); scrollToElement('trending'); }}>
                 {t('hero.exploreTrending')}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </a>
             </Button>
-            <Button size="lg" variant="outline" className="h-11 px-8 text-sm font-semibold hover:bg-primary/5 transition-all duration-300" asChild>
+            <Button size="lg" variant="outline" className="h-11 w-full px-8 text-sm font-semibold transition-all duration-300 hover:bg-primary/5 motion-reduce:transition-none sm:w-auto" asChild>
               <a href="#categories" onClick={(e) => { e.preventDefault(); scrollToElement('categories'); }}>{t('sections.categories')}</a>
             </Button>
-            <Button size="lg" variant="ghost" className="h-11 px-6 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300" onClick={() => navigate('/for-you')}>
+            <Button size="lg" variant="ghost" className="h-11 w-full px-6 text-sm font-semibold text-muted-foreground transition-all duration-300 hover:text-primary motion-reduce:transition-none sm:w-auto" onClick={() => navigate('/for-you')}>
               <Sparkles className="mr-1.5 h-4 w-4" />
               For You
             </Button>

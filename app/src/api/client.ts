@@ -3,6 +3,7 @@
 // provides typed wrappers for every endpoint.
 
 import { isAnalyticsEnabled } from '@/lib/analytics';
+import type { AdminGoogleAnalyticsResponse } from '@/types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -1363,6 +1364,12 @@ export const analyticsApi = {
     avgRating: number;
   }>('/analytics/public-stats'),
 
+  // Public popular searches (top searched terms — falls back to settings/defaults if empty)
+  popularSearches: (limit = 20, days = 30) =>
+    apiFetch<{ terms: { query: string; count: number }[]; period?: string }>(
+      `/analytics/popular-searches?limit=${limit}&days=${days}`,
+    ),
+
   // Public tracking (production only)
   trackEvent: (eventType: string, entityType?: string, entityId?: string, metadata?: any) => {
     if (!isAnalyticsEnabled()) return Promise.resolve({ success: true } as any);
@@ -1395,7 +1402,7 @@ export const analyticsApi = {
   topPages: (days = 30) => apiFetch<any[]>(`/analytics/top-pages?days=${days}`),
   eventsSummary: (days = 30) => apiFetch<any[]>(`/analytics/events-summary?days=${days}`),
   affiliateReport: (days = 30) => apiFetch<any>(`/analytics/affiliate-report?days=${days}`),
-  googleAnalytics: () => apiFetch<any>('/analytics/google'),
+  googleAnalytics: (days = 30) => apiFetch<AdminGoogleAnalyticsResponse>(`/analytics/google?days=${days}`),
 };
 
 // â”€â”€ Wishlist API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

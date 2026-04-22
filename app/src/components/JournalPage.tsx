@@ -66,7 +66,7 @@ export function JournalPage() {
 
   if (!isAuthenticated) {
     return (
-      <main className="pt-16" data-testid="journal-page-guest">
+      <main data-testid="journal-page-guest">
         <div className="container mx-auto max-w-2xl px-4 py-16 text-center space-y-4">
           <NotebookPen className="h-12 w-12 text-primary mx-auto" />
           <h1 className="text-3xl font-bold">My Reading Journal</h1>
@@ -78,7 +78,7 @@ export function JournalPage() {
   }
 
   return (
-    <main className="pt-16" data-testid="journal-page">
+    <main data-testid="journal-page">
       <div className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
         <section className="rounded-2xl border bg-card p-6 space-y-3">
           <h1 className="text-3xl font-bold flex items-center gap-2">

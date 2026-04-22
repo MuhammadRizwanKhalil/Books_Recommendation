@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -60,8 +62,8 @@ section:not(#hero) {
 
 /* Horizontal scroll containers */
 .scroll-fade {
-  mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
 }
 
 /* Section divider utility */
@@ -81,6 +83,8 @@ section:not(#hero) {
 
 @layer base {
   :root {
+    --font-brand-ui: 'Sora', ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    --font-brand-display: 'Fraunces', ui-serif, Georgia, Cambria, serif;
     --background: 38 35% 93%;
     --foreground: 20 20% 10%;
     --card: 40 30% 97%;
@@ -149,6 +153,14 @@ section:not(#hero) {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.font-brand-ui {
+  font-family: var(--font-brand-ui);
+}
+
+.font-brand-display {
+  font-family: var(--font-brand-display);
 }
 
 /* Book recommendation cards inside blog posts */

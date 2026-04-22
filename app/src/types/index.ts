@@ -182,3 +182,49 @@ export interface SearchFilters {
   priceMin?: number;
   priceMax?: number;
 }
+
+// Admin analytics types
+export interface AdminAnalyticsDailyPoint {
+  date: string;
+  sessions: number;
+  users: number;
+  pageViews: number;
+  bounceRate: number;
+  avgSessionDuration: number;
+  engagementRate: number;
+}
+
+export interface AdminAnalyticsSummary {
+  totalSessions: number;
+  totalUsers: number;
+  totalPageViews: number;
+  avgBounceRate: number;
+  avgSessionDuration: number;
+  pagesPerSession: number;
+  engagementRate: number;
+}
+
+export interface AdminGoogleAnalyticsResponse {
+  reporting: {
+    dateRange: { start: string; end: string };
+    dailyData: AdminAnalyticsDailyPoint[];
+    summary: AdminAnalyticsSummary;
+  };
+  demographics: {
+    countries: Array<{ country: string; users: number; percentage: number }>;
+    devices: Array<{ device: string; sessions: number; percentage: number }>;
+    browsers: Array<{ browser: string; sessions: number; percentage: number }>;
+  };
+  trafficSources: Array<{ source: string; sessions: number; percentage: number }>;
+  topPages: Array<{ page: string; title: string; pageViews: number; avgTime: number }>;
+  realtime: {
+    activeUsers: number;
+    topActivePages: Array<{ page: string; users: number }>;
+  };
+  isConfigured: boolean;
+  dataSource: 'ga4' | 'unavailable';
+  propertyId: string | null;
+  measurementId: string;
+  note?: string;
+  queriedAt: string;
+}

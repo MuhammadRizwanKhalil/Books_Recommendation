@@ -618,15 +618,15 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
 
   // ─── Strategy 5: Mood/Theme Similarity (AI-powered) ───────────────
   const sourceAnalysis = await dbGet<any>(
-    `SELECT analysis_data FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
+    `SELECT result FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
     [bookId],
   );
 
-  if (sourceAnalysis?.analysis_data) {
+  if (sourceAnalysis?.result) {
     try {
-      const srcData = typeof sourceAnalysis.analysis_data === 'string'
-        ? JSON.parse(sourceAnalysis.analysis_data)
-        : sourceAnalysis.analysis_data;
+      const srcData = typeof sourceAnalysis.result === 'string'
+        ? JSON.parse(sourceAnalysis.result)
+        : sourceAnalysis.result;
 
       const srcMoods = new Set<string>(srcData?.mood?.moods || []);
       const srcThemes = new Set<string>(srcData?.themes?.themes || []);
@@ -634,7 +634,7 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
       if (srcMoods.size > 0 || srcThemes.size > 0) {
         // Get books with mood analysis that we haven't scored yet
         const moodCandidates = await dbAll<any>(`
-          SELECT b.id, b.computed_score, a.analysis_data
+          SELECT b.id, b.computed_score, a.result
           FROM books b
           JOIN ai_book_analysis a ON a.book_id = b.id
           WHERE a.analysis_type = 'mood'
@@ -648,9 +648,9 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
           if (seen.has(mc.id)) continue;
 
           try {
-            const mcData = typeof mc.analysis_data === 'string'
-              ? JSON.parse(mc.analysis_data)
-              : mc.analysis_data;
+            const mcData = typeof mc.result === 'string'
+              ? JSON.parse(mc.result)
+              : mc.result;
 
             let moodScore = 0;
             const mcMoods = mcData?.mood?.moods || [];
@@ -702,7 +702,7 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
   });
 
   // Determine primary strategy
-  const strategy = sourceAnalysis?.analysis_data ? 'multi_signal_with_mood' : (bookCats.length > 0 ? 'multi_signal' : (authorBooks.length > 0 ? 'author' : 'engagement'));
+  const strategy = sourceAnalysis?.result ? 'multi_signal_with_mood' : (bookCats.length > 0 ? 'multi_signal' : (authorBooks.length > 0 ? 'author' : 'engagement'));
 
   return { books, strategy, scores };
 }
@@ -1279,14 +1279,14 @@ export async function getBooksByMood(
   limit: number = 12,
 ): Promise<any[]> {
   return dbAll<any>(`
-    SELECT b.*, a.analysis_data
+    SELECT b.*, a.result
     FROM books b
     JOIN ai_book_analysis a ON a.book_id = b.id
     WHERE a.analysis_type = 'mood'
       AND b.status = 'PUBLISHED' AND b.is_active = 1
-      AND JSON_CONTAINS(JSON_EXTRACT(a.analysis_data, '$.mood.moods'), ?)
+      AND JSON_CONTAINS(JSON_EXTRACT(a.result, '$.mood.moods'), ?)
     ORDER BY
-      JSON_EXTRACT(a.analysis_data, '$.mood.confidence') DESC,
+      JSON_EXTRACT(a.result, '$.mood.confidence') DESC,
       b.computed_score DESC
     LIMIT ?
   `, [JSON.stringify(mood), limit]);
@@ -1300,14 +1300,14 @@ export async function getBooksByPace(
   limit: number = 12,
 ): Promise<any[]> {
   return dbAll<any>(`
-    SELECT b.*, a.analysis_data
+    SELECT b.*, a.result
     FROM books b
     JOIN ai_book_analysis a ON a.book_id = b.id
     WHERE a.analysis_type = 'mood'
       AND b.status = 'PUBLISHED' AND b.is_active = 1
-      AND JSON_EXTRACT(a.analysis_data, '$.pace.pace') = ?
+      AND JSON_EXTRACT(a.result, '$.pace.pace') = ?
     ORDER BY
-      JSON_EXTRACT(a.analysis_data, '$.pace.confidence') DESC,
+      JSON_EXTRACT(a.result, '$.pace.confidence') DESC,
       b.computed_score DESC
     LIMIT ?
   `, [pace, limit]);
@@ -1321,12 +1321,12 @@ export async function getBooksByDifficulty(
   limit: number = 12,
 ): Promise<any[]> {
   return dbAll<any>(`
-    SELECT b.*, a.analysis_data
+    SELECT b.*, a.result
     FROM books b
     JOIN ai_book_analysis a ON a.book_id = b.id
     WHERE a.analysis_type = 'mood'
       AND b.status = 'PUBLISHED' AND b.is_active = 1
-      AND JSON_EXTRACT(a.analysis_data, '$.difficulty.level') = ?
+      AND JSON_EXTRACT(a.result, '$.difficulty.level') = ?
     ORDER BY b.computed_score DESC
     LIMIT ?
   `, [level, limit]);
@@ -1349,11 +1349,11 @@ export async function getMoodBasedRecommendations(
 ): Promise<{ books: any[]; strategy: string }> {
   // Get source book's mood analysis
   const sourceAnalysis = await dbGet<any>(
-    `SELECT analysis_data FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
+    `SELECT result FROM ai_book_analysis WHERE book_id = ? AND analysis_type = 'mood'`,
     [bookId],
   );
 
-  if (!sourceAnalysis?.analysis_data) {
+  if (!sourceAnalysis?.result) {
     // Fall back to regular recommendations if no mood data
     const fallback = await getRecommendations(bookId, limit);
     return { books: fallback.books, strategy: 'fallback_no_mood_data' };
@@ -1361,9 +1361,9 @@ export async function getMoodBasedRecommendations(
 
   let sourceData: any;
   try {
-    sourceData = typeof sourceAnalysis.analysis_data === 'string'
-      ? JSON.parse(sourceAnalysis.analysis_data)
-      : sourceAnalysis.analysis_data;
+    sourceData = typeof sourceAnalysis.result === 'string'
+      ? JSON.parse(sourceAnalysis.result)
+      : sourceAnalysis.result;
   } catch {
     const fallback = await getRecommendations(bookId, limit);
     return { books: fallback.books, strategy: 'fallback_parse_error' };
@@ -1376,7 +1376,7 @@ export async function getMoodBasedRecommendations(
 
   // Get all other books with mood analysis
   const candidates = await dbAll<any>(`
-    SELECT b.id, b.computed_score, a.analysis_data
+    SELECT b.id, b.computed_score, a.result
     FROM books b
     JOIN ai_book_analysis a ON a.book_id = b.id
     WHERE a.analysis_type = 'mood'
@@ -1391,9 +1391,9 @@ export async function getMoodBasedRecommendations(
   for (const candidate of candidates) {
     let data: any;
     try {
-      data = typeof candidate.analysis_data === 'string'
-        ? JSON.parse(candidate.analysis_data)
-        : candidate.analysis_data;
+      data = typeof candidate.result === 'string'
+        ? JSON.parse(candidate.result)
+        : candidate.result;
     } catch { continue; }
 
     let score = 0;

@@ -27,13 +27,13 @@ APP_DIR="/opt/thebooktimes"
 cd "$APP_DIR" || error "App directory ${APP_DIR} not found. Clone the repo first."
 
 if [ ! -f ".env" ]; then
-    if [ -f ".env.production" ]; then
-        warn ".env not found. Copying from .env.production..."
-        cp .env.production .env
+    if [ -f ".env.example" ]; then
+        warn ".env not found. Copying from .env.example..."
+        cp .env.example .env
         echo ""
         error "Please edit .env and fill in all CHANGE_ME values, then run this script again:\n  nano ${APP_DIR}/.env"
     else
-        error ".env file not found. Create it from .env.production first."
+        error ".env file not found. Create it from .env.example first."
     fi
 fi
 

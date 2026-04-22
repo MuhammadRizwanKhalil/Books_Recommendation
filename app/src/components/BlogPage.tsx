@@ -103,7 +103,7 @@ export function BlogPage() {
   };
 
   return (
-    <main className="pt-20 pb-16">
+    <main className="pb-16">
       <div className="container mx-auto px-4">
         {/* Page Header */}
         <motion.div

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Star, BookOpen, TrendingUp } from 'lucide-react';
+import { ArrowRight, Sparkles, Star, BookOpen, TrendingUp, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -97,8 +97,34 @@ export function HeroV2() {
             className="mt-6 font-serif text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-semibold tracking-tight leading-[1.05] text-foreground"
           >
             {taglineHead && <span>{taglineHead} </span>}
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {taglineTail}
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                {taglineTail}
+              </span>
+              {/* Decorative open-book illustration anchored under the highlighted word */}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 220 28"
+                className="absolute left-1/2 -translate-x-1/2 -bottom-3 sm:-bottom-4 w-[110%] h-5 sm:h-6 text-primary/70"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M4 16 C 40 4, 80 4, 110 14 C 140 24, 180 24, 216 12"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.7"
+                />
+                <path
+                  d="M10 22 C 50 14, 90 14, 110 18 C 130 22, 170 22, 210 18"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.4"
+                />
+              </svg>
             </span>
           </motion.h1>
 
@@ -120,7 +146,7 @@ export function HeroV2() {
 
           <motion.div
             variants={item}
-            className="mt-6 flex flex-wrap items-center justify-center gap-3"
+            className="mt-7 flex flex-wrap items-center justify-center gap-3"
           >
             <Button
               size="lg"
@@ -141,11 +167,14 @@ export function HeroV2() {
             <Button
               size="lg"
               variant="outline"
-              className="h-11 px-6 text-sm font-semibold"
+              className="h-11 px-6 text-sm font-semibold border-primary/30 hover:border-primary/60 hover:bg-primary/5 group"
               onClick={() => navigate('/for-you')}
             >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              Get Recommendations
+              <Heart className="mr-1.5 h-4 w-4 text-rose-500 group-hover:scale-110 transition-transform" />
+              For You
+              <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                <Sparkles className="h-2.5 w-2.5" /> AI
+              </span>
             </Button>
           </motion.div>
 

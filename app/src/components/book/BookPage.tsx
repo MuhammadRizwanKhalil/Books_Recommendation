@@ -177,7 +177,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </motion.div>
 
             {/* Book Details Card — directly under cover */}
-            <div className="w-full max-w-[420px] lg:max-w-none p-4 bg-muted/50 rounded-xl space-y-3">
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 space-y-3">
               <h3 className="font-semibold text-sm">Book Details</h3>
               <div className="grid gap-2.5 text-sm">
                 {book.publisher && (
@@ -224,13 +224,13 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Buy / Affiliate — under details */}
-            <div className="w-full max-w-[420px] lg:max-w-none p-4 bg-muted/50 rounded-xl space-y-3">
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 space-y-3">
               <h3 className="font-semibold text-sm">Buy This Book</h3>
-              {book.price && (
+              {book.price ? (
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-primary">{formatPrice(book.price, book.currency)}</span>
                 </div>
-              )}
+              ) : null}
               {book.amazonUrl ? (() => {
                 const isDirectLink = book.amazonUrl!.includes('/dp/');
                 const searchFallbackUrl = `https://www.amazon.com/s?k=${encodeURIComponent(book.isbn13 || book.isbn10 || `${book.title} ${book.author}`)}&tag=thebooktimes-20`;
@@ -279,10 +279,10 @@ export function BookPage({ book, onBack }: BookPageProps) {
               )}
             </div>
 
-            {/* Quick actions row — icon-only Wishlist + SocialShare icons */}
-            <div className="w-full max-w-[420px] lg:max-w-none rounded-xl border bg-card px-3 py-2.5">
+            {/* Share row — icon-only Wishlist + SocialShare icons */}
+            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card px-3 py-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Quick actions</span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Share</span>
                 <div className="flex items-center gap-1">
                   <Button
                     variant={isLiked ? 'default' : 'ghost'}
@@ -308,12 +308,12 @@ export function BookPage({ book, onBack }: BookPageProps) {
             {/* Reader actions panel — status, TBR, lists, owned */}
             <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 space-y-3">
               <h3 className="text-sm font-semibold">Reader Actions</h3>
-              <ReadingStatusButton bookId={book.id} className="w-full justify-between" />
+              <ReadingStatusButton bookId={book.id} className="w-full justify-center" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                <TBRQueueButton bookId={book.id} className="w-full justify-start" />
-                <AddToListButton bookId={book.id} bookTitle={book.title} className="w-full justify-start" />
+                <TBRQueueButton bookId={book.id} className="w-full justify-center" />
+                <AddToListButton bookId={book.id} bookTitle={book.title} className="w-full justify-center" />
               </div>
-              <OwnedBookButton bookId={book.id} />
+              <OwnedBookButton bookId={book.id} className="w-full justify-center" />
             </div>
 
             {/* Private personal tags */}
@@ -321,8 +321,8 @@ export function BookPage({ book, onBack }: BookPageProps) {
               <TagManager bookId={book.slug || book.id} />
             </div>
 
-            {/* Progress tracker for currently-reading books */}
-            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4">
+            {/* Progress tracker for currently-reading books — self-contained card, only renders when active */}
+            <div className="w-full max-w-[420px] lg:max-w-none">
               <ProgressTracker bookId={book.id} totalPages={book.pageCount} />
             </div>
 
@@ -395,38 +395,38 @@ export function BookPage({ book, onBack }: BookPageProps) {
             {/* Description — primary content */}
             <DescriptionSection description={book.description} />
 
-            {/* Compact mood + pace — secondary metadata */}
-            <div className="flex flex-col gap-2 sm:gap-3 px-3 py-3 rounded-xl bg-muted/40 border border-dashed">
+            {/* Compact mood + pace — inline, components self-hide when no data */}
+            <div className="flex flex-col gap-2 sm:gap-3">
               <MoodTags bookId={book.id} compact />
               <PaceIndicator bookId={book.id} compact />
             </div>
 
-            {/* Tabs — Reviews default, no Overview */}
+            {/* Details — rendered directly under description (was a tab) */}
+            <div className="space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
+              <ReadingCounts bookId={book.id} />
+              <FriendsReadingThis bookId={book.id} />
+              <ContentWarnings bookId={book.id} />
+              <StoryArcChart bookId={book.id} />
+              <AIInsights bookId={book.id} />
+              <CharactersList bookId={book.id} />
+              {book.authorsData && book.authorsData.length > 0 && (
+                <AuthorSection authors={book.authorsData} />
+              )}
+              <BookRecommendations bookId={book.id} />
+              <FeaturedInBlog bookId={book.id} />
+              <BookQuotes bookId={book.id} />
+            </div>
+
+            {/* Tabs — Reviews / Community / Tools */}
             <Tabs defaultValue="reviews" className="w-full">
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 gap-1 bg-muted/60 p-1.5 rounded-xl">
+              <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/60 p-1.5 rounded-xl">
                 <TabsTrigger value="reviews" className="h-9">Reviews</TabsTrigger>
-                <TabsTrigger value="details" className="h-9">Details</TabsTrigger>
                 <TabsTrigger value="community" className="h-9">Community</TabsTrigger>
                 <TabsTrigger value="tools" className="h-9">Tools</TabsTrigger>
               </TabsList>
 
               <TabsContent value="reviews" className="mt-4 rounded-2xl border bg-card p-4 sm:p-6">
                 <BookReviews bookId={book.id} />
-              </TabsContent>
-
-              <TabsContent value="details" className="mt-4 space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
-                <ReadingCounts bookId={book.id} />
-                <FriendsReadingThis bookId={book.id} />
-                <ContentWarnings bookId={book.id} />
-                <StoryArcChart bookId={book.id} />
-                <AIInsights bookId={book.id} />
-                <CharactersList bookId={book.id} />
-                {book.authorsData && book.authorsData.length > 0 && (
-                  <AuthorSection authors={book.authorsData} />
-                )}
-                <BookRecommendations bookId={book.id} />
-                <FeaturedInBlog bookId={book.id} />
-                <BookQuotes bookId={book.id} />
               </TabsContent>
 
               <TabsContent value="community" className="mt-4 space-y-6 rounded-2xl border bg-card p-4 sm:p-6">

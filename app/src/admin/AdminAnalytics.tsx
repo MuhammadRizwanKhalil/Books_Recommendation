@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { analyticsApi } from '@/api/client';
+import type { AdminGoogleAnalyticsResponse } from '@/types';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -17,36 +18,102 @@ const COLORS = [
   'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#6366f1', '#ec4899',
 ];
 
+interface InternalPageView {
+  date: string;
+  views: number;
+}
+
+interface InternalTopBook {
+  bookId: string;
+  title: string;
+  views: number;
+}
+
+interface InternalTopPage {
+  pagePath: string;
+  views: number;
+}
+
+interface AffiliateDaily {
+  date: string;
+  clicks: number;
+}
+
+interface AffiliateTopBook {
+  bookId: string;
+  title: string;
+  clicks: number;
+}
+
+interface AffiliateReport {
+  daily: AffiliateDaily[];
+  topBooks: AffiliateTopBook[];
+  summary: {
+    totalClicks: number;
+    estimatedConversions: number;
+    estimatedRevenue: number;
+  };
+}
+
+interface EventSummary {
+  eventType: string;
+  count: number;
+}
+
+function formatSeconds(seconds: number): string {
+  const safe = Math.max(0, Math.round(seconds || 0));
+  const mins = Math.floor(safe / 60);
+  const secs = safe % 60;
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
 export function AdminAnalytics() {
-  const [gaData, setGaData] = useState<any>(null);
-  const [pageViews, setPageViews] = useState<any[]>([]);
-  const [topBooks, setTopBooks] = useState<any[]>([]);
-  const [topPages, setTopPages] = useState<any[]>([]);
-  const [affiliateReport, setAffiliateReport] = useState<any>(null);
-  const [eventsSummary, setEventsSummary] = useState<any[]>([]);
+  const [gaData, setGaData] = useState<AdminGoogleAnalyticsResponse | null>(null);
+  const [gaError, setGaError] = useState<string | null>(null);
+  const [pageViews, setPageViews] = useState<InternalPageView[]>([]);
+  const [topBooks, setTopBooks] = useState<InternalTopBook[]>([]);
+  const [topPages, setTopPages] = useState<InternalTopPage[]>([]);
+  const [affiliateReport, setAffiliateReport] = useState<AffiliateReport | null>(null);
+  const [eventsSummary, setEventsSummary] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       try {
         const [ga, pv, tb, tp, ar, es] = await Promise.all([
-          analyticsApi.googleAnalytics(),
+          analyticsApi.googleAnalytics(30),
           analyticsApi.pageViews(30),
           analyticsApi.topBooks(30),
           analyticsApi.topPages(30),
           analyticsApi.affiliateReport(30),
           analyticsApi.eventsSummary(30),
         ]);
-        setGaData(ga);
-        setPageViews(pv);
-        setTopBooks(tb);
-        setTopPages(tp);
-        setAffiliateReport(ar);
-        setEventsSummary(es);
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+
+        if (!mounted) return;
+
+        setGaData(ga as AdminGoogleAnalyticsResponse);
+        setPageViews((pv as InternalPageView[]) || []);
+        setTopBooks((tb as InternalTopBook[]) || []);
+        setTopPages((tp as InternalTopPage[]) || []);
+        setAffiliateReport((ar as AffiliateReport) || null);
+        setEventsSummary((es as EventSummary[]) || []);
+        setGaError(null);
+      } catch (err: any) {
+        if (!mounted) return;
+        setGaError(err?.message || 'Failed to load analytics data.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
     }
+
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (loading) {
@@ -62,7 +129,11 @@ export function AdminAnalytics() {
     );
   }
 
-  const gaSummary = gaData?.reporting?.summary || {};
+  const gaSummary = gaData?.reporting?.summary;
+  const gaDateRange = gaData?.reporting?.dateRange;
+  const gaSource = gaData?.dataSource === 'ga4' ? 'Live GA4 Data' : 'Configuration Required';
+  const gaRefreshedAt = gaData?.queriedAt ? new Date(gaData.queriedAt).toLocaleString() : 'Unknown';
+
   const deviceIcon = (device: string) => {
     if (device.toLowerCase().includes('mobile')) return <Smartphone className="h-4 w-4" />;
     if (device.toLowerCase().includes('tablet')) return <Tablet className="h-4 w-4" />;
@@ -87,14 +158,39 @@ export function AdminAnalytics() {
 
         {/* Google Analytics Tab */}
         <TabsContent value="google" className="space-y-6 mt-6">
+          {gaError && (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-sm text-red-600">{gaError}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {gaData && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="text-lg">Google Analytics Data Source</CardTitle>
+                  <Badge variant={gaData.dataSource === 'ga4' ? 'default' : 'secondary'}>{gaSource}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p className="text-muted-foreground">Measurement ID: {gaData.measurementId || 'Not set'}</p>
+                <p className="text-muted-foreground">Property ID: {gaData.propertyId || 'Not configured'}</p>
+                <p className="text-muted-foreground">Last refreshed: {gaRefreshedAt}</p>
+                {gaData.note && <p className="text-xs text-muted-foreground">{gaData.note}</p>}
+              </CardContent>
+            </Card>
+          )}
+
           {/* GA Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Sessions (30d)</p>
-                    <p className="text-2xl font-bold mt-1">{(gaSummary.totalSessions || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold mt-1">{(gaSummary?.totalSessions || 0).toLocaleString()}</p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-blue-500 opacity-80" />
                 </div>
@@ -105,7 +201,7 @@ export function AdminAnalytics() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Unique Users</p>
-                    <p className="text-2xl font-bold mt-1">{(gaSummary.totalUsers || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold mt-1">{(gaSummary?.totalUsers || 0).toLocaleString()}</p>
                   </div>
                   <Users className="h-8 w-8 text-green-500 opacity-80" />
                 </div>
@@ -116,7 +212,7 @@ export function AdminAnalytics() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Page Views</p>
-                    <p className="text-2xl font-bold mt-1">{(gaSummary.totalPageViews || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold mt-1">{(gaSummary?.totalPageViews || 0).toLocaleString()}</p>
                   </div>
                   <Eye className="h-8 w-8 text-purple-500 opacity-80" />
                 </div>
@@ -127,9 +223,33 @@ export function AdminAnalytics() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Avg Session Duration</p>
-                    <p className="text-2xl font-bold mt-1">{Math.round(gaSummary.avgSessionDuration || 0)}s</p>
+                    <p className="text-2xl font-bold mt-1">{formatSeconds(gaSummary?.avgSessionDuration || 0)}</p>
                   </div>
                   <Clock className="h-8 w-8 text-orange-500 opacity-80" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Bounce Rate</p>
+                    <p className="text-2xl font-bold mt-1">{(gaSummary?.avgBounceRate || 0).toFixed(1)}%</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-rose-500 opacity-80" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Engagement Rate</p>
+                    <p className="text-2xl font-bold mt-1">{(gaSummary?.engagementRate || 0).toFixed(1)}%</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-emerald-500 opacity-80" />
                 </div>
               </CardContent>
             </Card>
@@ -138,11 +258,30 @@ export function AdminAnalytics() {
           {/* GA Real-time */}
           {gaData?.realtime && (
             <Card>
-              <CardContent className="p-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Realtime Snapshot</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse" />
-                  <p className="text-sm text-muted-foreground">Real-time active users:</p>
+                  <p className="text-sm text-muted-foreground">Active users right now:</p>
                   <p className="text-2xl font-bold">{gaData.realtime.activeUsers}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Top active screens/pages</p>
+                  {gaData.realtime.topActivePages.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No realtime page breakdown returned by GA yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {gaData.realtime.topActivePages.map((item) => (
+                        <div key={item.page} className="flex items-center justify-between text-sm">
+                          <span className="font-mono text-xs truncate pr-3">{item.page}</span>
+                          <span className="font-semibold">{item.users}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -162,14 +301,22 @@ export function AdminAnalytics() {
                     <Legend />
                     <Line type="monotone" dataKey="sessions" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="users" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="pageViews" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                <span>Pages per Session: {(gaSummary?.pagesPerSession || 0).toFixed(2)}</span>
+                <span>
+                  Date Range: {gaDateRange?.start || '-'} to {gaDateRange?.end || '-'}
+                </span>
               </div>
             </CardContent>
           </Card>
 
           {/* Demographics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Traffic Sources */}
             <Card>
               <CardHeader><CardTitle className="text-lg">Traffic Sources</CardTitle></CardHeader>
@@ -234,6 +381,24 @@ export function AdminAnalytics() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Browsers */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Browsers</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-3 mt-2">
+                  {(gaData?.demographics?.browsers || []).map((browser) => (
+                    <div key={browser.browser} className="flex items-center justify-between">
+                      <span className="text-sm">{browser.browser}</span>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{browser.sessions.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">{browser.percentage}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Top GA Pages */}
@@ -244,19 +409,19 @@ export function AdminAnalytics() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="pb-3 pr-4">Page</th>
+                      <th className="pb-3 pr-4">Path</th>
+                      <th className="pb-3 pr-4">Title</th>
                       <th className="pb-3 pr-4">Views</th>
                       <th className="pb-3 pr-4">Avg Time</th>
-                      <th className="pb-3">Bounce Rate</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(gaData?.topPages || []).map((p: any) => (
+                    {(gaData?.topPages || []).map((p) => (
                       <tr key={p.page} className="border-b last:border-0">
                         <td className="py-2 pr-4 font-mono text-xs">{p.page}</td>
+                        <td className="py-2 pr-4">{p.title}</td>
                         <td className="py-2 pr-4">{p.pageViews.toLocaleString()}</td>
-                        <td className="py-2 pr-4">{p.avgTime}s</td>
-                        <td className="py-2">—</td>
+                        <td className="py-2 pr-4">{formatSeconds(p.avgTime)}</td>
                       </tr>
                     ))}
                   </tbody>

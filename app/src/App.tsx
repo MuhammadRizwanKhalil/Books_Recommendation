@@ -46,32 +46,21 @@ import { TrendingPage } from '@/components/TrendingPage';
 import { CategoriesPage } from '@/components/CategoriesPage';
 import { GenreOnboardingModal } from '@/components/GenreOnboardingModal';
 import { Navigation } from '@/sections/Navigation';
-import { HeroV2 } from '@/sections/HeroV2';
+import { Hero } from '@/sections/Hero';
 import { Footer } from '@/sections/Footer';
 
 // â”€â”€ Lazy-loaded below-fold sections (reduces initial bundle) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const QuickDiscoverBar = lazy(() => import('@/sections/QuickDiscoverBar').then(m => ({ default: m.QuickDiscoverBar })));
-const PersonalDashboard = lazy(() => import('@/sections/PersonalDashboard').then(m => ({ default: m.PersonalDashboard })));
-const Trending = lazy(() => import('@/sections/Trending').then(m => ({ default: m.Trending })));
-const Categories = lazy(() => import('@/sections/Categories').then(m => ({ default: m.Categories })));
-const DiscoverShelves = lazy(() => import('@/sections/DiscoverShelves').then(m => ({ default: m.DiscoverShelves })));
-const FeatureHub = lazy(() => import('@/sections/FeatureHub').then(m => ({ default: m.FeatureHub })));
-const Testimonials = lazy(() => import('@/sections/Testimonials').then(m => ({ default: m.Testimonials })));
-const FeaturedAuthors = lazy(() => import('@/sections/FeaturedAuthors').then(m => ({ default: m.FeaturedAuthors })));
-const BlogStrip = lazy(() => import('@/sections/BlogStrip').then(m => ({ default: m.BlogStrip })));
-const Newsletter = lazy(() => import('@/sections/Newsletter').then(m => ({ default: m.Newsletter })));
-const BookOfTheDay = lazy(() => import('@/sections/BookOfTheDay').then(m => ({ default: m.BookOfTheDay })));
-const PopularSearches = lazy(() => import('@/sections/PopularSearches').then(m => ({ default: m.PopularSearches })));
-const Top20Carousel = lazy(() => import('@/sections/Top20Carousel').then(m => ({ default: m.Top20Carousel })));
+const HomeReimagined = lazy(() => import('@/sections/HomeReimagined').then(m => ({ default: m.HomeReimagined })));
 import type { AdminPage } from '@/admin/AdminLayout';
 import { LegalPage } from '@/components/LegalPage';
 import { AdminBar } from '@/components/AdminBar';
 import { WishlistDrawer } from '@/components/WishlistDrawer';
 import { useAuth } from '@/components/AuthProvider';
-import { ApiError, booksApi, settingsApi } from '@/api/client';
+import { ApiError, analyticsApi, booksApi, settingsApi } from '@/api/client';
 import { mapBook } from '@/lib/mappers';
 import type { Book, Category } from '@/types';
 import { useSEO } from '@/hooks/useSEO';
+import { isAnalyticsEnabled } from '@/lib/analytics';
 import './App.css';
 
 // â”€â”€ Lazy-loaded admin components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -226,72 +215,12 @@ function HomePage() {
 
   return (
     <main className="bg-background">
-      {/* 1. Hero — focused, premium, single CTA-pair */}
-      <ErrorBoundary section="Hero"><HeroV2 /></ErrorBoundary>
+      {/* Preserve backup hero section as requested. */}
+      <ErrorBoundary section="Hero"><Hero /></ErrorBoundary>
 
-      {/* 2. Quick Discover — horizontal pill navigation to key surfaces */}
+      {/* Reimagined compact homepage experience. */}
       <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Quick Discover"><QuickDiscoverBar /></ErrorBoundary>
-      </Suspense>
-
-      {/* 3. Personal Dashboard — auth-only consolidated block (recently viewed + shelf + challenge) */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Personal Dashboard"><PersonalDashboard /></ErrorBoundary>
-      </Suspense>
-
-      {/* 4. Trending — primary public discovery anchor */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Trending"><Trending /></ErrorBoundary>
-      </Suspense>
-
-      {/* 5. Book of the Day — premium editorial spotlight */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Book of the Day"><BookOfTheDay /></ErrorBoundary>
-      </Suspense>
-
-      {/* 6. Categories — minimal genre browsing grid */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Categories"><Categories /></ErrorBoundary>
-      </Suspense>
-
-      {/* 7. Discover Shelves — tabbed New Releases + Top Rated (replaces two duplicate-looking sections) */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Discover Shelves"><DiscoverShelves /></ErrorBoundary>
-      </Suspense>
-
-      {/* 8. Feature Hub — what The Book Times can do for you */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Feature Hub"><FeatureHub /></ErrorBoundary>
-      </Suspense>
-
-      {/* 9. Featured Authors — community / human element */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Featured Authors"><FeaturedAuthors /></ErrorBoundary>
-      </Suspense>
-
-      {/* 11. Top 20 Books — editor's choice carousel */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Top 20 Books"><Top20Carousel /></ErrorBoundary>
-      </Suspense>
-
-      {/* 12. Testimonials — social proof */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Testimonials"><Testimonials /></ErrorBoundary>
-      </Suspense>
-
-      {/* 12. Newsletter — primary conversion section */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Newsletter"><Newsletter /></ErrorBoundary>
-      </Suspense>
-
-      {/* 13. Popular Searches — SEO + internal linking */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Popular Searches"><PopularSearches /></ErrorBoundary>
-      </Suspense>
-
-      {/* 14. Latest from the Blog — compact strip at very bottom */}
-      <Suspense fallback={<SectionFallback />}>
-        <ErrorBoundary section="Blog Strip"><BlogStrip /></ErrorBoundary>
+        <ErrorBoundary section="Home Reimagined"><HomeReimagined /></ErrorBoundary>
       </Suspense>
     </main>
   );
@@ -403,7 +332,7 @@ function BookRoute() {
 
   if (notFound) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <h2 className="text-2xl font-bold">Book not found</h2>
           <p className="text-muted-foreground">The book you're looking for doesn't exist.</p>
@@ -415,7 +344,7 @@ function BookRoute() {
 
   if (loadError) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
           <h2 className="text-2xl font-bold">We couldn&apos;t load this book</h2>
           <p className="text-muted-foreground">Please try again in a moment.</p>
@@ -427,7 +356,7 @@ function BookRoute() {
 
   if (!book) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
@@ -436,7 +365,7 @@ function BookRoute() {
   }
 
   return (
-    <main className="pt-16">
+    <main>
       <ErrorBoundary section="Book">
         <BookPage book={book} onBack={() => routerNavigate(-1)} />
       </ErrorBoundary>
@@ -462,7 +391,7 @@ function SeriesRoute() {
 
   if (error) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <h2 className="text-2xl font-bold">Series not found</h2>
           <p className="text-muted-foreground">The series you're looking for doesn't exist.</p>
@@ -474,7 +403,7 @@ function SeriesRoute() {
 
   if (!series) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
@@ -483,7 +412,7 @@ function SeriesRoute() {
   }
 
   return (
-    <main className="pt-16">
+    <main>
       <ErrorBoundary section="Series">
         <SeriesPage series={series} onBack={() => routerNavigate(-1)} />
       </ErrorBoundary>
@@ -502,7 +431,7 @@ function MoodDiscoveryRoute() {
   const { slug } = useParams<{ slug: string }>();
   const routerNavigate = useNavigate();
   return (
-    <main className="pt-16">
+    <main>
       <ErrorBoundary section="Mood Discovery">
         <MoodDiscoveryPage initialSlug={slug} onBack={() => routerNavigate(-1)} />
       </ErrorBoundary>
@@ -666,6 +595,24 @@ function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [location.pathname]);
+
+  // Track SPA navigation for both internal analytics and GA pageview accuracy.
+  useEffect(() => {
+    if (!isAnalyticsEnabled()) return;
+
+    const path = `${location.pathname}${location.search}${location.hash}`;
+
+    analyticsApi.trackPageView(path, document.title).catch(() => {});
+
+    const win = window as Window & { gtag?: (...args: unknown[]) => void };
+    if (typeof win.gtag === 'function') {
+      win.gtag('event', 'page_view', {
+        page_path: path,
+        page_title: document.title,
+        page_location: window.location.href,
+      });
+    }
+  }, [location.pathname, location.search, location.hash]);
 
   // Derive current view from URL for backward compat
   const currentView: AppView = (() => {

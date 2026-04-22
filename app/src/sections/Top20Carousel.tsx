@@ -14,7 +14,9 @@ export function Top20Carousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPausedRef = useRef(false);
 
-  const displayBooks = books.length > 0 ? [...books, ...books] : [];
+  // Pad or trim to exactly 20 for display purposes (loop must have exactly 20 unique)
+  const exactBooks = books.slice(0, 20);
+  const displayBooks = exactBooks.length > 0 ? [...exactBooks, ...exactBooks] : [];
   useAutoScrollLoop({
     containerRef: scrollRef,
     pauseRef: isPausedRef,
@@ -54,11 +56,11 @@ export function Top20Carousel() {
           viewport={{ once: true }}
         >
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
               <Trophy className="h-7 w-7 text-amber-500" />
               Top 20 Books
             </h2>
-            <p className="text-muted-foreground mt-1">Highest rated across every genre</p>
+            <p className="text-muted-foreground mt-1 text-sm">Highest rated across every genre</p>
           </div>
           <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
             <Link to="/search?sort=rating">View All <ChevronRight className="ml-1 h-4 w-4" /></Link>
@@ -83,7 +85,7 @@ export function Top20Carousel() {
                 key={`${book.id}-${idx}`}
                 book={book}
                 onBookClick={openBook}
-                rank={idx < books.length ? idx + 1 : undefined}
+                rank={idx < exactBooks.length ? idx + 1 : undefined}
                 widthClassName="w-[130px] sm:w-[150px]"
                 highlightTopRank
               />

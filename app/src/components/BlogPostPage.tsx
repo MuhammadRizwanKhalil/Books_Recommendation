@@ -123,7 +123,7 @@ export function BlogPostPage() {
   // Loading state
   if (loading) {
     return (
-      <main className="pt-20 pb-16">
+      <main className="pb-16">
         <article className="container mx-auto px-4 max-w-4xl">
           <Skeleton className="h-6 w-48 mb-6" />
           <Skeleton className="h-[400px] w-full rounded-2xl mb-8" />
@@ -145,7 +145,7 @@ export function BlogPostPage() {
   // Error / not found
   if (error || !post) {
     return (
-      <main className="pt-20 pb-16">
+      <main className="pb-16">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-2">
             <FileText className="h-10 w-10 text-muted-foreground" />
@@ -179,7 +179,7 @@ export function BlogPostPage() {
   const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
 
   return (
-    <main className="pt-20 pb-16">
+    <main className="pb-16">
       {/* Breadcrumbs */}
       <div className="container mx-auto px-4 max-w-4xl mb-6">
         <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">

@@ -86,7 +86,7 @@ export function ReadingChallengePage() {
   // Unauthenticated
   if (!isAuthenticated) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 text-center space-y-4" data-testid="challenge-auth-required">
           <Target className="h-12 w-12 text-primary mx-auto" />
           <h1 className="text-3xl font-bold">Reading Challenge</h1>
@@ -104,7 +104,7 @@ export function ReadingChallengePage() {
   // Loading
   if (loading) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
@@ -115,7 +115,7 @@ export function ReadingChallengePage() {
   // No challenge — show setup
   if (!challenge) {
     return (
-      <main className="pt-16">
+      <main>
         <div className="container mx-auto px-4 py-16 text-center space-y-6" data-testid="challenge-empty-state">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -170,7 +170,7 @@ export function ReadingChallengePage() {
   }
 
   return (
-    <main className="pt-16">
+    <main>
       <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8" data-testid="reading-challenge-page">
         {/* Header */}
         <div className="text-center space-y-2">

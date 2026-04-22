@@ -32,13 +32,13 @@ export const config = {
     })(),
   },
   ga: {
-    measurementId: process.env.GA_MEASUREMENT_ID || 'G-XXXXXXXXXX',
-    propertyId: process.env.GA_PROPERTY_ID || 'properties/000000000',
+    measurementId: process.env.GA_MEASUREMENT_ID || 'G-TDW096P47M',
+    propertyId: process.env.GA_PROPERTY_ID || '',
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || './ga-credentials.json',
   },
   frontendUrl: (() => {
     const url = process.env.FRONTEND_URL || 'http://localhost:5173';
-    if (process.env.NODE_ENV === 'production' && url === 'http://localhost:5173') {
+    if (process.env.NODE_ENV === 'production' && /(localhost|127\.0\.0\.1)/i.test(url)) {
       console.warn('⚠️  FRONTEND_URL is still set to localhost — CORS will reject production requests. Set FRONTEND_URL to your real domain.');
     }
     return url;

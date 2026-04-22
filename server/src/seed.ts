@@ -180,7 +180,7 @@ const subscribers = [
 const DEFAULT_SETTINGS = [
   // General
   { key: 'site_name', value: 'The Book Times', category: 'general', label: 'Site Name', description: 'Name of the website', field_type: 'text', sort_order: 1 },
-  { key: 'site_url', value: 'http://localhost:5173', category: 'general', label: 'Site URL', description: 'Public URL of the website', field_type: 'url', sort_order: 2 },
+  { key: 'site_url', value: 'https://thebooktimes.com', category: 'general', label: 'Site URL', description: 'Public URL of the website', field_type: 'url', sort_order: 2 },
   { key: 'site_tagline', value: 'Discover your next favorite book', category: 'general', label: 'Site Tagline', description: 'Short tagline or slogan', field_type: 'text', sort_order: 3 },
   { key: 'site_description', value: 'The Book Times is a curated platform for book lovers to find, review, and discover new books.', category: 'general', label: 'Site Description', description: 'Short description of the website', field_type: 'textarea', sort_order: 4 },
   { key: 'admin_email', value: process.env.ADMIN_EMAIL || 'admin@thebooktimes.com', category: 'general', label: 'Admin Email', description: 'Primary admin email for receiving notifications', field_type: 'email', sort_order: 5 },
@@ -200,7 +200,7 @@ const DEFAULT_SETTINGS = [
   { key: 'site_favicon_url', value: '', category: 'branding', label: 'Favicon URL', description: 'URL to site favicon', field_type: 'url', sort_order: 2 },
   { key: 'brand_primary_color', value: '#c2631a', category: 'branding', label: 'Primary Color', description: 'Primary brand color (hex)', field_type: 'color', sort_order: 3 },
   { key: 'brand_secondary_color', value: '#1e293b', category: 'branding', label: 'Secondary Color', description: 'Secondary brand color (hex)', field_type: 'color', sort_order: 4 },
-  { key: 'google_analytics_id', value: '', category: 'branding', label: 'Google Analytics ID', description: 'GA Measurement ID (e.g. G-XXXXXXXXXX)', field_type: 'text', sort_order: 5 },
+  { key: 'google_analytics_id', value: 'G-TDW096P47M', category: 'branding', label: 'Google Analytics ID', description: 'GA Measurement ID (e.g. G-XXXXXXXXXX)', field_type: 'text', sort_order: 5 },
   // Social Links
   { key: 'social_facebook', value: '', category: 'social', label: 'Facebook URL', description: 'Facebook page URL', field_type: 'url', sort_order: 1 },
   { key: 'social_twitter', value: '', category: 'social', label: 'Twitter / X URL', description: 'Twitter profile URL', field_type: 'url', sort_order: 2 },

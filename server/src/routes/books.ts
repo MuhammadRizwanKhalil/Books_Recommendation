@@ -796,7 +796,8 @@ router.get('/recommendations/:bookId', async (req: Request, res: Response) => {
       strategy: result.strategy,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch recommendations' });
+    logger.error({ err: err?.message, stack: err?.stack, bookId: req.params.bookId }, 'Failed to get recommendations');
+    res.status(500).json({ error: 'Failed to fetch recommendations', detail: err?.message });
   }
 });
 

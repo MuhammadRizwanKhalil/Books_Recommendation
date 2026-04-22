@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../lib/logger.js';
 import { dbGet, dbAll, dbRun } from '../database.js';
 import { authenticate, requireAdmin, optionalAuth, rateLimit } from '../middleware.js';
+import { getGoogleAnalyticsDashboard } from '../services/googleAnalytics.js';
 
 const router = Router();
 
@@ -57,6 +58,37 @@ router.get('/public-stats', async (_req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// ── GET /api/analytics/popular-searches — public top searched terms ─────────
+// Returns the most-searched non-empty queries from the last N days. Cached.
+router.get('/popular-searches', async (req: Request, res: Response) => {
+  try {
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days as string || '30', 10)));
+    const limit = Math.min(40, Math.max(1, parseInt(req.query.limit as string || '20', 10)));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+    const rows = await dbAll<any>(
+      `SELECT query, COUNT(*) as count
+       FROM search_queries
+       WHERE created_at >= ?
+         AND query IS NOT NULL
+         AND LENGTH(TRIM(query)) >= 2
+         AND results_count > 0
+       GROUP BY LOWER(TRIM(query))
+       ORDER BY count DESC
+       LIMIT ?`,
+      [since, limit],
+    );
+
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1200');
+    res.json({
+      terms: rows.map(r => ({ query: String(r.query).trim(), count: Number(r.count) })),
+      period: `Last ${days} days`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ terms: [], error: 'Failed to fetch popular searches' });
   }
 });
 
@@ -265,7 +297,7 @@ router.get('/top-books', authenticate, requireAdmin, async (req: Request, res: R
              (SELECT COUNT(*) FROM affiliate_clicks ac WHERE ac.book_id = ae.entity_id AND ac.created_at >= ?) as clicks
       FROM analytics_events ae
       JOIN books b ON b.id = ae.entity_id
-      WHERE ae.event_type = 'view' AND ae.entity_type = 'book' AND ae.created_at >= ?
+      WHERE ae.event_type IN ('book_view', 'view') AND ae.entity_type = 'book' AND ae.created_at >= ?
       GROUP BY ae.entity_id
       ORDER BY views DESC
       LIMIT ?
@@ -378,104 +410,14 @@ router.get('/affiliate-report', authenticate, requireAdmin, async (req: Request,
 });
 
 // ── GET /api/analytics/google (Admin) ───────────────────────────────────────
-// Google Analytics data proxy — returns GA4 data or mock data if GA not configured
-router.get('/google', authenticate, requireAdmin, (_req: Request, res: Response) => {
+// Direct GA4 data proxy backed by Google Analytics Data API.
+router.get('/google', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
-    // In production, this would call the Google Analytics Data API (GA4)
-    // using @google-analytics/data library with service account credentials.
-    // For now, return realistic mock data that matches GA4 response format.
-
-    const now = new Date();
-    const days30: { date: string; sessions: number; users: number; pageViews: number; bounceRate: number; avgSessionDuration: number }[] = [];
-
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 86400000);
-      const dateStr = d.toISOString().split('T')[0];
-      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-      const base = isWeekend ? 45 : 80;
-
-      days30.push({
-        date: dateStr,
-        sessions: base + Math.floor(Math.random() * 40),
-        users: Math.floor((base + Math.random() * 30) * 0.8),
-        pageViews: Math.floor((base + Math.random() * 50) * 2.3),
-        bounceRate: Math.round((35 + Math.random() * 20) * 10) / 10,
-        avgSessionDuration: Math.round((120 + Math.random() * 180) * 10) / 10,
-      });
-    }
-
-    const totalSessions = days30.reduce((s, d) => s + d.sessions, 0);
-    const totalUsers = days30.reduce((s, d) => s + d.users, 0);
-    const totalPageViews = days30.reduce((s, d) => s + d.pageViews, 0);
-
-    res.json({
-      reporting: {
-        dateRange: { start: days30[0].date, end: days30[days30.length - 1].date },
-        dailyData: days30,
-        summary: {
-          totalSessions,
-          totalUsers,
-          totalPageViews,
-          avgBounceRate: Math.round(days30.reduce((s, d) => s + d.bounceRate, 0) / 30 * 10) / 10,
-          avgSessionDuration: Math.round(days30.reduce((s, d) => s + d.avgSessionDuration, 0) / 30),
-          pagesPerSession: Math.round((totalPageViews / totalSessions) * 10) / 10,
-        },
-      },
-      // Audience demographics
-      demographics: {
-        countries: [
-          { country: 'United States', sessions: Math.floor(totalSessions * 0.42), percentage: 42 },
-          { country: 'United Kingdom', sessions: Math.floor(totalSessions * 0.15), percentage: 15 },
-          { country: 'India', sessions: Math.floor(totalSessions * 0.12), percentage: 12 },
-          { country: 'Canada', sessions: Math.floor(totalSessions * 0.08), percentage: 8 },
-          { country: 'Germany', sessions: Math.floor(totalSessions * 0.06), percentage: 6 },
-          { country: 'Australia', sessions: Math.floor(totalSessions * 0.05), percentage: 5 },
-          { country: 'Other', sessions: Math.floor(totalSessions * 0.12), percentage: 12 },
-        ],
-        devices: [
-          { device: 'Desktop', sessions: Math.floor(totalSessions * 0.55), percentage: 55 },
-          { device: 'Mobile', sessions: Math.floor(totalSessions * 0.38), percentage: 38 },
-          { device: 'Tablet', sessions: Math.floor(totalSessions * 0.07), percentage: 7 },
-        ],
-        browsers: [
-          { browser: 'Chrome', percentage: 63 },
-          { browser: 'Safari', percentage: 19 },
-          { browser: 'Firefox', percentage: 8 },
-          { browser: 'Edge', percentage: 7 },
-          { browser: 'Other', percentage: 3 },
-        ],
-      },
-      // Traffic sources
-      trafficSources: [
-        { source: 'Organic Search', sessions: Math.floor(totalSessions * 0.45), percentage: 45 },
-        { source: 'Direct', sessions: Math.floor(totalSessions * 0.25), percentage: 25 },
-        { source: 'Social', sessions: Math.floor(totalSessions * 0.15), percentage: 15 },
-        { source: 'Referral', sessions: Math.floor(totalSessions * 0.10), percentage: 10 },
-        { source: 'Email', sessions: Math.floor(totalSessions * 0.05), percentage: 5 },
-      ],
-      // Top pages from GA
-      topPages: [
-        { page: '/', title: 'Home', pageViews: Math.floor(totalPageViews * 0.3), avgTime: 45 },
-        { page: '/books', title: 'Browse Books', pageViews: Math.floor(totalPageViews * 0.2), avgTime: 120 },
-        { page: '/categories/fiction', title: 'Fiction', pageViews: Math.floor(totalPageViews * 0.1), avgTime: 90 },
-        { page: '/categories/technology', title: 'Technology', pageViews: Math.floor(totalPageViews * 0.08), avgTime: 95 },
-        { page: '/blog', title: 'Blog', pageViews: Math.floor(totalPageViews * 0.07), avgTime: 180 },
-      ],
-      // Real-time (simulated)
-      realtime: {
-        activeUsers: Math.floor(Math.random() * 15) + 3,
-        topActivePages: [
-          { page: '/', users: Math.floor(Math.random() * 5) + 1 },
-          { page: '/books/atomic-habits', users: Math.floor(Math.random() * 3) + 1 },
-          { page: '/categories/self-help', users: Math.floor(Math.random() * 2) + 1 },
-        ],
-      },
-      // GA configuration status
-      isConfigured: false,
-      measurementId: 'G-XXXXXXXXXX',
-      note: 'Using simulated data. Configure GA_MEASUREMENT_ID and GOOGLE_APPLICATION_CREDENTIALS in .env for real Google Analytics data.',
-    });
+    const days = Math.min(90, Math.max(7, parseInt(req.query.days as string || '30', 10)));
+    const data = await getGoogleAnalyticsDashboard(days);
+    res.json(data);
   } catch (err: any) {
+    logger.error({ err: err?.message }, 'Failed to fetch Google Analytics dashboard data');
     res.status(500).json({ error: 'Failed to fetch Google Analytics data' });
   }
 });
