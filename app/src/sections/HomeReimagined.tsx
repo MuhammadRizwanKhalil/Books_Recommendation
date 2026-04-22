@@ -272,10 +272,10 @@ function CategoryStepCarousel({ categories }: { categories: Category[] }) {
         <div ref={emblaRef} className="overflow-hidden">
           <div className="-ml-3 flex">
             {categories.map((category) => (
-              <div key={category.id} className="basis-[78%] pl-3 sm:basis-[48%] md:basis-[36%] lg:basis-[28%] xl:basis-[22%]">
+              <div key={category.id} className="basis-[88%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[40%] xl:basis-[32%]">
                 <Link
                   to={`/category/${category.slug}`}
-                  className="group block overflow-hidden rounded-2xl border border-border/70 bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group block h-full overflow-hidden rounded-3xl border border-border/70 bg-background/70 transition-all duration-300 hover:border-primary/35 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                     {category.imageUrl ? (
@@ -289,11 +289,19 @@ function CategoryStepCarousel({ categories }: { categories: Category[] }) {
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/20" />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 p-3 text-white">
-                      <p className="line-clamp-1 text-base font-semibold">{category.name}</p>
-                      <p className="text-xs text-white/85">{category.bookCount.toLocaleString()} books</p>
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+                  </div>
+
+                  <div className="space-y-2 p-4">
+                    <p className="line-clamp-1 text-lg font-semibold leading-tight">{category.name}</p>
+                    <p className="text-xs font-medium text-primary">{category.bookCount.toLocaleString()} books available</p>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                      {category.description || `Explore top picks and trending reads in ${category.name}.`}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                      Explore category
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
                   </div>
                 </Link>
               </div>
@@ -410,9 +418,7 @@ export function HomeReimagined() {
     () => [...categories].sort((a, b) => b.bookCount - a.bookCount).slice(0, 10),
     [categories],
   );
-
-  const featuredBlogPost = blogPosts[0];
-  const secondaryBlogPosts = blogPosts.slice(1, 4);
+  const homeBlogPosts = useMemo(() => blogPosts.slice(0, 4), [blogPosts]);
 
   const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -571,7 +577,7 @@ export function HomeReimagined() {
           {categoriesLoading ? (
             <div className="flex gap-3 overflow-hidden">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="h-36 w-[260px] animate-pulse rounded-2xl bg-muted" />
+                <div key={idx} className="h-56 w-[320px] animate-pulse rounded-3xl bg-muted" />
               ))}
             </div>
           ) : topCategories.length > 0 ? (
@@ -602,53 +608,42 @@ export function HomeReimagined() {
           </header>
 
           {blogLoading ? (
-            <div className="grid gap-4 lg:grid-cols-12">
-              <div className="h-72 animate-pulse rounded-2xl bg-muted lg:col-span-7" />
-              <div className="space-y-3 lg:col-span-5">
-                {Array.from({ length: 3 }).map((_, idx) => (
-                  <div key={idx} className="h-24 animate-pulse rounded-xl bg-muted" />
-                ))}
-              </div>
-            </div>
-          ) : featuredBlogPost ? (
-            <div className="grid gap-4 lg:grid-cols-12">
-              <Link
-                to={`/blog/${featuredBlogPost.slug}`}
-                className="group relative isolate min-h-[280px] overflow-hidden rounded-2xl border border-border/70 lg:col-span-7"
-              >
-                <BlogImage post={featuredBlogPost} eager />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
-                  <p className="mb-1 text-xs text-white/85">{formatDate(featuredBlogPost.publishedAt || featuredBlogPost.createdAt)}</p>
-                  <h3 className="line-clamp-2 text-xl font-semibold sm:text-2xl">{featuredBlogPost.title}</h3>
-                  <p className="mt-2 line-clamp-2 text-sm text-white/85">
-                    {truncateText(featuredBlogPost.excerpt || featuredBlogPost.content || '', 145)}
-                  </p>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="overflow-hidden rounded-2xl border border-border/70">
+                  <div className="aspect-[16/10] animate-pulse bg-muted" />
+                  <div className="space-y-2 p-3.5">
+                    <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+                  </div>
                 </div>
-              </Link>
+              ))}
+            </div>
+          ) : homeBlogPosts.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {homeBlogPosts.map((post, index) => (
+                <Link
+                  key={post.id}
+                  to={`/blog/${post.slug}`}
+                  className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/70 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <div className="aspect-[16/10] overflow-hidden bg-muted">
+                    <BlogImage post={post} eager={index === 0} />
+                  </div>
 
-              <div className="space-y-1 lg:col-span-5">
-                {secondaryBlogPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    to={`/blog/${post.slug}`}
-                    className="group flex gap-3 border-b border-border/65 py-3 last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-border/70 bg-muted">
-                      <BlogImage post={post} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">{formatDate(post.publishedAt || post.createdAt)}</p>
-                      <h4 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
-                        {post.title}
-                      </h4>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {truncateText(post.excerpt || post.content || '', 95)}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                  <div className="flex flex-1 flex-col p-3.5">
+                    <p className="text-xs text-muted-foreground">{formatDate(post.publishedAt || post.createdAt)}</p>
+                    <h3 className="mt-1 line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
+                      {post.title}
+                    </h3>
+                    <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
+                      {truncateText(post.excerpt || post.content || '', 120)}
+                    </p>
+                    <span className="mt-auto pt-3 text-xs font-semibold text-primary">Read article</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           ) : (
             <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No published blog posts yet.</p>
