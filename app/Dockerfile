@@ -35,7 +35,7 @@ ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
 ENV VITE_ANALYTICS_ALLOWED_HOSTS=${VITE_ANALYTICS_ALLOWED_HOSTS}
 ENV VITE_ENABLE_ANALYTICS=${VITE_ENABLE_ANALYTICS}
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 # Inject build id into service worker so each deploy invalidates PWA caches
 RUN sed -i "s/__BUILD_ID__/${BUILD_ID}/g" public/sw.js
 RUN npx vite build
