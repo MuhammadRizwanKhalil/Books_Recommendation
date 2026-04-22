@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
   BrainCircuit,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Compass,
   Flame,
   Layers3,
@@ -13,6 +16,7 @@ import {
   Sparkles,
   Star,
   TrendingUp,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -26,7 +30,7 @@ import { analyticsApi, newsletterApi } from '@/api/client';
 import { useBlogPosts, useCategories, useNewReleases, useTopRated, useTrendingBooks } from '@/hooks/useBooks';
 import { handleImgError } from '@/lib/imageUtils';
 import { formatDate, formatRating, truncateText } from '@/lib/utils';
-import type { Book } from '@/types';
+import type { BlogPost, Book, Category } from '@/types';
 
 type PopularTerm = { query: string; count: number };
 
@@ -47,131 +51,311 @@ const HOME_ACTIONS: HomeAction[] = [
   { label: 'Search', description: 'Find any title quickly', href: '/search', icon: Search },
 ];
 
-type LaneVariant = 'trending' | 'topRated' | 'newReleases';
-
-function laneStyles(variant: LaneVariant) {
-  if (variant === 'trending') {
-    return {
-      tag: 'Readers are loving these',
-      badge: 'from-orange-500/20 to-rose-500/10',
-      accent: 'text-orange-500',
-    };
-  }
-
-  if (variant === 'topRated') {
-    return {
-      tag: 'Consistently high ratings',
-      badge: 'from-amber-500/20 to-yellow-500/10',
-      accent: 'text-amber-500',
-    };
-  }
-
-  return {
-    tag: 'Fresh this month',
-    badge: 'from-emerald-500/20 to-cyan-500/10',
-    accent: 'text-emerald-500',
-  };
-}
-
-function CompactBookRow({
-  book,
-  index,
+function Top20InfiniteCarousel({
+  books,
+  loading,
   onOpenBook,
 }: {
-  book: Book;
-  index: number;
+  books: Book[];
+  loading: boolean;
   onOpenBook: (book: Book) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  const animationRef = useRef<number>(0);
+
+  const displayBooks = useMemo(() => (books.length > 0 ? [...books, ...books] : []), [books]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || books.length === 0) return;
+
+    let lastTime = 0;
+
+    const animate = (time: number) => {
+      if (!pausedRef.current && lastTime) {
+        const delta = time - lastTime;
+        element.scrollLeft += 0.55 * (delta / 16);
+
+        const halfWidth = element.scrollWidth / 2;
+        if (halfWidth > 0 && element.scrollLeft >= halfWidth) {
+          element.scrollLeft -= halfWidth;
+        }
+      }
+
+      lastTime = time;
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [books.length]);
+
+  if (loading) {
+    return (
+      <div className="flex gap-3 overflow-hidden">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <div key={index} className="w-[138px] shrink-0 sm:w-[156px] md:w-[168px]">
+            <div className="aspect-[2/3] animate-pulse rounded-2xl bg-muted" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (books.length === 0) {
+    return <p className="text-sm text-muted-foreground">Top books are loading. Please check back in a moment.</p>;
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onOpenBook(book)}
-      className="group flex w-full items-center gap-3 rounded-xl border border-transparent bg-muted/20 px-2 py-2 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      aria-label={`Open ${book.title}`}
-    >
-      <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-md border bg-muted home-book-thumb">
-        <img
-          src={book.coverImage}
-          alt={`${book.title} by ${book.author}`}
-          loading="lazy"
-          width={96}
-          height={128}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={handleImgError}
-        />
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent" />
+
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto scrollbar-hide py-1"
+        onMouseEnter={() => {
+          pausedRef.current = true;
+        }}
+        onMouseLeave={() => {
+          pausedRef.current = false;
+        }}
+        onTouchStart={() => {
+          pausedRef.current = true;
+        }}
+        onTouchEnd={() => {
+          pausedRef.current = false;
+        }}
+      >
+        {displayBooks.map((book, index) => (
+          <button
+            key={`${book.id}-${index}`}
+            type="button"
+            className="group/flip w-[138px] shrink-0 text-left sm:w-[156px] md:w-[168px] [perspective:1000px]"
+            onClick={() => onOpenBook(book)}
+            aria-label={`Open ${book.title}`}
+          >
+            <div className="relative aspect-[2/3] w-full transition-transform duration-500 [transform-style:preserve-3d] group-hover/flip:[transform:rotateY(180deg)]">
+              <div className="absolute inset-0 overflow-hidden rounded-2xl shadow-md [backface-visibility:hidden]">
+                <img
+                  src={book.coverImage}
+                  alt={`${book.title} by ${book.author}`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  onError={handleImgError}
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white">
+                  <p className="line-clamp-2 text-xs font-semibold">{book.title}</p>
+                </div>
+              </div>
+
+              <div className="absolute inset-0 flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-3 shadow-md [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                <div>
+                  <p className="line-clamp-2 text-xs font-semibold leading-snug">{book.title}</p>
+                  <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">{book.author}</p>
+                  <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    {formatRating(book.googleRating)}
+                  </p>
+                  {book.categories[0] ? (
+                    <p className="mt-2 line-clamp-1 text-[11px] text-muted-foreground">{book.categories[0]}</p>
+                  ) : null}
+                </div>
+
+                <p className="text-[11px] font-semibold text-primary">Tap to open</p>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-sm font-semibold leading-tight">{book.title}</p>
-        <p className="line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
-
-        <div className="mt-1 flex items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            {formatRating(book.googleRating)}
-          </span>
-          {book.categories[0] ? <span className="line-clamp-1 text-muted-foreground">{book.categories[0]}</span> : null}
-        </div>
-      </div>
-
-      <span className="rounded-full border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">#{index + 1}</span>
-    </button>
+    </div>
   );
 }
 
-function DiscoveryLane({
-  variant,
+function BookShelfRow({
   title,
+  subtitle,
   href,
   books,
   loading,
   onOpenBook,
 }: {
-  variant: LaneVariant;
   title: string;
+  subtitle: string;
   href: string;
   books: Book[];
   loading: boolean;
   onOpenBook: (book: Book) => void;
 }) {
-  const styles = laneStyles(variant);
-  const visible = books.slice(0, 4);
-
   return (
-    <article className="home-3d-panel rounded-2xl p-4 sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <div>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className={`inline-flex items-center rounded-full bg-gradient-to-r px-2.5 py-1 text-[11px] font-medium ${styles.badge}`}>
-            {styles.tag}
-          </div>
-          <h3 className="mt-2 font-brand-display text-xl font-semibold tracking-tight">{title}</h3>
+          <h3 className="font-brand-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <Button variant="ghost" size="sm" asChild className="text-xs">
+        <Button variant="ghost" size="sm" asChild>
           <Link to={href}>
-            View
+            View all
             <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </Link>
         </Button>
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-[76px] animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
-      ) : visible.length > 0 ? (
-        <div className="space-y-2">
-          {visible.map((book, index) => (
-            <CompactBookRow key={book.id} book={book} index={index} onOpenBook={onOpenBook} />
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="w-[126px] shrink-0 sm:w-[140px] md:w-[152px]">
+              <div className="aspect-[2/3] animate-pulse rounded-xl bg-muted" />
+            </div>
           ))}
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No live data available yet.</p>
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+          {books.slice(0, 12).map((book, index) => (
+            <button
+              key={book.id}
+              type="button"
+              onClick={() => onOpenBook(book)}
+              className="group w-[126px] shrink-0 snap-start text-left sm:w-[140px] md:w-[152px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label={`Open ${book.title}`}
+            >
+              <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted">
+                <img
+                  src={book.coverImage}
+                  alt={`${book.title} by ${book.author}`}
+                  loading={index < 4 ? 'eager' : 'lazy'}
+                  className="aspect-[2/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={handleImgError}
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+              </div>
+              <p className="mt-2 line-clamp-1 text-sm font-semibold group-hover:text-primary">{book.title}</p>
+              <p className="line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
+            </button>
+          ))}
+        </div>
       )}
+    </div>
+  );
+}
 
-      <div className={`mt-4 text-xs ${styles.accent}`}>Updated from live catalog and community activity.</div>
-    </article>
+function CategoryStepCarousel({ categories }: { categories: Category[] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: 'start',
+    slidesToScroll: 1,
+    dragFree: false,
+  });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onSelect = () => {
+      setSelectedIndex(emblaApi.selectedScrollSnap());
+    };
+
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+
+    return () => {
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+    };
+  }, [emblaApi]);
+
+  return (
+    <div>
+      <div className="relative">
+        <div ref={emblaRef} className="overflow-hidden">
+          <div className="-ml-3 flex">
+            {categories.map((category) => (
+              <div key={category.id} className="basis-[78%] pl-3 sm:basis-[48%] md:basis-[36%] lg:basis-[28%] xl:basis-[22%]">
+                <Link
+                  to={`/category/${category.slug}`}
+                  className="group block overflow-hidden rounded-2xl border border-border/70 bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                    {category.imageUrl ? (
+                      <img
+                        src={category.imageUrl}
+                        alt={category.name}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={handleImgError}
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/20" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-3 text-white">
+                      <p className="line-clamp-1 text-base font-semibold">{category.name}</p>
+                      <p className="text-xs text-white/85">{category.bookCount.toLocaleString()} books</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="absolute -left-2 top-1/2 z-20 hidden -translate-y-1/2 bg-background/90 lg:inline-flex"
+          onClick={() => emblaApi?.scrollPrev()}
+          aria-label="Previous category"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="absolute -right-2 top-1/2 z-20 hidden -translate-y-1/2 bg-background/90 lg:inline-flex"
+          onClick={() => emblaApi?.scrollNext()}
+          aria-label="Next category"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="mt-4 flex items-center justify-center gap-1.5">
+        {categories.map((category, index) => (
+          <button
+            key={category.id}
+            type="button"
+            onClick={() => emblaApi?.scrollTo(index)}
+            className={`h-1.5 rounded-full transition-all ${selectedIndex === index ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/35'}`}
+            aria-label={`Go to category slide ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BlogImage({ post, eager }: { post: BlogPost; eager?: boolean }) {
+  if (post.featuredImage) {
+    return (
+      <img
+        src={post.featuredImage}
+        alt={post.title}
+        className="h-full w-full object-cover"
+        loading={eager ? 'eager' : 'lazy'}
+        onError={handleImgError}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-secondary/20">
+      <BookOpen className="h-8 w-8 text-primary/70" />
+    </div>
   );
 }
 
@@ -179,11 +363,11 @@ export function HomeReimagined() {
   const { isAuthenticated } = useAuth();
   const { openBook } = useAppNav();
 
-  const { books: trendingBooks, loading: trendingLoading } = useTrendingBooks(6);
-  const { books: topRatedBooks, loading: topRatedLoading } = useTopRated(6);
-  const { books: newReleaseBooks, loading: newReleaseLoading } = useNewReleases(6, 'this-month');
+  const { books: trendingBooks, loading: trendingLoading } = useTrendingBooks(12);
+  const { books: topTwentyBooks, loading: topTwentyLoading } = useTopRated(20);
+  const { books: newReleaseBooks, loading: newReleaseLoading } = useNewReleases(12, 'this-month');
   const { categories, loading: categoriesLoading } = useCategories();
-  const { posts: blogPosts, loading: blogLoading } = useBlogPosts(3);
+  const { posts: blogPosts, loading: blogLoading } = useBlogPosts(5);
 
   const [popularTerms, setPopularTerms] = useState<PopularTerm[]>([]);
   const [popularTermsLoading, setPopularTermsLoading] = useState(true);
@@ -223,9 +407,12 @@ export function HomeReimagined() {
   );
 
   const topCategories = useMemo(
-    () => [...categories].sort((a, b) => b.bookCount - a.bookCount).slice(0, 12),
+    () => [...categories].sort((a, b) => b.bookCount - a.bookCount).slice(0, 10),
     [categories],
   );
+
+  const featuredBlogPost = blogPosts[0];
+  const secondaryBlogPosts = blogPosts.slice(1, 4);
 
   const handleSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -259,8 +446,11 @@ export function HomeReimagined() {
     <div className="font-brand-ui">
       <section className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
-          <div className="home-3d-panel home-subtle-grid rounded-2xl p-4 sm:p-5">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-background via-background to-primary/5 p-4 sm:p-5">
+            <div className="pointer-events-none absolute -left-14 -top-14 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 -bottom-14 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+
+            <div className="relative mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <Badge variant="outline" className="mb-2">
                   Reader Control Center
@@ -276,7 +466,7 @@ export function HomeReimagined() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="relative grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
               {actions.map((action, idx) => (
                 <motion.div
                   key={action.label}
@@ -287,7 +477,7 @@ export function HomeReimagined() {
                 >
                   <Link
                     to={action.href}
-                    className="group block rounded-xl border bg-card/80 px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="group block rounded-xl border border-border/70 bg-background/80 px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <span className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/12 text-primary">
                       <action.icon className="h-4 w-4" />
@@ -302,39 +492,55 @@ export function HomeReimagined() {
         </div>
       </section>
 
-      <section id="trending" className="py-7 sm:py-9">
+      <section id="top20" className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
           <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Badge variant="secondary" className="mb-2 gap-1">
+                <Trophy className="h-3 w-3" />
+                Top 20 Carousel
+              </Badge>
+              <h2 className="font-brand-display text-2xl font-semibold tracking-tight sm:text-3xl">Top 20 Books Right Now</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Infinite loop showcase inspired by your category page carousel.</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/search?sort=rating-desc">
+                Open ranking
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </header>
+
+          <Top20InfiniteCarousel books={topTwentyBooks} loading={topTwentyLoading} onOpenBook={openBook} />
+        </div>
+      </section>
+
+      <section id="trending" className="py-7 sm:py-9">
+        <div className="container mx-auto px-4">
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <Badge variant="secondary" className="mb-2 gap-1">
                 <TrendingUp className="h-3 w-3" />
                 Live Discovery
               </Badge>
               <h2 className="font-brand-display text-2xl sm:text-3xl font-semibold tracking-tight">What To Read Next</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Three focused lanes powered by real-time catalog activity.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Visual shelves with cover-first browsing.</p>
             </div>
           </header>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <DiscoveryLane
-              variant="trending"
+          <div className="space-y-8">
+            <BookShelfRow
               title="Trending"
+              subtitle="What readers are opening most this week"
               href="/trending"
               books={trendingBooks}
               loading={trendingLoading}
               onOpenBook={openBook}
             />
-            <DiscoveryLane
-              variant="topRated"
-              title="Top Rated"
-              href="/search?sort=rating"
-              books={topRatedBooks}
-              loading={topRatedLoading}
-              onOpenBook={openBook}
-            />
-            <DiscoveryLane
-              variant="newReleases"
+
+            <BookShelfRow
               title="New Releases"
+              subtitle="Fresh arrivals this month"
               href="/search?sort=newest"
               books={newReleaseBooks}
               loading={newReleaseLoading}
@@ -346,139 +552,145 @@ export function HomeReimagined() {
 
       <section id="categories" className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
-          <div className="home-3d-panel rounded-2xl p-4 sm:p-5">
-            <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <Badge variant="outline" className="mb-2">
-                  Genre Surface
-                </Badge>
-                <h2 className="font-brand-display text-2xl sm:text-3xl font-semibold tracking-tight">Browse By Category</h2>
-                <p className="mt-1 text-sm text-muted-foreground">High-signal genres with the deepest collections.</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/categories">
-                  All genres
-                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </header>
+          <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Badge variant="outline" className="mb-2">
+                Genre Surface
+              </Badge>
+              <h2 className="font-brand-display text-2xl sm:text-3xl font-semibold tracking-tight">Browse Categories as a Carousel</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Moves one card at a time, exactly as requested.</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/categories">
+                All genres
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </header>
 
-            {categoriesLoading ? (
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-                {Array.from({ length: 12 }).map((_, idx) => (
-                  <div key={idx} className="h-20 animate-pulse rounded-xl bg-muted" />
-                ))}
-              </div>
-            ) : topCategories.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-                {topCategories.map((category, idx) => (
-                  <motion.div
-                    key={category.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.22, delay: idx * 0.02 }}
-                  >
-                    <Link
-                      to={`/category/${category.slug}`}
-                      className="group block rounded-xl border bg-card px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <p className="line-clamp-1 text-sm font-semibold">{category.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{category.bookCount.toLocaleString()} titles</p>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No category data available yet.</p>
-            )}
-          </div>
+          {categoriesLoading ? (
+            <div className="flex gap-3 overflow-hidden">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="h-36 w-[260px] animate-pulse rounded-2xl bg-muted" />
+              ))}
+            </div>
+          ) : topCategories.length > 0 ? (
+            <CategoryStepCarousel categories={topCategories} />
+          ) : (
+            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No category data available yet.</p>
+          )}
         </div>
       </section>
 
       <section className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
-          <div className="grid gap-4 lg:grid-cols-12">
-            <article className="home-3d-panel rounded-2xl p-4 sm:p-5 lg:col-span-8">
-              <header className="mb-4 flex items-end justify-between gap-3">
-                <div>
-                  <Badge variant="secondary" className="mb-2 gap-1">
-                    <CalendarDays className="h-3 w-3" />
-                    Fresh Editorial
-                  </Badge>
-                  <h2 className="font-brand-display text-2xl sm:text-3xl font-semibold tracking-tight">Latest From The Blog</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Actionable reading ideas, interviews, and curated lists.</p>
+          <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Badge variant="secondary" className="mb-2 gap-1">
+                <CalendarDays className="h-3 w-3" />
+                Fresh Editorial
+              </Badge>
+              <h2 className="font-brand-display text-2xl sm:text-3xl font-semibold tracking-tight">Latest From The Blog</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Now with visual story previews and richer post imagery.</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/blog">
+                View all
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </header>
+
+          {blogLoading ? (
+            <div className="grid gap-4 lg:grid-cols-12">
+              <div className="h-72 animate-pulse rounded-2xl bg-muted lg:col-span-7" />
+              <div className="space-y-3 lg:col-span-5">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="h-24 animate-pulse rounded-xl bg-muted" />
+                ))}
+              </div>
+            </div>
+          ) : featuredBlogPost ? (
+            <div className="grid gap-4 lg:grid-cols-12">
+              <Link
+                to={`/blog/${featuredBlogPost.slug}`}
+                className="group relative isolate min-h-[280px] overflow-hidden rounded-2xl border border-border/70 lg:col-span-7"
+              >
+                <BlogImage post={featuredBlogPost} eager />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
+                  <p className="mb-1 text-xs text-white/85">{formatDate(featuredBlogPost.publishedAt || featuredBlogPost.createdAt)}</p>
+                  <h3 className="line-clamp-2 text-xl font-semibold sm:text-2xl">{featuredBlogPost.title}</h3>
+                  <p className="mt-2 line-clamp-2 text-sm text-white/85">
+                    {truncateText(featuredBlogPost.excerpt || featuredBlogPost.content || '', 145)}
+                  </p>
                 </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/blog">
-                    View all
-                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+
+              <div className="space-y-1 lg:col-span-5">
+                {secondaryBlogPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    to={`/blog/${post.slug}`}
+                    className="group flex gap-3 border-b border-border/65 py-3 last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-border/70 bg-muted">
+                      <BlogImage post={post} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">{formatDate(post.publishedAt || post.createdAt)}</p>
+                      <h4 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
+                        {post.title}
+                      </h4>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {truncateText(post.excerpt || post.content || '', 95)}
+                      </p>
+                    </div>
                   </Link>
-                </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No published blog posts yet.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="border-t border-border/65 py-7 sm:py-9">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <header className="mb-3 flex items-center gap-2">
+                <Search className="h-4 w-4 text-primary" />
+                <h3 className="font-brand-display text-xl font-semibold">Popular Searches</h3>
               </header>
 
-              {blogLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <div key={idx} className="h-24 animate-pulse rounded-xl bg-muted" />
+              {popularTermsLoading ? (
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: 8 }).map((_, idx) => (
+                    <div key={idx} className="h-7 w-24 animate-pulse rounded-full bg-muted" />
                   ))}
                 </div>
-              ) : blogPosts.length > 0 ? (
-                <div className="space-y-2.5">
-                  {blogPosts.slice(0, 3).map((post) => (
+              ) : popularTerms.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {popularTerms.slice(0, 12).map((term) => (
                     <Link
-                      key={post.id}
-                      to={`/blog/${post.slug}`}
-                      className="group block rounded-xl border bg-card/70 px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      key={term.query}
+                      to={`/search?q=${encodeURIComponent(term.query)}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
-                      <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                        <BookOpen className="h-3.5 w-3.5" />
-                        <span>{formatDate(post.publishedAt || post.createdAt)}</span>
-                      </div>
-                      <h3 className="line-clamp-1 text-base font-semibold group-hover:text-primary">{post.title}</h3>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                        {truncateText(post.excerpt || post.content || '', 130)}
-                      </p>
+                      {term.query}
+                      {term.count > 1 ? <span className="text-muted-foreground">x{term.count}</span> : null}
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No published blog posts yet.</p>
+                <p className="text-sm text-muted-foreground">No recent search trends available yet.</p>
               )}
-            </article>
+            </div>
 
-            <aside className="space-y-4 lg:col-span-4">
-              <div className="home-3d-panel rounded-2xl p-4 sm:p-5">
-                <header className="mb-3 flex items-center gap-2">
-                  <Search className="h-4 w-4 text-primary" />
-                  <h3 className="font-brand-display text-xl font-semibold">Popular Searches</h3>
-                </header>
-
-                {popularTermsLoading ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 6 }).map((_, idx) => (
-                      <div key={idx} className="h-8 animate-pulse rounded-lg bg-muted" />
-                    ))}
-                  </div>
-                ) : popularTerms.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {popularTerms.slice(0, 10).map((term) => (
-                      <Link
-                        key={term.query}
-                        to={`/search?q=${encodeURIComponent(term.query)}`}
-                        className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      >
-                        {term.query}
-                        {term.count > 1 ? <span className="text-muted-foreground">x{term.count}</span> : null}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No recent search trends available yet.</p>
-                )}
-              </div>
-
-              <div className="home-3d-panel rounded-2xl p-4 sm:p-5">
+            <div className="lg:col-span-5">
+              <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-primary/5 to-background p-4 sm:p-5">
                 <header className="mb-3 flex items-center gap-2">
                   <Mail className="h-4 w-4 text-primary" />
                   <h3 className="font-brand-display text-xl font-semibold">Weekly Reading Digest</h3>
@@ -521,7 +733,7 @@ export function HomeReimagined() {
                   </span>
                 </div>
               </div>
-            </aside>
+            </div>
           </div>
         </div>
       </section>
