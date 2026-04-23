@@ -222,9 +222,9 @@ function calculatePercentRows<T extends { count: number }>(rows: T[]): Array<T &
   }));
 }
 
-export async function getGoogleAnalyticsDashboard(days = DEFAULT_DAYS): Promise<GoogleAnalyticsDashboardData> {
+export async function getGoogleAnalyticsDashboard(days = DEFAULT_DAYS, propertyIdOverride?: string): Promise<GoogleAnalyticsDashboardData> {
   const clampedDays = clampDays(days);
-  const propertyId = normalizePropertyId(config.ga.propertyId);
+  const propertyId = normalizePropertyId(propertyIdOverride || config.ga.propertyId);
 
   if (!propertyId) {
     return buildUnavailableResponse(

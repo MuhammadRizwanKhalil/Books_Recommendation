@@ -414,7 +414,16 @@ router.get('/affiliate-report', authenticate, requireAdmin, async (req: Request,
 router.get('/google', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
     const days = Math.min(90, Math.max(7, parseInt(req.query.days as string || '30', 10)));
-    const data = await getGoogleAnalyticsDashboard(days);
+
+    // Read GA property ID from DB settings when env var not configured
+    let propertyIdOverride: string | undefined;
+    if (!process.env.GA_PROPERTY_ID) {
+      const row = await dbGet<any>('SELECT value FROM site_settings WHERE `key` = ?', ['google_analytics_property_id']);
+      const v = String(row?.value || '').trim();
+      if (v) propertyIdOverride = v;
+    }
+
+    const data = await getGoogleAnalyticsDashboard(days, propertyIdOverride);
     res.json(data);
   } catch (err: any) {
     logger.error({ err: err?.message }, 'Failed to fetch Google Analytics dashboard data');

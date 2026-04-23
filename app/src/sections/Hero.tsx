@@ -45,7 +45,7 @@ export function Hero() {
   };
 
   return (
-    <section id="hero" className="relative min-h-[60vh] sm:min-h-[65vh] flex flex-col justify-center overflow-hidden" role="banner">
+    <section id="hero" className="relative min-h-[60vh] sm:min-h-[65vh] flex flex-col justify-center" role="banner">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-background to-background" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.10),transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--primary)/0.05),transparent_50%)]" />
@@ -81,7 +81,7 @@ export function Hero() {
             </p>
           </motion.div>
 
-          <motion.div className="max-w-2xl mx-auto" role="search" aria-label="Search books" variants={itemVariants}>
+          <motion.div className="max-w-2xl mx-auto relative z-50" role="search" aria-label="Search books" variants={itemVariants}>
             <SearchDropdown size="lg" />
             <nav className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1.5" aria-label="Popular searches">
               <span className="text-xs text-muted-foreground font-medium">{t('hero.popular')}</span>

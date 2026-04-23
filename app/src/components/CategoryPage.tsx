@@ -311,7 +311,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" style={{ isolation: 'auto' }}>
               {paginatedBooks.map((book) => (
                 <HorizontalBookCard
                   key={book.id}
@@ -642,7 +642,12 @@ function HorizontalBookCard({
   onToggleWishlist: () => void;
 }) {
   return (
-    <div className="relative group" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div
+      className="relative group"
+      style={{ zIndex: isExpanded ? 40 : 'auto', isolation: isExpanded ? 'isolate' : 'auto' } as React.CSSProperties}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {/* Main Card: horizontal rectangle */}
       <div
         className="flex items-center gap-3 p-2.5 rounded-xl border bg-card cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-300"
@@ -697,7 +702,7 @@ function HorizontalBookCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full z-30 mt-1"
+            className="absolute left-0 right-0 top-full z-[100] mt-1"
           >
             <div className="p-3 rounded-xl border bg-card shadow-xl space-y-2">
               {book.subtitle && (

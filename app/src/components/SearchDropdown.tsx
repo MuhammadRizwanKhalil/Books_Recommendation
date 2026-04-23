@@ -249,7 +249,7 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
       {/* Dropdown */}
       {isOpen && (books.length > 0 || categories.length > 0 || authors.length > 0) && (
         <div className={cn(
-          'absolute left-0 right-0 mt-2 bg-popover border rounded-xl shadow-xl z-50 overflow-hidden',
+          'absolute left-0 right-0 mt-2 bg-popover border rounded-xl shadow-xl z-[200] overflow-hidden',
           fullscreen ? 'max-h-[70vh]' : 'max-h-[420px]'
         )}>
           <div className="overflow-y-auto max-h-[inherit]">
@@ -405,7 +405,7 @@ export function SearchDropdown({ className, onClose, autoFocus = false, fullscre
       {/* No results */}
       {isOpen && !loading && books.length === 0 && categories.length === 0 && authors.length === 0 && query.trim().length >= 2 && (
         <div className={cn(
-          'absolute left-0 right-0 mt-2 bg-popover border rounded-xl shadow-xl z-50 p-6 text-center',
+          'absolute left-0 right-0 mt-2 bg-popover border rounded-xl shadow-xl z-[200] p-6 text-center',
         )}>
           <Search className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
           <p className="text-sm font-medium">No results for "{query}"</p>

@@ -331,7 +331,11 @@ const DEFAULT_SETTINGS = [
   { key: 'site_favicon_url', value: '', category: 'branding', label: 'Favicon URL', description: 'URL to site favicon', field_type: 'url', sort_order: 2 },
   { key: 'brand_primary_color', value: '#c2631a', category: 'branding', label: 'Primary Color', description: 'Primary brand color (hex)', field_type: 'color', sort_order: 3 },
   { key: 'brand_secondary_color', value: '#1e293b', category: 'branding', label: 'Secondary Color', description: 'Secondary brand color (hex)', field_type: 'color', sort_order: 4 },
-  { key: 'google_analytics_id', value: 'G-TDW096P47M', category: 'branding', label: 'Google Analytics ID', description: 'GA Measurement ID (e.g. G-XXXXXXXXXX)', field_type: 'text', sort_order: 5 },
+
+  // Analytics
+  { key: 'google_analytics_enabled', value: 'true', category: 'analytics', label: 'Enable Analytics', description: 'Enable Google Analytics tracking and dashboard reporting', field_type: 'boolean', sort_order: 1 },
+  { key: 'google_analytics_id', value: 'G-TDW096P47M', category: 'analytics', label: 'GA Measurement ID', description: 'Measurement ID used by the website tag (e.g. G-XXXXXXXXXX)', field_type: 'text', sort_order: 2 },
+  { key: 'google_analytics_property_id', value: '', category: 'analytics', label: 'GA Property ID', description: 'GA4 property id for admin reporting (e.g. 123456789 or properties/123456789)', field_type: 'text', sort_order: 3 },
 
   // Social Links
   { key: 'social_facebook', value: '', category: 'social', label: 'Facebook URL', description: 'Facebook page URL', field_type: 'url', sort_order: 1 },
@@ -385,7 +389,19 @@ const DEFAULT_SETTINGS = [
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const sensitiveKeys = ['smtp_user', 'smtp_pass', 'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_from_name', 'smtp_from_email', 'admin_url_slug', 'admin_email', 'affiliate_amazon_tag'];
+    const sensitiveKeys = [
+      'smtp_user',
+      'smtp_pass',
+      'smtp_host',
+      'smtp_port',
+      'smtp_secure',
+      'smtp_from_name',
+      'smtp_from_email',
+      'admin_url_slug',
+      'admin_email',
+      'affiliate_amazon_tag',
+      'google_analytics_property_id',
+    ];
     const rows = await dbAll<any>(`
       SELECT \`key\`, value, category, label, description, field_type, sort_order
       FROM site_settings
@@ -496,8 +512,14 @@ router.post('/seed', authenticate, requireAdmin, async (_req: Request, res: Resp
   try {
     for (const s of DEFAULT_SETTINGS) {
       await dbRun(`
-        INSERT IGNORE INTO site_settings (\`key\`, value, category, label, description, field_type, sort_order, updated_at)
+        INSERT INTO site_settings (\`key\`, value, category, label, description, field_type, sort_order, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+          category = VALUES(category),
+          label = VALUES(label),
+          description = VALUES(description),
+          field_type = VALUES(field_type),
+          sort_order = VALUES(sort_order)
       `, [s.key, s.value, s.category, s.label, s.description, s.field_type, s.sort_order]);
     }
 
@@ -569,8 +591,14 @@ export async function seedDefaultSettings(): Promise<void> {
   let inserted = 0;
   for (const s of DEFAULT_SETTINGS) {
     const result = await dbRun(`
-      INSERT IGNORE INTO site_settings (\`key\`, value, category, label, description, field_type, sort_order, updated_at)
+      INSERT INTO site_settings (\`key\`, value, category, label, description, field_type, sort_order, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        category = VALUES(category),
+        label = VALUES(label),
+        description = VALUES(description),
+        field_type = VALUES(field_type),
+        sort_order = VALUES(sort_order)
     `, [s.key, s.value, s.category, s.label, s.description, s.field_type, s.sort_order]);
     if (result.changes > 0) inserted++;
   }

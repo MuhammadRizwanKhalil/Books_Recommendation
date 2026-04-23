@@ -3,7 +3,7 @@ import {
   Settings, Save, RefreshCw, Mail, Palette, Globe, Shield,
   Bell, Link2, Loader2, ChevronRight,
   Eye, EyeOff, TestTube, Lock, Copy, ExternalLink, Home,
-  ShieldCheck, ShieldOff, KeyRound, Smartphone,
+  ShieldCheck, ShieldOff, KeyRound, Smartphone, BarChart3,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; de
   general: { label: 'General', icon: Settings, description: 'Basic site configuration' },
   smtp: { label: 'Email / SMTP', icon: Mail, description: 'Email delivery settings' },
   branding: { label: 'Branding', icon: Palette, description: 'Logo, colors, and appearance' },
+  analytics: { label: 'Analytics', icon: BarChart3, description: 'Google Analytics tracking and reporting' },
   social: { label: 'Social Links', icon: Globe, description: 'Social media profiles' },
   security: { label: 'Security', icon: Lock, description: 'Admin access and security settings' },
   legal: { label: 'Legal Pages', icon: Shield, description: 'Privacy, terms, and policies' },
@@ -273,6 +274,7 @@ export function AdminSettings() {
               <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
                 {categories.map((cat) => {
                   const meta = CATEGORY_META[cat];
+                  if (!meta) return null;
                   const Icon = meta.icon;
                   const itemCount = settings[cat]?.length || 0;
 
