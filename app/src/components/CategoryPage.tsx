@@ -311,7 +311,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" style={{ isolation: 'auto' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {paginatedBooks.map((book) => (
                 <HorizontalBookCard
                   key={book.id}
@@ -643,8 +643,7 @@ function HorizontalBookCard({
 }) {
   return (
     <div
-      className="relative group"
-      style={{ zIndex: isExpanded ? 40 : 'auto', isolation: isExpanded ? 'isolate' : 'auto' } as React.CSSProperties}
+      className={`relative group ${isExpanded ? 'z-40 isolate' : ''}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
