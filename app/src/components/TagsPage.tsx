@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSEO } from '@/hooks/useSEO';
+import { FALLBACK_COVER, handleImgError } from '@/lib/imageUtils';
 import { formatRating } from '@/lib/utils';
 
 export function TagsPage() {
@@ -191,9 +192,10 @@ export function TagsPage() {
                       <article key={book.id} className="rounded-xl border bg-background p-3 space-y-2" data-testid="tagged-book-card">
                         <Link to={`/book/${book.slug}`} className="flex gap-3">
                           <img
-                            src={book.coverImage || 'https://placehold.co/280x420?text=Book'}
+                            src={book.coverImage || FALLBACK_COVER}
                             alt={`${book.title} cover`}
                             className="h-24 w-16 rounded-md border object-cover shrink-0"
+                            onError={handleImgError}
                           />
                           <div className="min-w-0">
                             <h3 className="font-semibold line-clamp-2 hover:text-primary transition-colors">{book.title}</h3>

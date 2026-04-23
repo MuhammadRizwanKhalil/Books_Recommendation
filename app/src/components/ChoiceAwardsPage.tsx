@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Award, Medal, Vote, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { choiceAwardsApi, type ChoiceAwardsPayload } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSEO } from '@/hooks/useSEO';
+import { FALLBACK_COVER, handleImgError } from '@/lib/imageUtils';
 
 function VoteProgress({ value, max, testId }: { value: number; max: number; testId: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -39,22 +40,29 @@ export function ChoiceAwardsPage() {
     description: `Vote in TheBookTimes community awards ${selectedYear} and discover this year's finalists and winners.`,
   });
 
-  const load = async () => {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === 'object' && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {
+      return (error as { message: string }).message;
+    }
+    return fallback;
+  };
+
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await choiceAwardsApi.getByYear(selectedYear);
       setPayload(result);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load awards');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load awards'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedYear]);
 
   useEffect(() => {
     void load();
-  }, [selectedYear]);
+  }, [load]);
 
   const maxVotesPerCategory = useMemo(() => {
     const map: Record<string, number> = {};
@@ -76,8 +84,8 @@ export function ChoiceAwardsPage() {
       await choiceAwardsApi.vote(selectedYear, categoryId, nomineeId);
       toast.success('Vote submitted');
       await load();
-    } catch (err: any) {
-      toast.error(err?.message || 'Vote failed');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Vote failed'));
     }
   }
 
@@ -166,9 +174,10 @@ export function ChoiceAwardsPage() {
                         >
                           <div className="flex items-center gap-3">
                             <img
-                              src={nominee.book.coverImage || 'https://placehold.co/80x120?text=Book'}
+                              src={nominee.book.coverImage || FALLBACK_COVER}
                               alt={nominee.book.title}
                               className="h-16 w-12 rounded object-cover border"
+                              onError={handleImgError}
                             />
                             <div className="min-w-0 flex-1">
                               <p className="font-medium leading-tight">{nominee.book.title}</p>

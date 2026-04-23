@@ -51,20 +51,37 @@ const HOME_ACTIONS: HomeAction[] = [
   { label: 'Search', description: 'Find any title quickly', href: '/search', icon: Search },
 ];
 
-function Top20InfiniteCarousel({
+function InfiniteFlipBookCarousel({
   books,
   loading,
   onOpenBook,
+  emptyMessage = 'Books are loading. Please check back in a moment.',
 }: {
   books: Book[];
   loading: boolean;
   onOpenBook: (book: Book) => void;
+  emptyMessage?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const animationRef = useRef<number>(0);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollRef = useRef(0);
+  const dragDistanceRef = useRef(0);
 
   const displayBooks = useMemo(() => (books.length > 0 ? [...books, ...books] : []), [books]);
+
+  const normalizeScrollLeft = (element: HTMLDivElement, nextScrollLeft: number) => {
+    const halfWidth = element.scrollWidth / 2;
+    if (halfWidth <= 0) return nextScrollLeft;
+
+    let normalized = nextScrollLeft;
+    while (normalized < 0) normalized += halfWidth;
+    while (normalized >= halfWidth) normalized -= halfWidth;
+
+    return normalized;
+  };
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -73,14 +90,10 @@ function Top20InfiniteCarousel({
     let lastTime = 0;
 
     const animate = (time: number) => {
-      if (!pausedRef.current && lastTime) {
+      if (!pausedRef.current && !isDraggingRef.current && lastTime) {
         const delta = time - lastTime;
-        element.scrollLeft += 0.55 * (delta / 16);
-
-        const halfWidth = element.scrollWidth / 2;
-        if (halfWidth > 0 && element.scrollLeft >= halfWidth) {
-          element.scrollLeft -= halfWidth;
-        }
+        const nextScrollLeft = element.scrollLeft + 0.55 * (delta / 16);
+        element.scrollLeft = normalizeScrollLeft(element, nextScrollLeft);
       }
 
       lastTime = time;
@@ -104,8 +117,53 @@ function Top20InfiniteCarousel({
   }
 
   if (books.length === 0) {
-    return <p className="text-sm text-muted-foreground">Top books are loading. Please check back in a moment.</p>;
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
+
+  const startPointerDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    isDraggingRef.current = true;
+    pausedRef.current = true;
+    dragDistanceRef.current = 0;
+    dragStartXRef.current = event.clientX;
+    dragStartScrollRef.current = element.scrollLeft;
+    element.setPointerCapture(event.pointerId);
+  };
+
+  const movePointerDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const element = scrollRef.current;
+    if (!element || !isDraggingRef.current) return;
+
+    const deltaX = event.clientX - dragStartXRef.current;
+    dragDistanceRef.current = Math.max(dragDistanceRef.current, Math.abs(deltaX));
+
+    const nextScrollLeft = dragStartScrollRef.current - deltaX;
+    element.scrollLeft = normalizeScrollLeft(element, nextScrollLeft);
+  };
+
+  const endPointerDrag = (pointerId: number) => {
+    const element = scrollRef.current;
+    if (!element || !isDraggingRef.current) return;
+
+    isDraggingRef.current = false;
+    pausedRef.current = false;
+
+    if (element.hasPointerCapture(pointerId)) {
+      element.releasePointerCapture(pointerId);
+    }
+  };
+
+  const handleCardClick = (event: React.MouseEvent<HTMLButtonElement>, book: Book) => {
+    if (dragDistanceRef.current > 8) {
+      event.preventDefault();
+      dragDistanceRef.current = 0;
+      return;
+    }
+
+    onOpenBook(book);
+  };
 
   return (
     <div className="relative">
@@ -114,18 +172,25 @@ function Top20InfiniteCarousel({
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide py-1"
+        className="flex gap-4 overflow-x-auto scrollbar-hide py-1 select-none touch-pan-y cursor-grab active:cursor-grabbing"
+        onPointerDown={startPointerDrag}
+        onPointerMove={movePointerDrag}
+        onPointerUp={(event) => endPointerDrag(event.pointerId)}
+        onPointerCancel={(event) => endPointerDrag(event.pointerId)}
+        onPointerLeave={(event) => {
+          if (isDraggingRef.current) endPointerDrag(event.pointerId);
+        }}
         onMouseEnter={() => {
           pausedRef.current = true;
         }}
         onMouseLeave={() => {
-          pausedRef.current = false;
+          if (!isDraggingRef.current) pausedRef.current = false;
         }}
         onTouchStart={() => {
           pausedRef.current = true;
         }}
         onTouchEnd={() => {
-          pausedRef.current = false;
+          if (!isDraggingRef.current) pausedRef.current = false;
         }}
       >
         {displayBooks.map((book, index) => (
@@ -133,7 +198,7 @@ function Top20InfiniteCarousel({
             key={`${book.id}-${index}`}
             type="button"
             className="group/flip w-[138px] shrink-0 text-left sm:w-[156px] md:w-[168px] [perspective:1000px]"
-            onClick={() => onOpenBook(book)}
+            onClick={(event) => handleCardClick(event, book)}
             aria-label={`Open ${book.title}`}
           >
             <div className="relative aspect-[2/3] w-full transition-transform duration-500 [transform-style:preserve-3d] group-hover/flip:[transform:rotateY(180deg)]">
@@ -169,74 +234,6 @@ function Top20InfiniteCarousel({
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-function BookShelfRow({
-  title,
-  subtitle,
-  href,
-  books,
-  loading,
-  onOpenBook,
-}: {
-  title: string;
-  subtitle: string;
-  href: string;
-  books: Book[];
-  loading: boolean;
-  onOpenBook: (book: Book) => void;
-}) {
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="font-brand-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link to={href}>
-            View all
-            <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Link>
-        </Button>
-      </div>
-
-      {loading ? (
-        <div className="flex gap-3 overflow-hidden">
-          {Array.from({ length: 7 }).map((_, index) => (
-            <div key={index} className="w-[126px] shrink-0 sm:w-[140px] md:w-[152px]">
-              <div className="aspect-[2/3] animate-pulse rounded-xl bg-muted" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
-          {books.slice(0, 12).map((book, index) => (
-            <button
-              key={book.id}
-              type="button"
-              onClick={() => onOpenBook(book)}
-              className="group w-[126px] shrink-0 snap-start text-left sm:w-[140px] md:w-[152px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label={`Open ${book.title}`}
-            >
-              <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted">
-                <img
-                  src={book.coverImage}
-                  alt={`${book.title} by ${book.author}`}
-                  loading={index < 4 ? 'eager' : 'lazy'}
-                  className="aspect-[2/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  onError={handleImgError}
-                />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
-              </div>
-              <p className="mt-2 line-clamp-1 text-sm font-semibold group-hover:text-primary">{book.title}</p>
-              <p className="line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -683,7 +680,12 @@ export function HomeReimagined() {
             </Button>
           </header>
 
-          <Top20InfiniteCarousel books={topTwentyBooks} loading={topTwentyLoading} onOpenBook={openBook} />
+          <InfiniteFlipBookCarousel
+            books={topTwentyBooks}
+            loading={topTwentyLoading}
+            onOpenBook={openBook}
+            emptyMessage="Top books are loading. Please check back in a moment."
+          />
         </div>
       </section>
 
@@ -701,23 +703,49 @@ export function HomeReimagined() {
           </header>
 
           <div className="space-y-8">
-            <BookShelfRow
-              title="Trending"
-              subtitle="What readers are opening most this week"
-              href="/trending"
-              books={trendingBooks}
-              loading={trendingLoading}
-              onOpenBook={openBook}
-            />
+            <div>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="font-brand-display text-xl font-semibold tracking-tight sm:text-2xl">Trending</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">What readers are opening most this week.</p>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/trending">
+                    View all
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
 
-            <BookShelfRow
-              title="New Releases"
-              subtitle="Fresh arrivals this month"
-              href="/search?sort=newest"
-              books={newReleaseBooks}
-              loading={newReleaseLoading}
-              onOpenBook={openBook}
-            />
+              <InfiniteFlipBookCarousel
+                books={trendingBooks}
+                loading={trendingLoading}
+                onOpenBook={openBook}
+                emptyMessage="Trending books are loading."
+              />
+            </div>
+
+            <div>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="font-brand-display text-xl font-semibold tracking-tight sm:text-2xl">New Releases</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Fresh arrivals this month.</p>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/search?sort=newest">
+                    View all
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+
+              <InfiniteFlipBookCarousel
+                books={newReleaseBooks}
+                loading={newReleaseLoading}
+                onOpenBook={openBook}
+                emptyMessage="New releases are loading."
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -821,26 +849,34 @@ export function HomeReimagined() {
 
       <section className="border-t border-border/65 py-7 sm:py-9">
         <div className="container mx-auto px-4">
-          <div className="grid gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-7">
-              <header className="mb-3 flex items-center gap-2">
-                <Search className="h-4 w-4 text-primary" />
-                <h3 className="font-brand-display text-xl font-semibold">Popular Searches</h3>
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-border/70 bg-background/70 p-4 sm:p-5">
+              <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-primary" />
+                  <h3 className="font-brand-display text-xl font-semibold">Popular Searches</h3>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/search">
+                    Open search page
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
               </header>
 
               {popularTermsLoading ? (
                 <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: 8 }).map((_, idx) => (
-                    <div key={idx} className="h-7 w-24 animate-pulse rounded-full bg-muted" />
+                  {Array.from({ length: 10 }).map((_, idx) => (
+                    <div key={idx} className="h-8 w-28 animate-pulse rounded-full bg-muted" />
                   ))}
                 </div>
               ) : popularTerms.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {popularTerms.slice(0, 12).map((term) => (
+                  {popularTerms.slice(0, 16).map((term) => (
                     <Link
                       key={term.query}
                       to={`/search?q=${encodeURIComponent(term.query)}`}
-                      className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       {term.query}
                       {term.count > 1 ? <span className="text-muted-foreground">x{term.count}</span> : null}
@@ -852,48 +888,54 @@ export function HomeReimagined() {
               )}
             </div>
 
-            <div className="lg:col-span-5">
-              <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-primary/5 to-background p-4 sm:p-5">
-                <header className="mb-3 flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <h3 className="font-brand-display text-xl font-semibold">Weekly Reading Digest</h3>
-                </header>
+            <div className="home-newsletter-shell rounded-2xl border border-border/70 p-5 sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+                <div>
+                  <header className="mb-3 flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <h3 className="font-brand-display text-2xl font-semibold tracking-tight">Weekly Reading Digest</h3>
+                  </header>
 
-                <p className="mb-3 text-sm text-muted-foreground">One concise weekly email with curated picks and no noise.</p>
+                  <p className="max-w-2xl text-sm text-muted-foreground">
+                    Get one clean weekly email with trending books, standout new releases, and editor picks tailored for discovery.
+                  </p>
 
-                {!subscribed ? (
-                  <form onSubmit={handleSubscribe} className="space-y-2.5">
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="reader@example.com"
-                      required
-                      className="h-10"
-                    />
-                    <Button type="submit" className="w-full" disabled={submitting}>
-                      {submitting ? 'Subscribing...' : 'Subscribe'}
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-                    Subscription active. Check your inbox for confirmation.
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1">
+                      <Sparkles className="h-3 w-3" />
+                      Curated
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1">
+                      <CalendarDays className="h-3 w-3" />
+                      Weekly
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1">
+                      <Mail className="h-3 w-3" />
+                      No spam
+                    </span>
                   </div>
-                )}
+                </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
-                    <Sparkles className="h-3 w-3" />
-                    Curated
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
-                    <CalendarDays className="h-3 w-3" />
-                    Weekly
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
-                    <Mail className="h-3 w-3" />
-                    No spam
-                  </span>
+                <div>
+                  {!subscribed ? (
+                    <form onSubmit={handleSubscribe} className="space-y-2.5">
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="reader@example.com"
+                        required
+                        className="h-11 bg-background"
+                      />
+                      <Button type="submit" className="h-11 w-full" disabled={submitting}>
+                        {submitting ? 'Subscribing...' : 'Subscribe to the weekly digest'}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                      Subscription active. Check your inbox for confirmation.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

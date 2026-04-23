@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ApiError, ownedBooksApi, type OwnedBookFormat, type OwnedBookResponse } from '@/api/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useSEO } from '@/hooks/useSEO';
+import { FALLBACK_COVER, handleImgError } from '@/lib/imageUtils';
 
 const FILTERS: Array<OwnedBookFormat | 'all'> = ['all', 'hardcover', 'paperback', 'ebook', 'audiobook'];
 
@@ -135,9 +136,10 @@ export function OwnedBooksPage() {
               <article key={item.id} data-testid="owned-book-card" className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
                 <div className="flex gap-3 min-w-0">
                   <img
-                    src={item.coverImage || 'https://placehold.co/280x420?text=Book'}
+                    src={item.coverImage || FALLBACK_COVER}
                     alt={`${item.title || 'Book'} cover`}
                     className="h-24 w-16 rounded-md border object-cover shrink-0"
+                    onError={handleImgError}
                   />
                   <div className="min-w-0 flex-1">
                     {item.slug ? (

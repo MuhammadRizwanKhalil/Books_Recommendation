@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSEO } from '@/hooks/useSEO';
+import { FALLBACK_COVER, handleImgError } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
 
 const filters: Array<{ value: 'all' | JournalEntryType; label: string }> = [
@@ -20,10 +21,10 @@ const filters: Array<{ value: 'all' | JournalEntryType; label: string }> = [
 
 export function JournalPage() {
   const { isAuthenticated, openAuthModal } = useAuth();
-  const [entries, setEntries] = useState<JournalEntryResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<JournalEntryResponse[] | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | JournalEntryType>('all');
+  const loading = isAuthenticated && entries === null;
 
   useSEO({
     title: 'Reading Journal | The Book Times',
@@ -31,25 +32,19 @@ export function JournalPage() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setEntries([]);
-      setLoading(false);
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    setLoading(true);
     journalApi.list()
       .then((result) => setEntries(result.entries || []))
       .catch(() => {
         setEntries([]);
         toast.error('Failed to load journal entries');
-      })
-      .finally(() => setLoading(false));
+      });
   }, [isAuthenticated]);
 
   const filteredEntries = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return entries.filter((entry) => {
+    return (entries || []).filter((entry) => {
       if (filter !== 'all' && entry.entryType !== filter) return false;
       if (!q) return true;
 
@@ -144,9 +139,10 @@ export function JournalPage() {
                     data-testid={`journal-entry-book-${entry.id}`}
                   >
                     <img
-                      src={entry.book.coverImage || 'https://placehold.co/80x120?text=Book'}
+                      src={entry.book.coverImage || FALLBACK_COVER}
                       alt={entry.book.title}
                       className="h-10 w-7 rounded object-cover border"
+                      onError={handleImgError}
                     />
                     <span>{entry.book.title} by {entry.book.author}</span>
                   </Link>

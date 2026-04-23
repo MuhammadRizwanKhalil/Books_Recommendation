@@ -171,6 +171,20 @@ html {
     linear-gradient(155deg, hsl(var(--card) / 0.92), hsl(var(--muted) / 0.72));
 }
 
+.home-newsletter-shell {
+  background:
+    radial-gradient(circle at 12% 10%, hsl(var(--primary) / 0.14), transparent 46%),
+    radial-gradient(circle at 92% 86%, hsl(var(--primary) / 0.1), transparent 44%),
+    linear-gradient(165deg, hsl(var(--background)), hsl(var(--card) / 0.95));
+}
+
+.dark .home-newsletter-shell {
+  background:
+    radial-gradient(circle at 12% 10%, hsl(var(--primary) / 0.2), transparent 46%),
+    radial-gradient(circle at 92% 86%, hsl(var(--primary) / 0.14), transparent 44%),
+    linear-gradient(165deg, hsl(var(--card) / 0.96), hsl(var(--muted) / 0.76));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-3d-panel,
   .home-3d-panel:hover {

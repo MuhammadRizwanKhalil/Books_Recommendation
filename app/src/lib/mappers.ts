@@ -1,12 +1,13 @@
 import type { Book, Category, BlogPost } from '@/types';
-import { FALLBACK_COVER } from './imageUtils';
+import { getSafeCoverImage } from './imageUtils';
 
 /**
  * Map an API book row (camelCase or snake_case) → frontend Book type.
  * This is the single source of truth for API → UI mapping.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapBook(b: any): Book {
-  const cover = b.coverImage || b.cover_image || '';
+  const cover = getSafeCoverImage(b.coverImage || b.cover_image || '');
   return {
     id: String(b.id),
     googleBooksId: b.googleBooksId || b.google_books_id || '',
@@ -14,12 +15,12 @@ export function mapBook(b: any): Book {
     subtitle: b.subtitle || '',
     author: b.author,
     description: b.description || '',
-    coverImage: cover || FALLBACK_COVER,
+    coverImage: cover,
     publisher: b.publisher || '',
     publishedDate: b.publishedDate || b.published_date || '',
     pageCount: b.pageCount || b.page_count || 0,
     language: b.language || 'en',
-    categories: b.categories?.map((c: any) => (typeof c === 'string' ? c : c.slug || c)) || [],
+    categories: b.categories?.map((c) => (typeof c === 'string' ? c : c.slug || c)) || [],
     googleRating: b.googleRating ?? b.google_rating ?? 0,
     ratingsCount: b.ratingsCount ?? b.ratings_count ?? 0,
     computedScore: b.computedScore ?? b.computed_score ?? 0,
@@ -52,6 +53,7 @@ export function mapBook(b: any): Book {
 /**
  * Map an API category row → frontend Category type.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapCategory(c: any): Category {
   return {
     id: String(c.id),
@@ -68,6 +70,7 @@ export function mapCategory(c: any): Category {
 /**
  * Map an API blog post row → frontend BlogPost type.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapBlogPost(p: any): BlogPost {
   return {
     id: String(p.id),
