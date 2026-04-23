@@ -4,6 +4,7 @@ import { dbGet, dbAll, dbRun } from '../database.js';
 import { authenticate, requireAdmin, rateLimit } from '../middleware.js';
 import { testSmtpConnection, sendEmail, wrapInBaseTemplate } from '../services/email.js';
 import { logger } from '../lib/logger.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -411,6 +412,10 @@ router.get('/', async (_req: Request, res: Response) => {
 
     const grouped: Record<string, any[]> = {};
     for (const row of rows) {
+      // Keep GA tracking resilient in production even if DB setting was accidentally cleared.
+      if (row.key === 'google_analytics_id' && !String(row.value || '').trim()) {
+        row.value = config.ga.measurementId;
+      }
       if (!grouped[row.category]) grouped[row.category] = [];
       grouped[row.category].push(row);
     }
@@ -594,6 +599,12 @@ export async function seedDefaultSettings(): Promise<void> {
       INSERT INTO site_settings (\`key\`, value, category, label, description, field_type, sort_order, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
+        value = CASE
+          WHEN (\`key\` = 'google_analytics_id' OR \`key\` = 'google_analytics_enabled')
+               AND TRIM(COALESCE(site_settings.value, '')) = ''
+            THEN VALUES(value)
+          ELSE site_settings.value
+        END,
         category = VALUES(category),
         label = VALUES(label),
         description = VALUES(description),

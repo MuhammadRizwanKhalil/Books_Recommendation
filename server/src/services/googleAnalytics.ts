@@ -50,6 +50,24 @@ export interface GoogleAnalyticsDashboardData {
 
 let cachedClient: BetaAnalyticsDataClient | null = null;
 
+function parseCredentialsJson(raw: string): Record<string, unknown> | null {
+  const value = String(raw || '').trim();
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    // Some deployment systems store secrets as base64 instead of raw JSON.
+  }
+
+  try {
+    const decoded = Buffer.from(value, 'base64').toString('utf8');
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
 function clampDays(days: number): number {
   if (!Number.isFinite(days)) return DEFAULT_DAYS;
   return Math.min(90, Math.max(7, Math.round(days)));
@@ -161,7 +179,12 @@ async function getClient(): Promise<BetaAnalyticsDataClient> {
 
   const credentialsJson = String(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GA_CREDENTIALS_JSON || '').trim();
   if (credentialsJson) {
-    const parsed = JSON.parse(credentialsJson);
+    const parsed = parseCredentialsJson(credentialsJson);
+    if (!parsed) {
+      throw new Error(
+        'Google Analytics credentials JSON is invalid. Provide raw JSON or base64-encoded JSON in GOOGLE_APPLICATION_CREDENTIALS_JSON.',
+      );
+    }
     cachedClient = new BetaAnalyticsDataClient({ credentials: parsed });
     return cachedClient;
   }
@@ -173,7 +196,7 @@ async function getClient(): Promise<BetaAnalyticsDataClient> {
   }
 
   throw new Error(
-    'Google Analytics credentials missing. Set GOOGLE_APPLICATION_CREDENTIALS_JSON or provide GOOGLE_APPLICATION_CREDENTIALS with a mounted file path.',
+    'Google Analytics credentials missing. Set GOOGLE_APPLICATION_CREDENTIALS_JSON (raw or base64 JSON) or mount GOOGLE_APPLICATION_CREDENTIALS file path.',
   );
 }
 
@@ -229,7 +252,7 @@ export async function getGoogleAnalyticsDashboard(days = DEFAULT_DAYS, propertyI
   if (!propertyId) {
     return buildUnavailableResponse(
       clampedDays,
-      'GA_PROPERTY_ID is not configured. Add the numeric GA4 property id in environment settings.',
+      'GA4 property ID missing. Set Settings > Analytics > GA Property ID (preferred) or GA_PROPERTY_ID env with numeric value (e.g. 123456789).',
       null,
     );
   }
