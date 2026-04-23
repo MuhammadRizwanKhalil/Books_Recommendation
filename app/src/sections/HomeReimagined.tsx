@@ -272,7 +272,7 @@ function CategoryStepCarousel({ categories }: { categories: Category[] }) {
         <div ref={emblaRef} className="overflow-hidden">
           <div className="-ml-3 flex">
             {categories.map((category) => (
-              <div key={category.id} className="basis-[88%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[40%] xl:basis-[32%]">
+              <div key={category.id} className="shrink-0 basis-[88%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[40%] xl:basis-[32%]">
                 <Link
                   to={`/category/${category.slug}`}
                   className="group block h-full overflow-hidden rounded-3xl border border-border/70 bg-background/70 transition-all duration-300 hover:border-primary/35 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
