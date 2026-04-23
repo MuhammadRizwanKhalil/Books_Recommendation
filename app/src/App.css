@@ -157,6 +157,20 @@ html {
   box-shadow: 0 12px 20px -16px rgba(0, 0, 0, 0.55);
 }
 
+.home-brand-atmosphere {
+  background:
+    radial-gradient(circle at 14% 8%, hsl(var(--primary) / 0.14), transparent 45%),
+    radial-gradient(circle at 88% 92%, hsl(var(--primary) / 0.12), transparent 42%),
+    linear-gradient(155deg, hsl(var(--background)), hsl(var(--card) / 0.92));
+}
+
+.dark .home-brand-atmosphere {
+  background:
+    radial-gradient(circle at 14% 8%, hsl(var(--primary) / 0.2), transparent 45%),
+    radial-gradient(circle at 88% 92%, hsl(var(--primary) / 0.16), transparent 42%),
+    linear-gradient(155deg, hsl(var(--card) / 0.92), hsl(var(--muted) / 0.72));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-3d-panel,
   .home-3d-panel:hover {
@@ -167,6 +181,10 @@ html {
   .home-book-thumb,
   .home-book-thumb img {
     transition: none !important;
+  }
+
+  .home-brand-atmosphere * {
+    animation: none !important;
   }
 }
 

@@ -19,7 +19,7 @@ import {
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -367,6 +367,170 @@ function BlogImage({ post, eager }: { post: BlogPost; eager?: boolean }) {
   );
 }
 
+function BrandSignatureSection({
+  books,
+  onOpenBook,
+}: {
+  books: Book[];
+  onOpenBook: (book: Book) => void;
+}) {
+  const prefersReducedMotion = useReducedMotion();
+  const stackBooks = books.slice(0, 3);
+  const stackPositionClasses = [
+    'left-[2%] top-[18%] -rotate-[11deg]',
+    'left-[31%] top-[5%] rotate-[-1deg]',
+    'left-[58%] top-[18%] rotate-[10deg]',
+  ];
+
+  return (
+    <section id="brand-signature" aria-labelledby="brand-signature-title" className="py-7 sm:py-9">
+      <div className="container mx-auto px-4">
+        <div className="home-brand-atmosphere relative overflow-hidden rounded-3xl border border-border/70 p-5 sm:p-6 lg:p-8">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-44 w-44 rounded-full bg-primary/12 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-14 -right-8 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+
+          <div className="relative grid gap-7 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+            <div>
+              <Badge variant="secondary" className="mb-2 gap-1">
+                <Sparkles className="h-3 w-3" />
+                The Book Times Identity
+              </Badge>
+              <h2 id="brand-signature-title" className="font-brand-display text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                A Recommendation Engine With Editorial Soul
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                The Book Times combines curated book recommendations, real reader sentiment, and category intelligence so you discover better books faster. The home page is designed to feel premium and cinematic while staying mobile-friendly, fast, and easy to scan.
+              </p>
+
+              <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  Trend-aware rankings powered by live catalog activity.
+                </li>
+                <li className="flex items-start gap-2">
+                  <Layers3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  Deep genre discovery paths for fiction and non-fiction readers.
+                </li>
+                <li className="flex items-start gap-2">
+                  <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  Editorial quality blog picks with visual-first storytelling.
+                </li>
+              </ul>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                <Button asChild>
+                  <Link to="/trending">Explore trending books</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/blog">Read latest reviews</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative min-h-[280px] sm:min-h-[330px]">
+              <div className="absolute inset-0 [perspective:1400px]">
+                {stackBooks.length > 0 ? (
+                  stackBooks.map((book, index) => (
+                    <motion.div
+                      key={book.id}
+                      className={`absolute w-[36%] min-w-[108px] max-w-[170px] ${stackPositionClasses[index]}`}
+                      initial={{ opacity: 0, y: 18 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.2 }}
+                      transition={{ duration: 0.38, delay: index * 0.08 }}
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={() => onOpenBook(book)}
+                        className="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`Open ${book.title}`}
+                        animate={
+                          prefersReducedMotion
+                            ? undefined
+                            : {
+                                y: [0, -(7 + index * 2), 0],
+                              }
+                        }
+                        transition={
+                          prefersReducedMotion
+                            ? undefined
+                            : {
+                                duration: 6.8 + index,
+                                ease: 'easeInOut',
+                                repeat: Infinity,
+                                delay: index * 0.35,
+                              }
+                        }
+                      >
+                        <div className="overflow-hidden rounded-2xl border border-white/20 shadow-[0_22px_35px_-22px_rgba(0,0,0,0.75)]">
+                          <img
+                            src={book.coverImage}
+                            alt={`${book.title} by ${book.author}`}
+                            className="aspect-[2/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading={index === 1 ? 'eager' : 'lazy'}
+                            onError={handleImgError}
+                          />
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-xs font-semibold text-foreground/90">{book.title}</p>
+                      </motion.button>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="grid h-full grid-cols-3 gap-3">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="animate-pulse rounded-2xl bg-muted" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HomeSeoDiscoveryStrip({ categories }: { categories: Category[] }) {
+  const seoCategories = categories.slice(0, 6);
+
+  return (
+    <section aria-labelledby="home-seo-title" className="py-7 sm:py-8">
+      <div className="container mx-auto px-4">
+        <div className="rounded-2xl border border-border/65 bg-background/70 p-4 sm:p-5">
+          <h2 id="home-seo-title" className="font-brand-display text-xl font-semibold tracking-tight sm:text-2xl">
+            Discover Better Book Recommendations By Mood, Genre, and Community Signals
+          </h2>
+          <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground">
+            Explore trending books, trusted reader reviews, top categories, and editorial reading lists in one place. The Book Times helps you discover your next favorite title with high-quality recommendations optimized for modern readers.
+          </p>
+
+          <nav className="mt-4 flex flex-wrap gap-2" aria-label="Popular discovery links">
+            <Link to="/trending" className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium hover:border-primary/35 hover:text-primary">
+              Trending books
+            </Link>
+            <Link to="/blog" className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium hover:border-primary/35 hover:text-primary">
+              Book reviews blog
+            </Link>
+            <Link to="/categories" className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium hover:border-primary/35 hover:text-primary">
+              All categories
+            </Link>
+            {seoCategories.map((category) => (
+              <Link
+                key={category.id}
+                to={`/category/${category.slug}`}
+                className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium hover:border-primary/35 hover:text-primary"
+              >
+                {category.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function HomeReimagined() {
   const { isAuthenticated } = useAuth();
   const { openBook } = useAppNav();
@@ -498,7 +662,9 @@ export function HomeReimagined() {
         </div>
       </section>
 
-      <section id="top20" className="py-7 sm:py-9">
+      <BrandSignatureSection books={topTwentyBooks} onOpenBook={openBook} />
+
+      <section id="top20" aria-labelledby="top20-title" className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
           <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -506,7 +672,7 @@ export function HomeReimagined() {
                 <Trophy className="h-3 w-3" />
                 Top 20 Carousel
               </Badge>
-              <h2 className="font-brand-display text-2xl font-semibold tracking-tight sm:text-3xl">Top 20 Books Right Now</h2>
+              <h2 id="top20-title" className="font-brand-display text-2xl font-semibold tracking-tight sm:text-3xl">Top 20 Books Right Now</h2>
               <p className="mt-1 text-sm text-muted-foreground">Infinite loop showcase inspired by your category page carousel.</p>
             </div>
             <Button variant="ghost" size="sm" asChild>
@@ -650,6 +816,8 @@ export function HomeReimagined() {
           )}
         </div>
       </section>
+
+      <HomeSeoDiscoveryStrip categories={topCategories} />
 
       <section className="border-t border-border/65 py-7 sm:py-9">
         <div className="container mx-auto px-4">
