@@ -297,7 +297,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mb-12"
+            className="relative z-30 mb-12 overflow-visible"
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -311,7 +311,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="relative z-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-visible">
               {paginatedBooks.map((book) => (
                 <HorizontalBookCard
                   key={book.id}
@@ -380,7 +380,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="mb-12"
+          className="relative z-0 mb-12"
         >
           <AutoFlipCarousel
             books={globalTopBooks}

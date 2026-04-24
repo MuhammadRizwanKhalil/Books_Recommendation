@@ -68,8 +68,11 @@ async function initGoogleAnalytics() {
 
   const win = window as Window & { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void };
   win.dataLayer = win.dataLayer || [];
-  win.gtag = (...args: unknown[]) => {
-    win.dataLayer!.push(args);
+  // eslint-disable-next-line prefer-rest-params
+  win.gtag = function gtag() {
+    // gtag.js requires the Arguments object (not a plain array) to process commands correctly.
+    // eslint-disable-next-line prefer-rest-params
+    (win.dataLayer as unknown[]).push(arguments);
   };
 
   win.gtag('js', new Date());
