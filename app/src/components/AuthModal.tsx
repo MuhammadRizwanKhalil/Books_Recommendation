@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Mail, Lock, UserIcon, Loader2, ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react';
 import {
   Dialog,
@@ -27,10 +27,13 @@ declare global {
             auto_select?: boolean;
             cancel_on_tap_outside?: boolean;
           }) => void;
-          prompt: (listener?: (notification: {
-            isNotDisplayed?: () => boolean;
-            isSkippedMoment?: () => boolean;
-          }) => void) => void;
+          renderButton: (parent: HTMLElement, options: {
+            theme?: 'outline' | 'filled_blue' | 'filled_black';
+            size?: 'large' | 'medium' | 'small';
+            width?: number;
+            text?: string;
+            shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+          }) => void;
         };
       };
     };
@@ -99,6 +102,59 @@ export function AuthModal() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const isSignUp = authModalMode === 'signup' && view === 'signup';
+
+  // Initialize Google Sign-In button once when modal opens
+  useEffect(() => {
+    if (!isAuthModalOpen || !GOOGLE_CLIENT_ID) return;
+
+    loadGoogleIdentityScript().then(() => {
+      const googleId = window.google?.accounts?.id;
+      if (!googleId) return;
+
+      if (!googleInitialized.current) {
+        googleId.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          ux_mode: 'popup',
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          callback: async (response) => {
+            if (!response?.credential) {
+              setError('Google sign-in was cancelled.');
+              return;
+            }
+            setLoading(true);
+            setError('');
+            try {
+              const ok = await signInWithSocial('google', response.credential);
+              if (ok) resetForm();
+              else setError('Failed to sign in with Google. Please try again.');
+            } catch (err: any) {
+              setError(err?.message || 'Google sign-in failed. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
+        googleInitialized.current = true;
+      }
+
+      // Render button after a short delay to ensure the div is mounted
+      setTimeout(() => {
+        const container = googleButtonRef.current;
+        if (!container) return;
+        container.innerHTML = '';
+        googleId.renderButton(container, {
+          theme: 'outline',
+          size: 'large',
+          width: container.offsetWidth || 360,
+          text: 'continue_with',
+          shape: 'rectangular',
+        });
+      }, 50);
+    }).catch(() => {
+      // Script load failed silently — user will see the fallback
+    });
+  }, [isAuthModalOpen]);
 
   const resetForm = () => {
     setName('');
@@ -222,61 +278,7 @@ export function AuthModal() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (!GOOGLE_CLIENT_ID) {
-        setError('Google sign-in is not configured yet. Set VITE_GOOGLE_CLIENT_ID in the frontend environment.');
-        return;
-      }
 
-      await loadGoogleIdentityScript();
-
-      const googleId = window.google?.accounts?.id;
-      if (!googleId) {
-        setError('Google sign-in is temporarily unavailable. Please continue with email.');
-        return;
-      }
-
-      const idToken = await new Promise<string>((resolve, reject) => {
-        const timeoutId = window.setTimeout(() => {
-          reject(new Error('Google sign-in timed out. Please try again.'));
-        }, 15000);
-
-        googleId.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          ux_mode: 'popup',
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          callback: (response) => {
-            window.clearTimeout(timeoutId);
-            if (response?.credential) {
-              resolve(response.credential);
-            } else {
-              reject(new Error('Google sign-in was cancelled.'));
-            }
-          },
-        });
-
-        // Opens Google account chooser / one-tap flow.
-        googleId.prompt((notification) => {
-          if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
-            window.clearTimeout(timeoutId);
-            reject(new Error('Google sign-in prompt could not be displayed. Check allowed origins in Google Cloud Console.'));
-          }
-        });
-      });
-
-      const ok = await signInWithSocial('google', idToken);
-      if (ok) resetForm();
-      else setError('Failed to sign in with Google.');
-    } catch (err: any) {
-      setError(err?.message || 'Google sign-in failed. Please continue with email.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleMode = () => {
     setAuthModalMode(isSignUp ? 'signin' : 'signup');
@@ -510,17 +512,11 @@ export function AuthModal() {
             </DialogHeader>
 
             <div className="mt-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full justify-center gap-2.5 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-                onClick={() => void handleGoogleSignIn()}
-                disabled={loading}
-                aria-label="Continue with Google"
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4285F4] text-xs font-bold text-white">G</span>
-                Continue with Google
-              </Button>
+              {GOOGLE_CLIENT_ID ? (
+                <div ref={googleButtonRef} className="w-full flex justify-center min-h-[40px]" />
+              ) : (
+                <p className="text-xs text-center text-muted-foreground py-2">Google sign-in not configured.</p>
+              )}
             </div>
 
             <div className="relative my-3">
