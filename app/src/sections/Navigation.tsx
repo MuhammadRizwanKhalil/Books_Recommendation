@@ -48,6 +48,7 @@ export function Navigation() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMac = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac');
 
   const siteName = getSetting('site_name', 'The Book Times');
   const logoUrl = getSetting('site_logo_url', '');
@@ -213,7 +214,7 @@ export function Navigation() {
                   <Search className="h-4 w-4" />
                   <span className="text-muted-foreground text-xs hidden xl:block">Search...</span>
                   <kbd className="hidden xl:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                    {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}K
+                    {isMac ? '⌘' : 'Ctrl+'}K
                   </kbd>
                 </Button>
               )}

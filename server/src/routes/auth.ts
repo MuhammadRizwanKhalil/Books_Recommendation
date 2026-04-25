@@ -13,7 +13,7 @@ import {
 } from '../middleware.js';
 import {
   sendEmail, wrapInBaseTemplate, getSiteSetting,
-  buildWelcomeEmail, buildAdminLoginAlertEmail,
+  buildWelcomeEmail,
   build2FASetupEmail, build2FACodeEmail, buildPasswordResetEmail,
 } from '../services/email.js';
 import { validate, registerSchema, loginSchema, updateProfileSchema } from '../lib/validation.js';
@@ -196,18 +196,6 @@ router.post('/login', rateLimit('login', 10, 15 * 60 * 1000), validate(loginSche
     // â”€â”€ Normal login (no 2FA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     res.json(await createLoginResponse(user, req, 'login'));
 
-    // â”€â”€ Fire-and-forget: Admin login alert email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if (user.role === 'admin') {
-      try {
-        const ip = req.ip || req.socket.remoteAddress || 'unknown';
-        const ua = req.headers['user-agent'] || 'unknown';
-        const alertEmail = await buildAdminLoginAlertEmail(user.email, ip, ua);
-        sendEmail({ to: user.email, subject: alertEmail.subject, html: alertEmail.html })
-          .catch(e => logger.error({ err: e }, 'Admin login alert email failed'));
-      } catch (e) {
-        logger.error({ err: e }, 'Admin login alert build failed');
-      }
-    }
   } catch (err: any) {
     logger.error({ err: err }, 'Login error');
     res.status(500).json({ error: 'Failed to login' });
@@ -313,18 +301,6 @@ router.post('/verify-2fa', rateLimit('2fa-verify', 5, 15 * 60 * 1000), async (re
         },
       });
 
-      // Admin login alert
-      if (user.role === 'admin') {
-        try {
-          const ip = req.ip || req.socket.remoteAddress || 'unknown';
-          const ua = req.headers['user-agent'] || 'unknown';
-          const alertEmail = await buildAdminLoginAlertEmail(user.email, ip, ua);
-          sendEmail({ to: user.email, subject: alertEmail.subject, html: alertEmail.html })
-            .catch(e => logger.error({ err: e }, 'Admin login alert email failed'));
-        } catch (e) {
-          logger.error({ err: e }, 'Admin login alert build failed');
-        }
-      }
       return;
     }
 

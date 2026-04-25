@@ -7,14 +7,38 @@ import type { AdminGoogleAnalyticsResponse } from '@/types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+function safeGetLocalStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage-unavailable environments.
+  }
+}
+
+function safeRemoveLocalStorage(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage-unavailable environments.
+  }
+}
+
 // â”€â”€ Token management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-let authToken: string | null = localStorage.getItem('thebooktimes-token');
+let authToken: string | null = safeGetLocalStorage('thebooktimes-token');
 
 export function setToken(token: string | null) {
   authToken = token;
-  if (token) localStorage.setItem('thebooktimes-token', token);
-  else localStorage.removeItem('thebooktimes-token');
+  if (token) safeSetLocalStorage('thebooktimes-token', token);
+  else safeRemoveLocalStorage('thebooktimes-token');
 }
 
 export function getToken() {
@@ -38,8 +62,20 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     headers,
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  const parseBody = async () => {
+    if (res.status === 204) return null;
+    if (contentType.includes('application/json')) {
+      return res.json().catch(() => null);
+    }
+    return res.text().catch(() => '');
+  };
+
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
+    const rawBody = await parseBody();
+    const body = (rawBody && typeof rawBody === 'object')
+      ? rawBody
+      : { error: typeof rawBody === 'string' && rawBody.trim() ? rawBody : res.statusText };
 
     if (res.status === 401 && authToken) {
       setToken(null);
@@ -51,7 +87,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     throw new ApiError(body.error || 'Request failed', res.status, body);
   }
 
-  return res.json();
+  if (res.status === 204) return undefined as T;
+  if (contentType.includes('application/json')) {
+    return res.json() as Promise<T>;
+  }
+  return (await res.text()) as T;
 }
 
 export class ApiError extends Error {

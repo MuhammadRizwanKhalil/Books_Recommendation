@@ -556,10 +556,16 @@ export function useTranslation() {
 // ── Detect browser locale ───────────────────────────────────────────────────
 
 function detectLocale(): Locale {
-  const stored = localStorage.getItem('thebooktimes-locale') as Locale | null;
+  const stored = (() => {
+    try {
+      return localStorage.getItem('thebooktimes-locale') as Locale | null;
+    } catch {
+      return null;
+    }
+  })();
   if (stored && AVAILABLE_LOCALES.some(l => l.code === stored)) return stored;
 
-  const browserLang = navigator.language.split('-')[0] as Locale;
+  const browserLang = (typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'en') as Locale;
   if (AVAILABLE_LOCALES.some(l => l.code === browserLang)) return browserLang;
 
   return 'en';
@@ -578,15 +584,23 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
-    localStorage.setItem('thebooktimes-locale', newLocale);
-    document.documentElement.lang = newLocale;
-    document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? 'rtl' : 'ltr';
+    try {
+      localStorage.setItem('thebooktimes-locale', newLocale);
+    } catch {
+      // Ignore storage-unavailable environments.
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = newLocale;
+      document.documentElement.dir = RTL_LOCALES.includes(newLocale) ? 'rtl' : 'ltr';
+    }
   }, []);
 
   useEffect(() => {
     setMessages(localeLoaders[locale]());
-    document.documentElement.lang = locale;
-    document.documentElement.dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale;
+      document.documentElement.dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
+    }
   }, [locale]);
 
   const t = useCallback(

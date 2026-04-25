@@ -53,6 +53,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const USER_STORAGE_KEY = 'thebooktimes-user';
 const HISTORY_STORAGE_KEY = 'thebooktimes-reading-history';
 
+function getStoredToken(): string | null {
+  try {
+    return localStorage.getItem('thebooktimes-token');
+  } catch {
+    return null;
+  }
+}
+
 function loadUser(): UserProfile | null {
   try {
     const stored = localStorage.getItem(USER_STORAGE_KEY);
@@ -73,14 +81,14 @@ function loadHistory(): ReadingHistoryEntry[] {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(loadUser);
-  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem('thebooktimes-token'));
+  const [isLoading, setIsLoading] = useState(() => !!getStoredToken());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [readingHistory, setReadingHistory] = useState<ReadingHistoryEntry[]>(loadHistory);
 
   // Validate stored token on app load
   useEffect(() => {
-    const storedToken = localStorage.getItem('thebooktimes-token');
+    const storedToken = getStoredToken();
     if (!storedToken) {
       setIsLoading(false);
       return;
