@@ -269,12 +269,12 @@ function CategoryStepCarousel({ categories }: { categories: Category[] }) {
         <div ref={emblaRef} className="overflow-hidden">
           <div className="-ml-3 flex">
             {categories.map((category) => (
-              <div key={category.id} className="shrink-0 basis-[88%] pl-3 sm:basis-[72%] md:basis-[56%] lg:basis-[40%] xl:basis-[32%]">
+              <div key={category.id} className="shrink-0 basis-[84%] pl-3 sm:basis-[68%] md:basis-[52%] lg:basis-[37%] xl:basis-[30%]">
                 <Link
                   to={`/category/${category.slug}`}
                   className="group block h-full overflow-hidden rounded-3xl border border-border/70 bg-background/70 transition-all duration-300 hover:border-primary/35 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                  <div className="relative aspect-[16/9] overflow-hidden bg-muted">
                     {category.imageUrl ? (
                       <img
                         src={category.imageUrl}
@@ -289,13 +289,13 @@ function CategoryStepCarousel({ categories }: { categories: Category[] }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
                   </div>
 
-                  <div className="space-y-2 p-4">
-                    <p className="line-clamp-1 text-lg font-semibold leading-tight">{category.name}</p>
-                    <p className="text-xs font-medium text-primary">{category.bookCount.toLocaleString()} books available</p>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                  <div className="space-y-1.5 p-3.5">
+                    <p className="line-clamp-1 text-base font-semibold leading-tight">{category.name}</p>
+                    <p className="text-[11px] font-medium text-primary">{category.bookCount.toLocaleString()} books available</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
                       {category.description || `Explore top picks and trending reads in ${category.name}.`}
                     </p>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
                       Explore category
                       <ArrowRight className="h-3.5 w-3.5" />
                     </span>
@@ -771,7 +771,7 @@ export function HomeReimagined() {
           {categoriesLoading ? (
             <div className="flex gap-3 overflow-hidden">
               {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="h-56 w-[320px] animate-pulse rounded-3xl bg-muted" />
+                <div key={idx} className="h-52 w-[290px] animate-pulse rounded-3xl bg-muted" />
               ))}
             </div>
           ) : topCategories.length > 0 ? (

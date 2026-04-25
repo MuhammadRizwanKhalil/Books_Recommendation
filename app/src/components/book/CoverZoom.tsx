@@ -87,7 +87,7 @@ export function CoverZoom({ bookId, title, fallbackCoverImage }: CoverZoomProps)
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-2xl group cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative aspect-[2/3] min-h-[320px] min-w-[213px] w-full overflow-hidden rounded-xl shadow-2xl group cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-testid="cover-zoom-trigger"
         aria-label={`Zoom cover for ${title}`}
       >

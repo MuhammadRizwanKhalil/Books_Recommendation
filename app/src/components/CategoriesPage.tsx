@@ -62,7 +62,7 @@ export function CategoriesPage() {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             {Array.from({ length: 15 }).map((_, i) => (
-              <Card key={i} className="h-28">
+              <Card key={i} className="h-28 py-0 gap-0 overflow-hidden">
                 <CardContent className="p-3">
                   <div className="animate-pulse space-y-2">
                     <div className="h-4 w-3/4 bg-muted rounded" />
@@ -82,7 +82,7 @@ export function CategoriesPage() {
                 transition={{ duration: 0.3, delay: index * 0.02 }}
               >
                 <Card
-                  className="group cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full focus-within:ring-2 focus-within:ring-primary border-0"
+                  className="group cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full focus-within:ring-2 focus-within:ring-primary border-0 py-0 gap-0"
                   role="button"
                   tabIndex={0}
                   onClick={() => openCategory(category)}
