@@ -65,6 +65,19 @@ export const config = {
   // Google Books API
   googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY || '',
 
+  // Google OAuth (Sign-In)
+  googleAuth: {
+    clientIds: String(
+      process.env.GOOGLE_OAUTH_CLIENT_IDS
+      || process.env.GOOGLE_CLIENT_ID
+      || process.env.VITE_GOOGLE_CLIENT_ID
+      || '',
+    )
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean),
+  },
+
   // Resend email API
   resendApiKey: process.env.RESEND_API_KEY || '',
   emailFrom: process.env.EMAIL_FROM || 'The Book Times <noreply@thebooktimes.com>',

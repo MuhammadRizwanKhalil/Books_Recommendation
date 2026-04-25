@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { OAuth2Client } from 'google-auth-library';
 import { dbAll, dbGet, dbRun } from '../database.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
@@ -23,6 +24,8 @@ function normalizeString(value: unknown, max = 255): string {
 function fallbackAvatar(seed: string) {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed || 'reader')}`;
 }
+
+const googleOAuthClient = new OAuth2Client();
 
 function parseMockToken(provider: SocialProvider, token: string): SocialIdentity | null {
   const prefixes = [`${provider}-mock:`, `mock-${provider}:`];
@@ -89,7 +92,59 @@ export async function verifySocialIdentity(provider: SocialProvider, token: stri
   const normalized = normalizeString(token, 4000);
   if (!normalized) return null;
 
-  return parseMockToken(provider, normalized) || parseDevJwtLikeToken(provider, normalized);
+  // Never allow mock tokens in production.
+  if (config.nodeEnv !== 'production') {
+    const mock = parseMockToken(provider, normalized);
+    if (mock) return mock;
+  }
+
+  if (provider === 'google') {
+    if (!config.googleAuth.clientIds.length) {
+      logger.warn('Google OAuth client IDs are not configured; set GOOGLE_OAUTH_CLIENT_IDS (or GOOGLE_CLIENT_ID)');
+      return null;
+    }
+
+    try {
+      const ticket = await googleOAuthClient.verifyIdToken({
+        idToken: normalized,
+        audience: config.googleAuth.clientIds,
+      });
+
+      const payload = ticket.getPayload();
+      const providerUserId = normalizeString(payload?.sub, 255);
+      if (!providerUserId) return null;
+
+      const email = normalizeString(payload?.email, 255) || null;
+      const emailVerified = !!payload?.email_verified;
+      const name = normalizeString(payload?.name || payload?.given_name || payload?.email || 'Google user', 255);
+      const avatarUrl = normalizeString(payload?.picture, 500) || fallbackAvatar(email || name);
+      const issuer = normalizeString(payload?.iss, 255);
+
+      if (!issuer || (issuer !== 'accounts.google.com' && issuer !== 'https://accounts.google.com')) {
+        return null;
+      }
+
+      if (email && !emailVerified) {
+        return null;
+      }
+
+      return {
+        provider,
+        providerUserId,
+        email,
+        name,
+        avatarUrl,
+        accessToken: normalized,
+        refreshToken: null,
+        tokenExpiresAt: null,
+      };
+    } catch (err) {
+      logger.warn({ err }, 'Failed to verify Google ID token');
+      return null;
+    }
+  }
+
+  return parseDevJwtLikeToken(provider, normalized);
 }
 
 export async function upsertSocialAccountForUser(userId: string, identity: SocialIdentity): Promise<void> {

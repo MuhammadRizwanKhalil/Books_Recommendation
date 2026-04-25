@@ -65,6 +65,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=/api
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
             BUILD_ID=${{ steps.meta.outputs.sha }}
           tags: |
             ${{ env.IMAGE_BASE }}/app:latest
@@ -90,11 +91,13 @@ jobs:
         env:
           SHA: ${{ needs.build.outputs.sha }}
           GA_CREDENTIALS_JSON_B64: ${{ secrets.GA_CREDENTIALS_JSON_B64 }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_IDS: ${{ secrets.GOOGLE_OAUTH_CLIENT_IDS }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: SHA,GA_CREDENTIALS_JSON_B64
+          envs: SHA,GA_CREDENTIALS_JSON_B64,GOOGLE_CLIENT_ID,GOOGLE_OAUTH_CLIENT_IDS
           command_timeout: 8m
           script: |
             #!/bin/bash
@@ -137,7 +140,7 @@ jobs:
             log "APP_IMAGE=$APP_IMAGE"
 
             # Persist for future restarts (e.g. after server reboot)
-            grep -v '^SERVER_IMAGE=\|^APP_IMAGE=\|^GOOGLE_APPLICATION_CREDENTIALS_JSON=' .env > .env.tmp || true
+            grep -v '^SERVER_IMAGE=\|^APP_IMAGE=\|^GOOGLE_APPLICATION_CREDENTIALS_JSON=\|^GOOGLE_CLIENT_ID=\|^GOOGLE_OAUTH_CLIENT_IDS=' .env > .env.tmp || true
             echo "SERVER_IMAGE=$SERVER_IMAGE" >> .env.tmp
             echo "APP_IMAGE=$APP_IMAGE"       >> .env.tmp
 
@@ -148,6 +151,16 @@ jobs:
               log "GA credentials secret injected into .env"
             else
               warn "GA_CREDENTIALS_JSON_B64 secret missing; keeping existing GA credentials setting"
+            fi
+
+            if [ -n "${GOOGLE_OAUTH_CLIENT_IDS:-}" ]; then
+              echo "GOOGLE_OAUTH_CLIENT_IDS=$GOOGLE_OAUTH_CLIENT_IDS" >> .env.tmp
+              log "Google OAuth audience list injected into .env"
+            elif [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+              echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env.tmp
+              log "Google OAuth client id injected into .env"
+            else
+              warn "GOOGLE_CLIENT_ID / GOOGLE_OAUTH_CLIENT_IDS secrets missing; Google sign-in may fail"
             fi
 
             mv .env.tmp .env

@@ -15,6 +15,28 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+            ux_mode?: 'popup' | 'redirect';
+            auto_select?: boolean;
+            cancel_on_tap_outside?: boolean;
+          }) => void;
+          prompt: (listener?: (notification: {
+            isNotDisplayed?: () => boolean;
+            isSkippedMoment?: () => boolean;
+          }) => void) => void;
+        };
+      };
+    };
+  }
+}
+
 // API helper
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 async function apiFetch<T>(path: string, body?: any): Promise<T> {
@@ -30,12 +52,32 @@ async function apiFetch<T>(path: string, body?: any): Promise<T> {
 
 type AuthView = 'signin' | 'signup' | 'forgot-email' | 'forgot-otp' | 'forgot-newpass' | 'forgot-success';
 
-type SocialProvider = 'google' | 'apple';
+const GOOGLE_CLIENT_ID = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+const GOOGLE_IDENTITY_SCRIPT = 'https://accounts.google.com/gsi/client';
+let googleIdentityScriptPromise: Promise<void> | null = null;
 
-function encodeSocialMockToken(provider: SocialProvider, payload: Record<string, unknown>) {
-  const json = JSON.stringify(payload);
-  const encoded = window.btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-  return `${provider}-mock:${encoded}`;
+function loadGoogleIdentityScript(): Promise<void> {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  if (googleIdentityScriptPromise) return googleIdentityScriptPromise;
+
+  googleIdentityScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${GOOGLE_IDENTITY_SCRIPT}"]`) as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Failed to load Google Sign-In SDK.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = GOOGLE_IDENTITY_SCRIPT;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Sign-In SDK.'));
+    document.head.appendChild(script);
+  });
+
+  return googleIdentityScriptPromise;
 }
 
 export function AuthModal() {
@@ -180,32 +222,57 @@ export function AuthModal() {
     }
   };
 
-  const handleSocialSignIn = async (provider: SocialProvider) => {
+  const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
     try {
-      const mockStore = (window as any).__BOOKTIMES_SOCIAL_LOGIN_MOCK__;
-      if (mockStore === null) {
-        setError('Social sign-in is not available right now. Please continue with email.');
+      if (!GOOGLE_CLIENT_ID) {
+        setError('Google sign-in is not configured yet. Set VITE_GOOGLE_CLIENT_ID in the frontend environment.');
         return;
       }
 
-      const localFallbackAllowed = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-      const profile = mockStore?.[provider] || (localFallbackAllowed ? {
-        sub: `${provider}-${Date.now()}`,
-        email: `${provider}_${Date.now()}@test.com`,
-        name: provider === 'google' ? 'Google Reader' : 'Apple Reader',
-        picture: 'https://placehold.co/96x96?text=OAuth',
-      } : null);
+      await loadGoogleIdentityScript();
 
-      if (!profile) {
-        setError('Social sign-in is not available right now. Please continue with email.');
+      const googleId = window.google?.accounts?.id;
+      if (!googleId) {
+        setError('Google sign-in is temporarily unavailable. Please continue with email.');
         return;
       }
 
-      const ok = await signInWithSocial(provider, encodeSocialMockToken(provider, profile));
+      const idToken = await new Promise<string>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          reject(new Error('Google sign-in timed out. Please try again.'));
+        }, 15000);
+
+        googleId.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          ux_mode: 'popup',
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          callback: (response) => {
+            window.clearTimeout(timeoutId);
+            if (response?.credential) {
+              resolve(response.credential);
+            } else {
+              reject(new Error('Google sign-in was cancelled.'));
+            }
+          },
+        });
+
+        // Opens Google account chooser / one-tap flow.
+        googleId.prompt((notification) => {
+          if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+            window.clearTimeout(timeoutId);
+            reject(new Error('Google sign-in prompt could not be displayed. Check allowed origins in Google Cloud Console.'));
+          }
+        });
+      });
+
+      const ok = await signInWithSocial('google', idToken);
       if (ok) resetForm();
-      else setError(`Failed to sign in with ${provider === 'google' ? 'Google' : 'Apple'}.`);
+      else setError('Failed to sign in with Google.');
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-in failed. Please continue with email.');
     } finally {
       setLoading(false);
     }
@@ -239,7 +306,7 @@ export function AuthModal() {
         }
       }}
     >
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[420px] max-h-[88vh] overflow-y-auto p-5">
         {/* ═══ FORGOT PASSWORD: Enter Email ═══ */}
         {currentView === 'forgot-email' && (
           <>
@@ -428,55 +495,44 @@ export function AuthModal() {
         {/* ═══ NORMAL: Sign In / Sign Up ═══ */}
         {(currentView === 'signin' || currentView === 'signup') && (
           <>
-            <DialogHeader className="text-center space-y-3">
+            <DialogHeader className="text-center space-y-2">
               <div className="mx-auto p-3 rounded-xl bg-primary/10">
-                <LogoMark size={32} className="text-primary" />
+                <LogoMark size={28} className="text-primary" />
               </div>
-              <DialogTitle className="text-2xl font-bold">
+              <DialogTitle className="text-xl font-bold leading-tight">
                 {isSignUp ? 'Create Account' : 'Welcome Back'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 {isSignUp
                   ? 'Join The Book Times to save favorites and get personalized recommendations.'
                   : 'Sign in to access your wishlist, reviews, and reading history.'}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-3">
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-center gap-3 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-                onClick={() => void handleSocialSignIn('google')}
+                className="h-10 w-full justify-center gap-2.5 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                onClick={() => void handleGoogleSignIn()}
                 disabled={loading}
                 aria-label="Continue with Google"
               >
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4285F4] text-xs font-bold text-white">G</span>
                 Continue with Google
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-center gap-3 border-black bg-black text-white hover:bg-black/90"
-                onClick={() => void handleSocialSignIn('apple')}
-                disabled={loading}
-                aria-label="Continue with Apple"
-              >
-                <span className="text-base font-semibold"></span>
-                Continue with Apple
-              </Button>
             </div>
 
-            <div className="relative my-4">
+            <div className="relative my-3">
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
                 or continue with email
               </span>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {isSignUp && (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="auth-name">Full Name</Label>
                   <div className="relative">
                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -484,7 +540,7 @@ export function AuthModal() {
                       id="auth-name"
                       type="text"
                       placeholder="John Doe"
-                      className="pl-9"
+                      className="h-10 pl-9"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -492,7 +548,7 @@ export function AuthModal() {
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="auth-email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -500,14 +556,14 @@ export function AuthModal() {
                     id="auth-email"
                     type="email"
                     placeholder="you@example.com"
-                    className="pl-9"
+                    className="h-10 pl-9"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="auth-password">Password</Label>
                   {!isSignUp && (
@@ -526,7 +582,7 @@ export function AuthModal() {
                     id="auth-password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="pl-9 pr-10"
+                    className="h-10 pl-9 pr-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -545,13 +601,13 @@ export function AuthModal() {
                 <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>
               )}
 
-              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90" size="lg" disabled={loading}>
+              <Button type="submit" className="h-10 w-full bg-foreground text-background hover:bg-foreground/90" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSignUp ? 'Create Account' : 'Sign In'}
               </Button>
             </form>
 
-            <Separator className="my-4" />
+            <Separator className="my-3" />
 
             <p className="text-center text-sm text-muted-foreground">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
