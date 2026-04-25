@@ -1,6 +1,6 @@
 ﻿import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { authApi, setToken } from '@/api/client';
+import { ApiError, authApi, setToken } from '@/api/client';
 
 type SocialProvider = 'google' | 'apple';
 
@@ -104,9 +104,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           onboardingCompleted: prev?.onboardingCompleted,
         }));
       })
-      .catch(() => {
-        // Keep token on transient failures so feature pages can still recover
-        // via authenticated API calls once connectivity stabilizes.
+      .catch((err: unknown) => {
+        // If backend rejects the token, force logout so protected routes
+        // (especially admin) cannot be entered using stale local storage data.
+        if (err instanceof ApiError && err.status === 401) {
+          setToken(null);
+          setUser(null);
+          return;
+        }
+
+        // Keep existing user data on transient/network errors.
         setUser((prev) => prev ?? loadUser());
       })
       .finally(() => setIsLoading(false));
@@ -123,6 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(readingHistory));
   }, [readingHistory]);
+
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+    };
+
+    window.addEventListener('thebooktimes:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('thebooktimes:unauthorized', onUnauthorized);
+  }, []);
 
   const openAuthModal = useCallback((mode: 'signin' | 'signup' = 'signin') => {
     setAuthModalMode(mode);

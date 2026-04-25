@@ -20,11 +20,14 @@ declare global {
   }
 }
 
-// Generate access token (2h in prod, 7d in dev)
-// 2h balances security with UX — refresh tokens handle long sessions
+// Generate access token with role-specific expiry (configurable via env)
 export function generateToken(payload: JwtPayload): string {
+  const expiresIn = payload.role === 'admin'
+    ? config.jwt.adminExpiresIn
+    : config.jwt.userExpiresIn;
+
   return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.nodeEnv === 'production' ? '2h' : config.jwt.expiresIn,
+    expiresIn,
   } as jwt.SignOptions);
 }
 

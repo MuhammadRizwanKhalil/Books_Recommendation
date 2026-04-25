@@ -40,6 +40,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
+
+    if (res.status === 401 && authToken) {
+      setToken(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('thebooktimes:unauthorized'));
+      }
+    }
+
     throw new ApiError(body.error || 'Request failed', res.status, body);
   }
 

@@ -19,7 +19,9 @@ export const config = {
       }
       return s || 'dev-thebooktimes-jwt-secret-do-not-use-in-production';
     })(),
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    userExpiresIn: process.env.JWT_USER_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '24h',
+    adminExpiresIn: process.env.JWT_ADMIN_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '24h',
   },
   admin: {
     email: process.env.ADMIN_EMAIL || 'admin@thebooktimes.com',
