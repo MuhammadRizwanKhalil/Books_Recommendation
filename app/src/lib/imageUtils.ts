@@ -61,7 +61,11 @@ export function getSafeCoverImage(src?: string | null): string {
   if (!normalized) return FALLBACK_COVER;
 
   const lowered = normalized.toLowerCase();
-  if (lowered === 'null' || lowered === 'undefined' || lowered === 'n/a') {
+  const isMissingLiteral = lowered === 'null' || lowered === 'undefined' || lowered === 'n/a';
+  const isUnavailableLabel = lowered.includes('image not available') || lowered.includes('no image available');
+  const isGoogleBooksNoCover = lowered.includes('books.google.com/books/content') && lowered.includes('zoom=0');
+
+  if (isMissingLiteral || isUnavailableLabel || isGoogleBooksNoCover) {
     return FALLBACK_COVER;
   }
 

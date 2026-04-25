@@ -716,7 +716,7 @@ export async function getRecommendations(bookId: string, limit: number = 6): Pro
 export async function getTopRated(limit: number = 8): Promise<any[]> {
   const priors = await getPriors();
 
-  return await dbAll<any>(`
+  const strictTopRated = await dbAll<any>(`
     SELECT *,
       (CAST(ratings_count AS DOUBLE) / (ratings_count + ?)) * google_rating +
       (CAST(? AS DOUBLE) / (ratings_count + ?)) * ? AS bayesian_rating
@@ -727,6 +727,33 @@ export async function getTopRated(limit: number = 8): Promise<any[]> {
     ORDER BY bayesian_rating DESC
     LIMIT ?
   `, [GOOGLE_PRIOR_M, GOOGLE_PRIOR_M, GOOGLE_PRIOR_M, priors.googleMean, limit]);
+
+  if (strictTopRated.length >= limit) {
+    return strictTopRated;
+  }
+
+  // Fill remainder with best published/active books so UI sections expecting 20 cards are fully populated.
+  const existingIds = new Set(strictTopRated.map((b: any) => b.id));
+  const remaining = limit - strictTopRated.length;
+  const fallback = await dbAll<any>(`
+    SELECT *
+    FROM books
+    WHERE status = 'PUBLISHED' AND is_active = 1
+      AND id NOT IN (${strictTopRated.map(() => '?').join(',') || "''"})
+    ORDER BY computed_score DESC, ratings_count DESC, google_rating DESC
+    LIMIT ?
+  `, [...strictTopRated.map((b: any) => b.id), remaining]);
+
+  const merged = [...strictTopRated];
+  for (const book of fallback) {
+    if (!existingIds.has(book.id)) {
+      merged.push(book);
+      existingIds.add(book.id);
+    }
+    if (merged.length >= limit) break;
+  }
+
+  return merged;
 }
 
 // ── Trending (Time-Decayed) ─────────────────────────────────────────────────

@@ -490,7 +490,6 @@ function AutoFlipCarousel({
   onBookClick: (book: Book) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isPausedRef = useRef(false);
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
 
@@ -503,19 +502,17 @@ function AutoFlipCarousel({
 
 
     const animate = (time: number) => {
-      if (!isPausedRef.current) {
-        if (lastTimeRef.current > 0) {
-          const rawDelta = time - lastTimeRef.current;
-          // Cap at 100ms to prevent jumps from tab switching or long pauses
-          const delta = Math.min(rawDelta, 100);
-          el.scrollLeft += 0.5 * (delta / 16);
-          const halfWidth = el.scrollWidth / 2;
-          if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
-            el.scrollLeft -= halfWidth;
-          }
+      if (lastTimeRef.current > 0) {
+        const rawDelta = time - lastTimeRef.current;
+        // Cap long-frame deltas and keep a steady auto-scroll speed.
+        const delta = Math.min(rawDelta, 100);
+        el.scrollLeft += 0.45 * (delta / 16);
+        const halfWidth = el.scrollWidth / 2;
+        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
+          el.scrollLeft -= halfWidth;
         }
-        lastTimeRef.current = time;
       }
+      lastTimeRef.current = time;
       animRef.current = requestAnimationFrame(animate);
     };
 
@@ -559,10 +556,10 @@ function AutoFlipCarousel({
         <div
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scrollbar-hide"
-          onMouseEnter={() => { isPausedRef.current = true; }}
-          onMouseLeave={() => { isPausedRef.current = false; lastTimeRef.current = 0; }}
-          onTouchStart={() => { isPausedRef.current = true; }}
-          onTouchEnd={() => { isPausedRef.current = false; lastTimeRef.current = 0; }}
+          onMouseEnter={() => { lastTimeRef.current = 0; }}
+          onMouseLeave={() => { lastTimeRef.current = 0; }}
+          onTouchStart={() => { lastTimeRef.current = 0; }}
+          onTouchEnd={() => { lastTimeRef.current = 0; }}
           style={{ scrollBehavior: 'auto' }}
         >
         {displayBooks.map((book, idx) => (
@@ -702,7 +699,7 @@ function HorizontalBookCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full z-[100] mt-1"
+            className="absolute left-0 right-0 bottom-full mb-1"
                       style={{ zIndex: 9999 }}
           >
             <div className="p-3 rounded-xl border bg-card shadow-xl space-y-2">
