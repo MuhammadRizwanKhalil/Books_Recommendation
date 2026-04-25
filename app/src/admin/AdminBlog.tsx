@@ -40,7 +40,7 @@ export function AdminBlog() {
       await blogApi.delete(id);
       toast.success('Post deleted');
       setDeleteConfirm(null);
-      load();
+      await load();
     } catch (err: any) { toast.error(err.message || 'Failed'); }
   }
 
@@ -131,7 +131,13 @@ export function AdminBlog() {
                         <div className="flex items-center justify-end gap-1">
                           {post.status === 'PUBLISHED' && (
                             <Button variant="ghost" size="icon" asChild title="View on site">
-                              <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer">
+                              <a
+                                href={`/blog/${post.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`View ${post.title} on site`}
+                                title={`View ${post.title} on site`}
+                              >
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             </Button>
@@ -179,7 +185,12 @@ export function AdminBlog() {
       </Card>
 
       {/* Delete Confirm */}
-      <Dialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader><DialogTitle>Delete Post</DialogTitle></DialogHeader>
           <p className="text-muted-foreground">Are you sure? This cannot be undone.</p>

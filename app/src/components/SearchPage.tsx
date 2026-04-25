@@ -214,7 +214,7 @@ export function SearchPage() {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-2 flex-wrap sm:flex-nowrap">
             <div ref={filterMenuRef} className="relative rounded-xl border bg-card p-1 shadow-sm">
               <Button
                 variant="ghost"
@@ -226,7 +226,7 @@ export function SearchPage() {
                 }}
               >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filters
+                <span>Filters</span>
                 {activeFilterCount > 0 && (
                   <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
                     {activeFilterCount}
@@ -312,7 +312,8 @@ export function SearchPage() {
                 }}
               >
                 <ArrowUpDown className="mr-2 h-4 w-4" />
-                {currentSort.label}
+                <span className="sm:hidden">Sort</span>
+                <span className="hidden sm:inline">{currentSort.label}</span>
               </Button>
 
               <AnimatePresence>
@@ -341,24 +342,24 @@ export function SearchPage() {
                 )}
               </AnimatePresence>
             </div>
-            <div className="flex items-center rounded-xl border bg-card p-1 shadow-sm">
+            <div className="flex items-center rounded-xl border bg-card p-1 shadow-sm ml-auto sm:ml-0">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
-                className="h-9 rounded-lg px-3"
+                className="h-9 rounded-lg px-2 sm:px-3"
                 onClick={() => setViewMode('grid')}
               >
-                <Grid3X3 className="mr-2 h-4 w-4" />
-                Card View
+                <Grid3X3 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Card View</span>
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                 size="sm"
-                className="h-9 rounded-lg px-3"
+                className="h-9 rounded-lg px-2 sm:px-3"
                 onClick={() => setViewMode('list')}
               >
-                <List className="mr-2 h-4 w-4" />
-                List View
+                <List className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">List View</span>
               </Button>
             </div>
           </div>

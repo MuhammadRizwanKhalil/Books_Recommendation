@@ -111,11 +111,11 @@ export function BookPage({ book, onBack }: BookPageProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-background"
+      className="min-h-screen bg-background overflow-x-hidden"
     >
       {/* Unified top bar: Back + inline breadcrumb + admin edit (one row, no duplication) */}
-      <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-lg border-b">
-        <div className="container mx-auto px-4 py-2.5 flex items-center gap-3">
+      <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-lg border-b overflow-x-hidden">
+        <div className="container mx-auto px-4 py-2.5 flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0 -ml-2">
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -156,9 +156,9 @@ export function BookPage({ book, onBack }: BookPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-8">
+      <div className="container mx-auto px-4 pb-8 overflow-x-hidden">
         {/* ====== MAIN LAYOUT ====== */}
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-3 sm:pt-4">
+        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-3 sm:pt-4 min-w-0">
 
           {/* LEFT COLUMN — Image + Details + Affiliate + Quick actions */}
           <div className="space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
@@ -338,7 +338,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="space-y-5 sm:space-y-6"
+            className="space-y-5 sm:space-y-6 min-w-0"
           >
             {/* Header — title + author */}
             <div>
@@ -349,9 +349,9 @@ export function BookPage({ book, onBack }: BookPageProps) {
                   </Link>
                 ))}
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">{book.title}</h1>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight break-words">{book.title}</h1>
               {book.subtitle && (
-                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mt-1">{book.subtitle}</p>
+                <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mt-1 break-words">{book.subtitle}</p>
               )}
               <p className="text-base sm:text-lg mt-2">
                 by {book.authorsData && book.authorsData.length > 0 ? (

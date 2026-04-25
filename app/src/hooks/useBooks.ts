@@ -181,7 +181,7 @@ export function useBlogPosts(limit?: number) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    blogApi.list(1, limit || 50)
+    blogApi.list(1, limit || 50, 'PUBLISHED')
       .then((res) => {
         setPosts(res.posts.map((p: any) => ({
           id: String(p.id),

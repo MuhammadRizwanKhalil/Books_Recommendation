@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Settings, Save, RefreshCw, Mail, Palette, Globe, Shield,
   Bell, Link2, Loader2, ChevronRight,
@@ -40,6 +40,59 @@ interface SettingItem {
   sort_order: number;
 }
 
+// Runtime-backed setting keys used by active frontend/server paths.
+// Legacy keys can still be edited by enabling "Show legacy settings".
+const ACTIVE_SETTING_KEYS = new Set([
+  // General
+  'site_name',
+  'site_url',
+  'site_tagline',
+  'site_description',
+  'admin_email',
+  'contact_email',
+  'maintenance_mode',
+  // SMTP
+  'smtp_host',
+  'smtp_port',
+  'smtp_secure',
+  'smtp_user',
+  'smtp_pass',
+  'smtp_from_name',
+  'smtp_from_email',
+  // Branding + analytics
+  'site_logo_url',
+  'site_favicon_url',
+  'brand_primary_color',
+  'google_analytics_enabled',
+  'google_analytics_id',
+  'google_analytics_property_id',
+  // Social
+  'social_facebook',
+  'social_twitter',
+  'social_instagram',
+  'social_linkedin',
+  'social_youtube',
+  'social_tiktok',
+  'social_pinterest',
+  'social_goodreads',
+  // Legal
+  'privacy_policy',
+  'terms_conditions',
+  'cookie_policy',
+  'refund_policy',
+  'affiliate_disclosure',
+  // Notifications
+  'notify_new_user',
+  'notify_new_review',
+  'notify_new_subscriber',
+  // Security
+  'admin_url_slug',
+  // Homepage
+  'hero_badge_text',
+  'popular_searches',
+  'footer_tagline',
+]);
+
 export function AdminSettings() {
   const [settings, setSettings] = useState<Record<string, SettingItem[]>>({});
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
@@ -49,6 +102,7 @@ export function AdminSettings() {
   const [seeding, setSeeding] = useState(false);
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [showLegacySettings, setShowLegacySettings] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,12 +174,51 @@ export function AdminSettings() {
     }
   };
 
-  // Show categories from both CATEGORY_META and actual data
-  const categories = Array.from(new Set([...Object.keys(CATEGORY_META), ...Object.keys(settings)]));
-  const hasChanges = Object.keys(editedValues).some(key => {
-    const original = Object.values(settings).flat().find(s => s.key === key);
-    return original && original.value !== editedValues[key];
-  });
+  const runtimeSettings = useMemo(() => {
+    const grouped: Record<string, SettingItem[]> = {};
+    for (const [category, items] of Object.entries(settings)) {
+      const filtered = items.filter((item) => ACTIVE_SETTING_KEYS.has(item.key));
+      if (filtered.length > 0) grouped[category] = filtered;
+    }
+    return grouped;
+  }, [settings]);
+
+  const visibleSettings = showLegacySettings ? settings : runtimeSettings;
+
+  const hiddenSettingsCount = useMemo(() => {
+    if (showLegacySettings) return 0;
+    let hidden = 0;
+    for (const items of Object.values(settings)) {
+      hidden += items.filter((item) => !ACTIVE_SETTING_KEYS.has(item.key)).length;
+    }
+    return hidden;
+  }, [settings, showLegacySettings]);
+
+  const categories = useMemo(() => {
+    return Object.keys(visibleSettings).filter((cat) => Boolean(CATEGORY_META[cat]));
+  }, [visibleSettings]);
+
+  useEffect(() => {
+    if (categories.length === 0) return;
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory(categories[0]);
+    }
+  }, [categories, activeCategory]);
+
+  const hasChanges = useMemo(() => {
+    const originalByKey = new Map<string, string>();
+    for (const items of Object.values(visibleSettings)) {
+      for (const item of items) {
+        originalByKey.set(item.key, item.value);
+      }
+    }
+    for (const [key, originalValue] of originalByKey.entries()) {
+      if ((editedValues[key] ?? originalValue) !== originalValue) {
+        return true;
+      }
+    }
+    return false;
+  }, [visibleSettings, editedValues]);
 
   const renderField = (item: SettingItem) => {
     const value = editedValues[item.key] ?? item.value;
@@ -252,9 +345,16 @@ export function AdminSettings() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground text-sm">Manage your site configuration, branding, and policies</p>
+          <p className="text-muted-foreground text-sm">Manage your live site configuration, branding, and policies</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLegacySettings((prev) => !prev)}
+          >
+            {showLegacySettings ? 'Hide Legacy Settings' : 'Show Legacy Settings'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSeed} disabled={seeding}>
             {seeding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             Seed Defaults
@@ -266,6 +366,18 @@ export function AdminSettings() {
         </div>
       </div>
 
+      {!showLegacySettings && hiddenSettingsCount > 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-3 text-sm text-muted-foreground">
+            {hiddenSettingsCount} legacy settings are hidden because they are not used by current runtime paths. Use
+            {' '}
+            <span className="font-medium text-foreground">Show Legacy Settings</span>
+            {' '}
+            to review or edit them.
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar navigation */}
         <div className="lg:col-span-3">
@@ -276,7 +388,7 @@ export function AdminSettings() {
                   const meta = CATEGORY_META[cat];
                   if (!meta) return null;
                   const Icon = meta.icon;
-                  const itemCount = settings[cat]?.length || 0;
+                  const itemCount = visibleSettings[cat]?.length || 0;
 
                   return (
                     <button
@@ -390,7 +502,7 @@ export function AdminSettings() {
                 {/* 2FA Security Panel — only in security category */}
                 {activeCategory === 'security' && <TwoFactorPanel />}
 
-                {(!settings[activeCategory] || settings[activeCategory].length === 0) ? (
+                {(!visibleSettings[activeCategory] || visibleSettings[activeCategory].length === 0) ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No settings in this category yet.</p>
                     <Button onClick={handleSeed} variant="outline" className="mt-3">
@@ -399,7 +511,7 @@ export function AdminSettings() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {settings[activeCategory].map((item, idx) => (
+                    {visibleSettings[activeCategory].map((item, idx) => (
                       <div key={item.key}>
                         {idx > 0 && <Separator className="mb-6" />}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">

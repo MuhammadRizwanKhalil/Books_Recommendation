@@ -1261,8 +1261,14 @@ export interface AdminBlogMention {
 }
 
 export const blogApi = {
-  list: (page = 1, limit = 10) =>
-    apiFetch<PaginatedBlog>(`/blog?page=${page}&limit=${limit}`),
+  list: (page = 1, limit = 10, status?: string) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (status) params.set('status', status);
+    return apiFetch<PaginatedBlog>(`/blog?${params.toString()}`);
+  },
 
   getBySlug: (slug: string) =>
     apiFetch<BlogPostResponse>(`/blog/${slug}`),

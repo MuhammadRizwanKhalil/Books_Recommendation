@@ -162,7 +162,13 @@ app.set('etag', 'weak');
 function cacheControl(maxAge: number) {
   return (_req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (_req.method === 'GET') {
-      res.set('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
+      const hasAuth = Boolean(_req.headers.authorization);
+      if (hasAuth) {
+        // Authenticated/admin responses should never be cached as public content.
+        res.set('Cache-Control', 'private, no-store');
+      } else {
+        res.set('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
+      }
     }
     next();
   };

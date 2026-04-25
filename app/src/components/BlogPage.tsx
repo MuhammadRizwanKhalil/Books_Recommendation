@@ -24,7 +24,7 @@ export function BlogPage() {
 
   useEffect(() => {
     setLoading(true);
-    blogApi.list(page, 12)
+    blogApi.list(page, 12, 'PUBLISHED')
       .then((res: any) => {
         setPosts(res.posts.map((p: any) => ({
           id: p.id,
