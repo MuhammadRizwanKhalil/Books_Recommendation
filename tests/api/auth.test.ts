@@ -2,9 +2,10 @@
  * Backend API Tests — Authentication
  */
 
-const BASE_URL = process.env.API_URL || 'https://thebooktimes.com/api';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'rizwankhalil87@gmail.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'o6SNgYdeMih2iwP/F7Lk9zUxfEl3FzrJ';
+const BASE_URL = process.env.API_URL || `${process.env.TEST_BASE_URL || 'http://127.0.0.1:3001'}/api`;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const hasAdminCreds = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 
 async function post(path: string, body: any, token?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -25,7 +26,7 @@ async function get(path: string, token?: string) {
 }
 
 describe('POST /api/auth/login', () => {
-  it('should return 200 with valid admin credentials', async () => {
+  (hasAdminCreds ? it : it.skip)('should return 200 with valid admin credentials', async () => {
     const { status, data } = await post('/auth/login', {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD,
@@ -36,7 +37,7 @@ describe('POST /api/auth/login', () => {
     expect(data.user.role).toBe('admin');
   });
 
-  it('token should be a non-empty string', async () => {
+  (hasAdminCreds ? it : it.skip)('token should be a non-empty string', async () => {
     const { data } = await post('/auth/login', {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD,
@@ -83,7 +84,7 @@ describe('POST /api/auth/login', () => {
     expect(status).toBe(400);
   });
 
-  it('user object should have expected fields', async () => {
+  (hasAdminCreds ? it : it.skip)('user object should have expected fields', async () => {
     const { data } = await post('/auth/login', {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD,
@@ -97,7 +98,7 @@ describe('POST /api/auth/login', () => {
 });
 
 describe('POST /api/auth/register', () => {
-  it('should return 400 with duplicate email', async () => {
+  (hasAdminCreds ? it : it.skip)('should return 400 with duplicate email', async () => {
     const { status } = await post('/auth/register', {
       name: 'Test User',
       email: ADMIN_EMAIL,
@@ -146,11 +147,12 @@ describe('Protected routes with valid token', () => {
   let token: string;
 
   beforeAll(async () => {
+    if (!hasAdminCreds) return;
     const { data } = await post('/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     token = data.token;
   });
 
-  it('should access admin blog endpoint with valid token', async () => {
+  (hasAdminCreds ? it : it.skip)('should access admin blog endpoint with valid token', async () => {
     const { status } = await get('/blog/ai-status', token);
     expect(status).toBe(200);
   });

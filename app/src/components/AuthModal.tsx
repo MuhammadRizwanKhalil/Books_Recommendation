@@ -100,6 +100,8 @@ export function AuthModal() {
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleInitialized = useRef(false);
 
   const isSignUp = authModalMode === 'signup' && view === 'signup';
 

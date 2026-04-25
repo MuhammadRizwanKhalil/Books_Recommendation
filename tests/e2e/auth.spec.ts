@@ -64,9 +64,11 @@ test.describe('Authentication', () => {
   });
 
   test.describe('Login Happy Path @testing @auth-happy-path', () => {
+    test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD, 'ADMIN_EMAIL and ADMIN_PASSWORD are required for auth happy-path tests.');
+
     test('login with valid credentials closes modal and shows user', async ({ page }) => {
-      const email = process.env.ADMIN_EMAIL || 'admin@thebooktimes.com';
-      const password = process.env.ADMIN_PASSWORD || 'admin123456';
+      const email = process.env.ADMIN_EMAIL!;
+      const password = process.env.ADMIN_PASSWORD!;
 
       await page.locator('text=Sign In').first().click();
       await page.waitForTimeout(500);
@@ -85,8 +87,8 @@ test.describe('Authentication', () => {
     });
 
     test('session persists on page refresh', async ({ page }) => {
-      const email = process.env.ADMIN_EMAIL || 'admin@thebooktimes.com';
-      const password = process.env.ADMIN_PASSWORD || 'admin123456';
+      const email = process.env.ADMIN_EMAIL!;
+      const password = process.env.ADMIN_PASSWORD!;
 
       await page.locator('text=Sign In').first().click();
       await page.waitForTimeout(500);
@@ -110,8 +112,8 @@ test.describe('Authentication', () => {
     });
 
     test('logout clears session and Sign In button returns', async ({ page }) => {
-      const email = process.env.ADMIN_EMAIL || 'admin@thebooktimes.com';
-      const password = process.env.ADMIN_PASSWORD || 'admin123456';
+      const email = process.env.ADMIN_EMAIL!;
+      const password = process.env.ADMIN_PASSWORD!;
 
       // Login
       await page.locator('text=Sign In').first().click();

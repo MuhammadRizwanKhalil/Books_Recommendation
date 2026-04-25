@@ -20,6 +20,22 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
+function safeGetTheme(storageKey: string): Theme | null {
+  try {
+    return localStorage.getItem(storageKey) as Theme | null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSetTheme(storageKey: string, theme: Theme) {
+  try {
+    localStorage.setItem(storageKey, theme);
+  } catch {
+    // Ignore storage-unavailable environments.
+  }
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
@@ -27,12 +43,13 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    () => safeGetTheme(storageKey) || defaultTheme
   );
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
+    const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
 
     if (theme === 'system') {
@@ -49,7 +66,7 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      safeSetTheme(storageKey, theme);
       setTheme(theme);
     },
   };
