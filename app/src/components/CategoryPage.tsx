@@ -298,6 +298,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="relative z-[60] mb-12 overflow-visible"
+          style={{ zIndex: expandedBookId !== null ? 9999 : 1 }}
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -380,7 +381,8 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="relative z-0 mb-12"
+          className="relative mb-12"
+          style={{ zIndex: 0 }}
         >
           <AutoFlipCarousel
             books={globalTopBooks}
@@ -490,6 +492,7 @@ function AutoFlipCarousel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPausedRef = useRef(false);
   const animRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
 
   // Duplicate for seamless infinite loop
   const displayBooks = books.length > 0 ? [...books, ...books] : [];
@@ -498,18 +501,21 @@ function AutoFlipCarousel({
     const el = scrollRef.current;
     if (!el || books.length === 0) return;
 
-    let lastTime = 0;
 
     const animate = (time: number) => {
-      if (!isPausedRef.current && lastTime) {
-        const delta = time - lastTime;
-        el.scrollLeft += 0.5 * (delta / 16);
-        const halfWidth = el.scrollWidth / 2;
-        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
-          el.scrollLeft -= halfWidth;
+      if (!isPausedRef.current) {
+        if (lastTimeRef.current > 0) {
+          const rawDelta = time - lastTimeRef.current;
+          // Cap at 100ms to prevent jumps from tab switching or long pauses
+          const delta = Math.min(rawDelta, 100);
+          el.scrollLeft += 0.5 * (delta / 16);
+          const halfWidth = el.scrollWidth / 2;
+          if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
+            el.scrollLeft -= halfWidth;
+          }
         }
+        lastTimeRef.current = time;
       }
-      lastTime = time;
       animRef.current = requestAnimationFrame(animate);
     };
 
@@ -554,9 +560,9 @@ function AutoFlipCarousel({
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scrollbar-hide"
           onMouseEnter={() => { isPausedRef.current = true; }}
-          onMouseLeave={() => { isPausedRef.current = false; }}
+          onMouseLeave={() => { isPausedRef.current = false; lastTimeRef.current = 0; }}
           onTouchStart={() => { isPausedRef.current = true; }}
-          onTouchEnd={() => { isPausedRef.current = false; }}
+          onTouchEnd={() => { isPausedRef.current = false; lastTimeRef.current = 0; }}
           style={{ scrollBehavior: 'auto' }}
         >
         {displayBooks.map((book, idx) => (
@@ -638,6 +644,7 @@ function HorizontalBookCard({
   return (
     <div
       className={`relative group ${isExpanded ? 'z-[9999]' : ''}`}
+        style={{ zIndex: isExpanded ? 9999 : undefined }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -696,6 +703,7 @@ function HorizontalBookCard({
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="absolute left-0 right-0 top-full z-[100] mt-1"
+                      style={{ zIndex: 9999 }}
           >
             <div className="p-3 rounded-xl border bg-card shadow-xl space-y-2">
               {book.subtitle && (
