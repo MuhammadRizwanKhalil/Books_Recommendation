@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Star,
   Heart,
@@ -489,35 +490,42 @@ function AutoFlipCarousel({
   loading?: boolean;
   onBookClick: (book: Book) => void;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const posRef = useRef<number>(0);
+  const halfWidthRef = useRef<number>(0);
 
   // Duplicate for seamless infinite loop
   const displayBooks = books.length > 0 ? [...books, ...books] : [];
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || books.length === 0) return;
+    const track = trackRef.current;
+    if (!track || books.length === 0) return;
 
+    // Measure once after mount; re-measure on window resize
+    const measure = () => { halfWidthRef.current = track.scrollWidth / 2; };
+    measure();
+    window.addEventListener('resize', measure, { passive: true });
 
     const animate = (time: number) => {
       if (lastTimeRef.current > 0) {
-        const rawDelta = time - lastTimeRef.current;
-        // Cap long-frame deltas and keep a steady auto-scroll speed.
-        const delta = Math.min(rawDelta, 100);
-        el.scrollLeft += 0.45 * (delta / 16);
-        const halfWidth = el.scrollWidth / 2;
-        if (halfWidth > 0 && el.scrollLeft >= halfWidth) {
-          el.scrollLeft -= halfWidth;
+        const delta = Math.min(time - lastTimeRef.current, 100);
+        posRef.current += 0.45 * (delta / 16);
+        if (halfWidthRef.current > 0 && posRef.current >= halfWidthRef.current) {
+          posRef.current -= halfWidthRef.current;
         }
+        track.style.transform = `translateX(-${posRef.current}px)`;
       }
       lastTimeRef.current = time;
       animRef.current = requestAnimationFrame(animate);
     };
 
     animRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animRef.current);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener('resize', measure);
+    };
   }, [books.length]);
 
   if (loading) {
@@ -553,15 +561,16 @@ function AutoFlipCarousel({
       <div className="relative">
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto scrollbar-hide"
-          onMouseEnter={() => { lastTimeRef.current = 0; }}
-          onMouseLeave={() => { lastTimeRef.current = 0; }}
-          onTouchStart={() => { lastTimeRef.current = 0; }}
-          onTouchEnd={() => { lastTimeRef.current = 0; }}
-          style={{ scrollBehavior: 'auto' }}
-        >
+        <div className="overflow-hidden">
+          <div
+            ref={trackRef}
+            className="flex gap-4"
+            style={{ willChange: 'transform' }}
+            onMouseEnter={() => { lastTimeRef.current = 0; }}
+            onMouseLeave={() => { lastTimeRef.current = 0; }}
+            onTouchStart={() => { lastTimeRef.current = 0; }}
+            onTouchEnd={() => { lastTimeRef.current = 0; }}
+          >
         {displayBooks.map((book, idx) => (
           <div
             key={`${book.id}-${idx}`}
@@ -609,6 +618,7 @@ function AutoFlipCarousel({
             </div>
           </div>
         ))}
+          </div>
         </div>
       </div>
     </div>
@@ -638,10 +648,40 @@ function HorizontalBookCard({
   liked: boolean;
   onToggleWishlist: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [panelRect, setPanelRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Measure card position whenever it becomes expanded
+  useEffect(() => {
+    if (isExpanded && cardRef.current) {
+      const r = cardRef.current.getBoundingClientRect();
+      setPanelRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    } else {
+      setPanelRect(null);
+    }
+  }, [isExpanded]);
+
+  // Keep panel aligned while user scrolls / resizes
+  useEffect(() => {
+    if (!isExpanded) return;
+    const update = () => {
+      if (cardRef.current) {
+        const r = cardRef.current.getBoundingClientRect();
+        setPanelRect({ top: r.bottom + 4, left: r.left, width: r.width });
+      }
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [isExpanded]);
+
   return (
     <div
-      className={`relative group ${isExpanded ? 'z-[9999]' : ''}`}
-        style={{ zIndex: isExpanded ? 9999 : undefined }}
+      ref={cardRef}
+      className="relative group"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -691,18 +731,26 @@ function HorizontalBookCard({
         </Button>
       </div>
 
-      {/* Expanded details — overlay on top of other cards */}
-      <AnimatePresence>
-        {isExpanded && (
+      {/* Expanded details — portalled to document.body so it's above everything */}
+      {isExpanded && panelRect && createPortal(
+        <AnimatePresence>
           <motion.div
-            initial={{ opacity: 0, y: -4 }}
+            key={book.id}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 bottom-full mb-1"
-                      style={{ zIndex: 9999 }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            style={{
+              position: 'fixed',
+              top: panelRect.top,
+              left: panelRect.left,
+              width: panelRect.width,
+              zIndex: 99999,
+            }}
           >
-            <div className="p-3 rounded-xl border bg-card shadow-xl space-y-2">
+            <div className="p-3 rounded-xl border bg-card shadow-2xl space-y-2">
               {book.subtitle && (
                 <p className="text-xs text-muted-foreground italic">{book.subtitle}</p>
               )}
@@ -750,8 +798,9 @@ function HorizontalBookCard({
               </div>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
