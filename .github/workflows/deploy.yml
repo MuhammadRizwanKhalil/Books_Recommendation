@@ -89,11 +89,12 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           SHA: ${{ needs.build.outputs.sha }}
+          GA_CREDENTIALS_JSON_B64: ${{ secrets.GA_CREDENTIALS_JSON_B64 }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: SHA
+          envs: SHA,GA_CREDENTIALS_JSON_B64
           command_timeout: 8m
           script: |
             #!/bin/bash
@@ -136,9 +137,19 @@ jobs:
             log "APP_IMAGE=$APP_IMAGE"
 
             # Persist for future restarts (e.g. after server reboot)
-            grep -v '^SERVER_IMAGE=\|^APP_IMAGE=' .env > .env.tmp || true
+            grep -v '^SERVER_IMAGE=\|^APP_IMAGE=\|^GOOGLE_APPLICATION_CREDENTIALS_JSON=' .env > .env.tmp || true
             echo "SERVER_IMAGE=$SERVER_IMAGE" >> .env.tmp
             echo "APP_IMAGE=$APP_IMAGE"       >> .env.tmp
+
+            # Inject GA credentials from GitHub secret (base64-encoded JSON).
+            # This avoids storing credential files in git or on the runner.
+            if [ -n "${GA_CREDENTIALS_JSON_B64:-}" ]; then
+              echo "GOOGLE_APPLICATION_CREDENTIALS_JSON=$GA_CREDENTIALS_JSON_B64" >> .env.tmp
+              log "GA credentials secret injected into .env"
+            else
+              warn "GA_CREDENTIALS_JSON_B64 secret missing; keeping existing GA credentials setting"
+            fi
+
             mv .env.tmp .env
 
             # ── Pull images ──
