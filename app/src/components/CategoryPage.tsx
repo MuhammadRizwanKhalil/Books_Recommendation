@@ -19,7 +19,7 @@ import type { Book, Category } from '@/types';
 import { useBooksByCategory, useTopRated } from '@/hooks/useBooks';
 import { formatPrice, formatRating, formatNumber } from '@/lib/utils';
 import { StarDisplay } from '@/components/ui/star-display';
-import { handleImgError } from '@/lib/imageUtils';
+import { handleImgError, getSafeCoverImage } from '@/lib/imageUtils';
 import { useWishlist } from '@/components/WishlistProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSEO } from '@/hooks/useSEO';
@@ -239,7 +239,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
                       {/* Soft shadow beneath */}
                       <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-black/15 dark:bg-black/30 rounded-full blur-xl" />
                       <img
-                        src={featuredBook.coverImage}
+                        src={getSafeCoverImage(featuredBook.coverImage)}
                         alt={`${featuredBook.title} by ${featuredBook.author} — Featured ${category.name} book`}
                         className="relative w-full rounded-2xl shadow-2xl ring-1 ring-black/5 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.25)] transition-all duration-500 group-hover:-translate-y-2"
                         loading="eager"
@@ -297,7 +297,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="relative z-30 mb-12 overflow-visible"
+            className="relative z-[60] mb-12 overflow-visible"
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -311,7 +311,7 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
               )}
             </div>
 
-            <div className="relative z-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-visible">
+            <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-visible">
               {paginatedBooks.map((book) => (
                 <HorizontalBookCard
                   key={book.id}
@@ -428,19 +428,13 @@ export function CategoryPage({ category, onBack, onBookClick }: CategoryPageProp
                     >
                       <div className="rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
                         <div className="aspect-[2/3] overflow-hidden">
-                          {entry.bookCover ? (
-                            <img
-                              src={entry.bookCover}
-                              alt={entry.bookTitle}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              loading="lazy"
-                              onError={handleImgError}
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-muted flex items-center justify-center">
-                              <span className="text-3xl">📚</span>
-                            </div>
-                          )}
+                          <img
+                            src={getSafeCoverImage(entry.bookCover)}
+                            alt={entry.bookTitle}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            onError={handleImgError}
+                          />
                         </div>
                         <div className="p-2.5">
                           <p className="text-xs font-semibold line-clamp-1 group-hover:text-primary transition-colors">
@@ -576,7 +570,7 @@ function AutoFlipCarousel({
               {/* Front - Cover Image */}
               <div className="absolute inset-0 rounded-xl overflow-hidden shadow-md [backface-visibility:hidden]">
                 <img
-                  src={book.coverImage}
+                  src={getSafeCoverImage(book.coverImage)}
                   alt={book.title}
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -643,7 +637,7 @@ function HorizontalBookCard({
 }) {
   return (
     <div
-      className={`relative group ${isExpanded ? 'z-40 isolate' : ''}`}
+      className={`relative group ${isExpanded ? 'z-[9999]' : ''}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -654,7 +648,7 @@ function HorizontalBookCard({
       >
         <div className="shrink-0 w-14 h-20 rounded-lg overflow-hidden shadow-sm">
           <img
-            src={book.coverImage}
+            src={getSafeCoverImage(book.coverImage)}
             alt={book.title}
             className="h-full w-full object-cover"
             loading="lazy"
