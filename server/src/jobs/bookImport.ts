@@ -590,11 +590,14 @@ export async function runImportJob(
 
   try {
     // ── Pre-fetch: load already-imported Google IDs to skip duplicates at API level ──
-    const existingRows = await dbAll<{ google_books_id: string }>(
-      `SELECT google_books_id FROM books WHERE google_books_id IS NOT NULL AND google_books_id != ''`,
+    const existingRows = await dbAll<{ google_books_id: string | null; isbn10: string | null; isbn13: string | null }>(
+      `SELECT google_books_id, isbn10, isbn13 FROM books`,
     );
-    const existingGoogleIds = new Set(existingRows.map(r => r.google_books_id));
-    log(`Found ${existingGoogleIds.size} already-imported Google Book IDs – will skip during fetch`);
+    const normalizeIsbnKey = (isbn: string | null | undefined) => (isbn || '').replace(/[\s-]/g, '').toUpperCase();
+    const existingGoogleIds = new Set(existingRows.map(r => r.google_books_id).filter(Boolean) as string[]);
+    const existingIsbn10s = new Set(existingRows.map(r => normalizeIsbnKey(r.isbn10)).filter(Boolean));
+    const existingIsbn13s = new Set(existingRows.map(r => normalizeIsbnKey(r.isbn13)).filter(Boolean));
+    log(`Found ${existingGoogleIds.size} Google Book IDs, ${existingIsbn10s.size} ISBN-10s, and ${existingIsbn13s.size} ISBN-13s already in the catalog – will skip during fetch`);
 
     // Fetch books from Google API
     let fetchedBooks: NormalizedBook[];
@@ -607,6 +610,8 @@ export async function runImportJob(
         existingGoogleIds,
         config.importJob.fullImportTargetBooks,
         config.importJob.googleDailyRequestBudget,
+        existingIsbn10s,
+        existingIsbn13s,
       );
     } else {
       log(`Running daily import – target ${config.importJob.dailyTargetBooks} new books with up to ${config.importJob.googleDailyRequestBudget} Google Books requests...`);
@@ -616,6 +621,8 @@ export async function runImportJob(
         existingGoogleIds,
         config.importJob.dailyTargetBooks,
         config.importJob.googleDailyRequestBudget,
+        existingIsbn10s,
+        existingIsbn13s,
       );
     }
 

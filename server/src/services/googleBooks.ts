@@ -251,9 +251,15 @@ interface CollectBooksOptions {
   maxNewPerQuery: number;
   requestBudget: number;
   existingGoogleIds?: Set<string>;
+  existingIsbn10s?: Set<string>;
+  existingIsbn13s?: Set<string>;
   label: string;
   onProgress?: (message: string) => void;
   qualityGate?: (book: NormalizedBook) => boolean;
+}
+
+function normalizeIsbnKey(isbn: string | null | undefined): string {
+  return (isbn || '').replace(/[\s-]/g, '').toUpperCase();
 }
 
 async function collectNormalizedBooksFromPlans(
@@ -262,6 +268,12 @@ async function collectNormalizedBooksFromPlans(
 ): Promise<NormalizedBook[]> {
   const allBooks: NormalizedBook[] = [];
   const seenIds = new Set<string>(options.existingGoogleIds || []);
+  const seenIsbn10s = new Set<string>(
+    Array.from(options.existingIsbn10s || []).map(normalizeIsbnKey).filter(Boolean),
+  );
+  const seenIsbn13s = new Set<string>(
+    Array.from(options.existingIsbn13s || []).map(normalizeIsbnKey).filter(Boolean),
+  );
   const requestBudget = Math.max(1, options.requestBudget);
   let requestsUsed = 0;
   let consecutiveFailures = 0;
@@ -317,6 +329,16 @@ async function collectNormalizedBooksFromPlans(
             skippedInvalid++;
             continue;
           }
+
+          const isbn10Key = normalizeIsbnKey(normalized.isbn10);
+          const isbn13Key = normalizeIsbnKey(normalized.isbn13);
+          if ((isbn10Key && seenIsbn10s.has(isbn10Key)) || (isbn13Key && seenIsbn13s.has(isbn13Key))) {
+            skippedExisting++;
+            continue;
+          }
+
+          if (isbn10Key) seenIsbn10s.add(isbn10Key);
+          if (isbn13Key) seenIsbn13s.add(isbn13Key);
 
           allBooks.push(normalized);
           newInQuery++;
@@ -418,6 +440,8 @@ export async function fetchTopBooks(
   existingGoogleIds?: Set<string>,
   targetBooks: number = config.importJob.fullImportTargetBooks,
   requestBudget: number = config.importJob.googleDailyRequestBudget,
+  existingIsbn10s?: Set<string>,
+  existingIsbn13s?: Set<string>,
 ): Promise<NormalizedBook[]> {
   const plans: BookQueryPlan[] = [
     ...TOP_BOOKS_QUERIES.map(({ query, category }) => ({ query, category, orderBy: 'relevance' as const })),
@@ -430,6 +454,8 @@ export async function fetchTopBooks(
     maxNewPerQuery: booksPerCategory,
     requestBudget,
     existingGoogleIds,
+    existingIsbn10s,
+    existingIsbn13s,
     label: 'Full import',
     onProgress,
     qualityGate: (book) => !(book.googleRating && book.googleRating < 3.0 && book.ratingsCount < 10),
@@ -446,6 +472,8 @@ export async function fetchDailyNewBooks(
   existingGoogleIds?: Set<string>,
   targetBooks: number = config.importJob.dailyTargetBooks,
   requestBudget: number = config.importJob.googleDailyRequestBudget,
+  existingIsbn10s?: Set<string>,
+  existingIsbn13s?: Set<string>,
 ): Promise<NormalizedBook[]> {
   const plans: BookQueryPlan[] = [
     ...getDailyQueries().map((query) => ({ query, orderBy: 'newest' as const, maxNewBooks: maxPerQuery })),
@@ -457,6 +485,8 @@ export async function fetchDailyNewBooks(
     maxNewPerQuery: maxPerQuery,
     requestBudget,
     existingGoogleIds,
+    existingIsbn10s,
+    existingIsbn13s,
     label: 'Daily import',
     onProgress,
   });
