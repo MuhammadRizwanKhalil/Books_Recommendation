@@ -33,7 +33,11 @@ const DEFAULTS = {
 function toAbsoluteUrl(value?: string) {
   if (!value) return '';
   try {
-    return new URL(value, window.location.origin).href;
+    const url = new URL(value, window.location.origin);
+    if (url.origin === window.location.origin && url.pathname.startsWith('/books/')) {
+      url.pathname = url.pathname.replace(/^\/books\//, '/book/');
+    }
+    return url.href;
   } catch {
     return value;
   }

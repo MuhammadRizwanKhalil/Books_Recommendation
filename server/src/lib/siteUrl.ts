@@ -8,8 +8,22 @@ export function getPrimaryFrontendUrl(): string {
 
 export function toAbsoluteSiteUrl(value: string | null | undefined, siteUrl = getPrimaryFrontendUrl()): string {
   if (!value) return siteUrl;
-  if (/^https?:\/\//i.test(value)) return value;
-  const normalizedPath = value.startsWith('/') ? value : `/${value}`;
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      const site = new URL(siteUrl);
+      if (parsed.origin === site.origin && parsed.pathname.startsWith('/books/')) {
+        parsed.pathname = parsed.pathname.replace(/^\/books\//, '/book/');
+      }
+      return parsed.href;
+    } catch {
+      return value;
+    }
+  }
+  let normalizedPath = value.startsWith('/') ? value : `/${value}`;
+  if (normalizedPath.startsWith('/books/')) {
+    normalizedPath = normalizedPath.replace(/^\/books\//, '/book/');
+  }
   return `${siteUrl}${normalizedPath}`;
 }
 
