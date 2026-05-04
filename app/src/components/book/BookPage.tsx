@@ -74,8 +74,8 @@ export function BookPage({ book, onBack }: BookPageProps) {
     ogDescription: `${book.title} by ${book.author} â€” Rating: ${book.googleRating}/5`,
     ogImage: book.ogImage || book.coverImage,
     ogType: 'book',
-    ogUrl: `${window.location.origin}/book/${book.slug}`,
-    canonical: book.canonicalUrl || `${window.location.origin}/book/${book.slug}`,
+    ogUrl: `${window.location.origin}/books/${book.slug}`,
+    canonical: book.canonicalUrl || `${window.location.origin}/books/${book.slug}`,
     robots: book.seoRobots || 'index, follow',
     jsonLd: [structuredData, breadcrumbJsonLd],
   });
@@ -114,8 +114,8 @@ export function BookPage({ book, onBack }: BookPageProps) {
       className="min-h-screen bg-background overflow-x-hidden"
     >
       {/* Unified top bar: Back + inline breadcrumb + admin edit (one row, no duplication) */}
-      <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-lg border-b overflow-x-hidden">
-        <div className="container mx-auto px-4 py-2.5 flex items-center gap-3 min-w-0">
+      <div className="sticky top-14 sm:top-16 z-40 bg-background border-b shadow-sm overflow-x-hidden">
+        <div className="container mx-auto px-4 py-3 flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0 -ml-2">
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -158,7 +158,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
       <div className="container mx-auto px-4 pb-8 overflow-x-hidden">
         {/* ====== MAIN LAYOUT ====== */}
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-6 sm:pt-8 min-w-0 items-start">
+        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-8 sm:pt-10 min-w-0 items-start">
 
           {/* LEFT COLUMN — Image + Details + Affiliate + Quick actions */}
           <div className="space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
@@ -296,7 +296,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
                   </Button>
                   <Separator orientation="vertical" className="h-5 mx-0.5" />
                   <SocialShare
-                    url={`${window.location.origin}/book/${book.slug}`}
+                    url={`${window.location.origin}/books/${book.slug}`}
                     title={`${book.title} by ${book.author}`}
                     description={book.description?.slice(0, 200)}
                     variant="icons"

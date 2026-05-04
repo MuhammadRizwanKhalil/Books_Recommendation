@@ -175,7 +175,7 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
     const description = book.meta_description || truncate(
       `Read ${book.title} by ${book.author}. ${book.description || ''}`, 160
     );
-    const pageUrl = `${siteUrl}/book/${slug}`;
+    const pageUrl = `${siteUrl}/books/${slug}`;
     const ogImageUrl = toAbsoluteSiteUrl(book.og_image || book.cover_image || DEFAULT_OG_IMAGE, siteUrl);
     const canonicalUrl = toAbsoluteSiteUrl(book.canonical_url || pageUrl, siteUrl);
     const robots = book.seo_robots || 'index, follow';
@@ -556,8 +556,8 @@ async function getMetaForPath(pathname: string, query?: string): Promise<PageMet
     return await getHomeMeta();
   }
 
-  // Book detail: /book/:slug
-  const bookMatch = pathname.match(/^\/book\/([^/]+)$/);
+  // Book detail: /books/:slug, with /book/:slug kept as a legacy alias
+  const bookMatch = pathname.match(/^\/books?\/([^/]+)$/);
   if (bookMatch) {
     return await getBookMeta(bookMatch[1]);
   }

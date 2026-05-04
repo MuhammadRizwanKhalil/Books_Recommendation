@@ -181,7 +181,7 @@ async function buildDigestHtml(userId: string): Promise<string> {
 
   // 2. New releases this week
   const newBooks = await dbAll<any>(
-    `SELECT id, title, author, cover_image, google_rating as rating
+    `SELECT id, slug, title, author, cover_image, google_rating as rating
      FROM books WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
      ORDER BY google_rating DESC LIMIT 5`,
     [],
@@ -195,7 +195,7 @@ async function buildDigestHtml(userId: string): Promise<string> {
 
   // 3. Trending (top rated recent)
   const trending = await dbAll<any>(
-    `SELECT id, title, author, cover_image, google_rating as rating
+    `SELECT id, slug, title, author, cover_image, google_rating as rating
      FROM books ORDER BY computed_score DESC LIMIT 5`,
     [],
   );
@@ -208,7 +208,7 @@ async function buildDigestHtml(userId: string): Promise<string> {
 
   // 4. From followed authors
   const followedBooks = await dbAll<any>(
-    `SELECT b.id, b.title, b.author, b.cover_image, b.google_rating as rating
+    `SELECT b.id, b.slug, b.title, b.author, b.cover_image, b.google_rating as rating
      FROM books b
      JOIN authors a ON b.author_id = a.id
      JOIN author_follows af ON af.author_id = a.id AND af.user_id = ?
@@ -236,7 +236,7 @@ function bookCard(book: any, siteUrl: string): string {
     <div class="book-card">
       ${book.cover_image ? `<img src="${book.cover_image}" alt="${esc(book.title)}" />` : ''}
       <div>
-        <strong><a href="${siteUrl}/book/${book.id}" style="color:#18181b;text-decoration:none">${esc(book.title)}</a></strong>
+        <strong><a href="${siteUrl}/books/${book.slug || book.id}" style="color:#18181b;text-decoration:none">${esc(book.title)}</a></strong>
         <br/><span style="color:#71717a">${esc(book.author || 'Unknown')}</span>
         ${book.rating ? `<br/>⭐ ${Number(book.rating).toFixed(1)}` : ''}
       </div>

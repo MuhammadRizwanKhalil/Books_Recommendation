@@ -171,7 +171,10 @@ router.get('/author-portal/dashboard', authenticate, async (req: Request, res: R
          COALESCE((
            SELECT COUNT(*)
            FROM page_views pv
-           JOIN books b2 ON pv.page_path LIKE CONCAT('/book/', b2.slug, '%')
+           JOIN books b2 ON (
+             pv.page_path LIKE CONCAT('/books/', b2.slug, '%')
+             OR pv.page_path LIKE CONCAT('/book/', b2.slug, '%')
+           )
            WHERE b2.author_id = ?
          ), 0) AS total_views,
          COALESCE((SELECT COUNT(*) FROM author_follows af WHERE af.author_id = ?), 0) AS follower_count

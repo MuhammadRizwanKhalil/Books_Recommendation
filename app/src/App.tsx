@@ -619,7 +619,7 @@ function App() {
     const p = location.pathname;
     if (p.startsWith('/admin')) return { type: 'admin', page: (p.split('/')[2] || 'dashboard') as AdminPage };
     if (p.startsWith('/category/')) return { type: 'category', category: { id: '', name: '', slug: p.split('/')[2] || '', bookCount: 0 } };
-    if (p.startsWith('/book/')) return { type: 'book', book: {} as Book };
+    if (p.startsWith('/book/') || p.startsWith('/books/')) return { type: 'book', book: {} as Book };
     if (p.startsWith('/legal/')) return { type: 'legal', pageKey: p.split('/')[2] || '' };
     if (p.startsWith('/search')) return { type: 'search' };
     return { type: 'home' };
@@ -639,6 +639,7 @@ function App() {
         '/category',
         '/categories',
         '/book',
+        '/books',
         '/series',
         '/discover',
         '/author',
@@ -696,7 +697,7 @@ function App() {
     switch (v.type) {
       case 'home': routerNavigate('/'); break;
       case 'category': routerNavigate(`/category/${v.category.slug}`); break;
-      case 'book': routerNavigate(`/book/${v.book.slug}`); break;
+      case 'book': routerNavigate(`/books/${v.book.slug}`); break;
       case 'admin': routerNavigate(`/admin/${v.page}`); break;
       case 'legal': routerNavigate(`/legal/${v.pageKey}`); break;
       case 'search': routerNavigate('/search'); break;
@@ -705,7 +706,7 @@ function App() {
   }, [routerNavigate]);
 
   const openBook = useCallback((book: Book) => {
-    routerNavigate(`/book/${book.slug}`);
+    routerNavigate(`/books/${book.slug}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [routerNavigate]);
 
@@ -741,6 +742,7 @@ function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/category/:slug" element={<CategoryRoute />} />
+          <Route path="/books/:slug" element={<BookRoute />} />
           <Route path="/book/:slug" element={<BookRoute />} />
           <Route path="/series/:slug" element={<SeriesRoute />} />
           <Route path="/discover/mood" element={<MoodDiscoveryRoute />} />

@@ -12,8 +12,8 @@ export function toAbsoluteSiteUrl(value: string | null | undefined, siteUrl = ge
     try {
       const parsed = new URL(value);
       const site = new URL(siteUrl);
-      if (parsed.origin === site.origin && parsed.pathname.startsWith('/books/')) {
-        parsed.pathname = parsed.pathname.replace(/^\/books\//, '/book/');
+      if (parsed.origin === site.origin && parsed.pathname.startsWith('/book/')) {
+        parsed.pathname = parsed.pathname.replace(/^\/book\//, '/books/');
       }
       return parsed.href;
     } catch {
@@ -21,8 +21,8 @@ export function toAbsoluteSiteUrl(value: string | null | undefined, siteUrl = ge
     }
   }
   let normalizedPath = value.startsWith('/') ? value : `/${value}`;
-  if (normalizedPath.startsWith('/books/')) {
-    normalizedPath = normalizedPath.replace(/^\/books\//, '/book/');
+  if (normalizedPath.startsWith('/book/')) {
+    normalizedPath = normalizedPath.replace(/^\/book\//, '/books/');
   }
   return `${siteUrl}${normalizedPath}`;
 }

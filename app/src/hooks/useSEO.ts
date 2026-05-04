@@ -34,8 +34,8 @@ function toAbsoluteUrl(value?: string) {
   if (!value) return '';
   try {
     const url = new URL(value, window.location.origin);
-    if (url.origin === window.location.origin && url.pathname.startsWith('/books/')) {
-      url.pathname = url.pathname.replace(/^\/books\//, '/book/');
+    if (url.origin === window.location.origin && url.pathname.startsWith('/book/')) {
+      url.pathname = url.pathname.replace(/^\/book\//, '/books/');
     }
     return url.href;
   } catch {

@@ -110,7 +110,7 @@ async function buildDigestForUser(userId: string, siteUrl: string): Promise<{ ht
   // New releases
   try {
     const books = await dbAll<any>(
-      `SELECT id, title, author, cover_image, google_rating as rating FROM books WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY google_rating DESC LIMIT 5`,
+      `SELECT id, slug, title, author, cover_image, google_rating as rating FROM books WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY google_rating DESC LIMIT 5`,
       [],
     );
     if (books.length > 0) {
@@ -123,7 +123,7 @@ async function buildDigestForUser(userId: string, siteUrl: string): Promise<{ ht
   // Trending
   try {
     const books = await dbAll<any>(
-      `SELECT id, title, author, cover_image, google_rating as rating FROM books ORDER BY computed_score DESC LIMIT 5`,
+      `SELECT id, slug, title, author, cover_image, google_rating as rating FROM books ORDER BY computed_score DESC LIMIT 5`,
       [],
     );
     if (books.length > 0) {
@@ -136,7 +136,7 @@ async function buildDigestForUser(userId: string, siteUrl: string): Promise<{ ht
   // From followed authors
   try {
     const books = await dbAll<any>(
-      `SELECT b.id, b.title, b.author, b.cover_image, b.google_rating as rating
+      `SELECT b.id, b.slug, b.title, b.author, b.cover_image, b.google_rating as rating
        FROM books b JOIN authors a ON b.author_id = a.id
        JOIN author_follows af ON af.author_id = a.id AND af.user_id = ?
        WHERE b.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY b.created_at DESC LIMIT 5`,
@@ -168,7 +168,7 @@ function bookCard(book: any, siteUrl: string): string {
     <div style="border:1px solid #e4e4e7;border-radius:8px;padding:16px;margin:12px 0;display:flex;gap:12px">
       ${book.cover_image ? `<img src="${book.cover_image}" alt="${esc(book.title)}" style="width:60px;height:90px;object-fit:cover;border-radius:4px" />` : ''}
       <div>
-        <strong><a href="${siteUrl}/book/${book.id}" style="color:#18181b;text-decoration:none">${esc(book.title)}</a></strong>
+        <strong><a href="${siteUrl}/books/${book.slug || book.id}" style="color:#18181b;text-decoration:none">${esc(book.title)}</a></strong>
         <br/><span style="color:#71717a">${esc(book.author || 'Unknown')}</span>
         ${book.rating ? `<br/>⭐ ${Number(book.rating).toFixed(1)}` : ''}
       </div>

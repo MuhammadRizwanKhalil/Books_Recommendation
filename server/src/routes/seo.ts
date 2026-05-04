@@ -113,7 +113,7 @@ router.get('/sitemap-books.xml', async (_req: Request, res: Response) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${books.map(b => `  <url>
-    <loc>${siteUrl}/book/${b.slug}</loc>
+    <loc>${siteUrl}/books/${b.slug}</loc>
     <lastmod>${b.updated_at ? b.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>${b.cover_image ? `
@@ -275,7 +275,7 @@ router.get('/api/seo/author/:slug', async (req: Request, res: Response) => {
         workExample: books.map(b => ({
           '@type': 'Book',
           name: b.title,
-          url: `${siteUrl}/book/${b.slug}`,
+          url: `${siteUrl}/books/${b.slug}`,
           ...(b.cover_image && { image: toAbsoluteSiteUrl(b.cover_image, siteUrl) }),
           ...(b.isbn13 && { isbn: b.isbn13 }),
           ...(b.published_date && { datePublished: b.published_date }),
@@ -328,7 +328,7 @@ router.get('/api/seo/book/:slug', async (req: Request, res: Response) => {
       },
       description: book.description || `${book.title} by ${book.author}`,
       image: toAbsoluteSiteUrl(book.cover_image || '/og-image.png', siteUrl),
-      url: `${siteUrl}/book/${book.slug}`,
+      url: `${siteUrl}/books/${book.slug}`,
       ...(book.isbn13 && { isbn: book.isbn13 }),
       ...(book.isbn10 && { identifier: { '@type': 'PropertyValue', propertyID: 'ISBN-10', value: book.isbn10 } }),
       ...(book.publisher && { publisher: { '@type': 'Organization', name: book.publisher } }),
