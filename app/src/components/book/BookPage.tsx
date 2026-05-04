@@ -158,7 +158,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
       <div className="container mx-auto px-4 pb-8 overflow-x-hidden">
         {/* ====== MAIN LAYOUT ====== */}
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-8 sm:pt-10 min-w-0 items-start">
+        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-16 min-w-0 items-start">
 
           {/* LEFT COLUMN — Image + Details + Affiliate + Quick actions */}
           <div className="space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
