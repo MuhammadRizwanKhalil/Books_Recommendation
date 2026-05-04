@@ -600,18 +600,22 @@ export async function runImportJob(
     let fetchedBooks: NormalizedBook[];
 
     if (type === 'initial') {
-      log('Running initial import – fetching top books across all categories...');
+      log(`Running full import – target ${config.importJob.fullImportTargetBooks} new books with up to ${config.importJob.googleDailyRequestBudget} Google Books requests...`);
       fetchedBooks = await fetchTopBooks(
         config.importJob.booksPerCategory,
         log,
         existingGoogleIds,
+        config.importJob.fullImportTargetBooks,
+        config.importJob.googleDailyRequestBudget,
       );
     } else {
-      log('Running daily import – fetching new and trending books...');
+      log(`Running daily import – target ${config.importJob.dailyTargetBooks} new books with up to ${config.importJob.googleDailyRequestBudget} Google Books requests...`);
       fetchedBooks = await fetchDailyNewBooks(
         config.importJob.dailyBooksPerQuery,
         log,
         existingGoogleIds,
+        config.importJob.dailyTargetBooks,
+        config.importJob.googleDailyRequestBudget,
       );
     }
 

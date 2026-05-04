@@ -167,21 +167,42 @@
     <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
+        const hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
+        let serviceWorkerRefreshing = false;
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!hadServiceWorkerController || serviceWorkerRefreshing) return;
+          serviceWorkerRefreshing = true;
+          window.location.reload();
+        });
+
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
             .then((reg) => {
-              // Auto-update: when a new SW is available, notify user
+              const activateUpdate = (worker) => {
+                if (!worker) return;
+                worker.addEventListener('statechange', () => {
+                  if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                    worker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              };
+
+              if (reg.waiting && navigator.serviceWorker.controller) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+
               reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                if (newWorker) {
-                  newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                      // New version available — could show a toast
-                      console.log('[SW] New version available');
-                    }
-                  });
-                }
+                activateUpdate(reg.installing);
               });
+
+              const checkForUpdate = () => reg.update().catch(() => {});
+              checkForUpdate();
+              window.addEventListener('focus', checkForUpdate);
+              document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) checkForUpdate();
+              });
+              setInterval(checkForUpdate, 5 * 60 * 1000);
             })
             .catch((err) => console.warn('[SW] Registration failed:', err));
         });

@@ -1,13 +1,31 @@
+import fs from "fs"
 import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { visualizer } from "rollup-plugin-visualizer"
+
+function injectServiceWorkerBuildId() {
+  const buildId = (process.env.BUILD_ID || process.env.GITHUB_SHA?.slice(0, 12) || new Date().toISOString().replace(/\D/g, "")).trim()
+
+  return {
+    name: "inject-service-worker-build-id",
+    apply: "build" as const,
+    closeBundle() {
+      const swPath = path.resolve(__dirname, "dist/sw.js")
+      if (!fs.existsSync(swPath)) return
+
+      const source = fs.readFileSync(swPath, "utf8")
+      fs.writeFileSync(swPath, source.replace(/thebooktimes-__BUILD_ID__/g, `thebooktimes-${buildId}`))
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
   plugins: [
     react(),
+    injectServiceWorkerBuildId(),
     // Bundle analyzer — generates stats.html in dist/ when ANALYZE=true
     ...(process.env.ANALYZE ? [visualizer({
       filename: 'dist/stats.html',

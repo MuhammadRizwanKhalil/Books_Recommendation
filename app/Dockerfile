@@ -30,16 +30,15 @@ ARG VITE_GOOGLE_CLIENT_ID=
 ARG VITE_GA_MEASUREMENT_ID=
 ARG VITE_ANALYTICS_ALLOWED_HOSTS=thebooktimes.com
 ARG VITE_ENABLE_ANALYTICS=false
-ARG BUILD_ID=dev
+ARG BUILD_ID=
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
 ENV VITE_ANALYTICS_ALLOWED_HOSTS=${VITE_ANALYTICS_ALLOWED_HOSTS}
 ENV VITE_ENABLE_ANALYTICS=${VITE_ENABLE_ANALYTICS}
+ENV BUILD_ID=${BUILD_ID}
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
-# Inject build id into service worker so each deploy invalidates PWA caches
-RUN sed -i "s/__BUILD_ID__/${BUILD_ID}/g" public/sw.js
 RUN npx vite build
 
 # ── Production stage: serve with nginx ───────────────────────────────────────

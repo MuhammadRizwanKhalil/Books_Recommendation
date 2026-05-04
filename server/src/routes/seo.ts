@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { dbGet, dbAll } from '../database.js';
 import { logger } from '../lib/logger.js';
-import { config } from '../config.js';
+import { getPrimaryFrontendUrl, toAbsoluteSiteUrl } from '../lib/siteUrl.js';
 
 const router = Router();
 
 // ── Robots.txt ──────────────────────────────────────────────────────────────
 router.get('/robots.txt', async (_req: Request, res: Response) => {
   try {
-  const siteUrl = config.frontendUrl;
+  const siteUrl = getPrimaryFrontendUrl();
   // Read admin URL slug dynamically from settings
   const adminSlug = (await dbGet<any>("SELECT value FROM site_settings WHERE `key` = 'admin_url_slug'", []))?.value || 'ctrl-panel';
   res.type('text/plain').send(`# The Book Times Robots.txt
@@ -37,7 +37,7 @@ Crawl-delay: 1
 
 // ── Main Sitemap Index ──────────────────────────────────────────────────────
 router.get('/sitemap.xml', (_req: Request, res: Response) => {
-  const siteUrl = config.frontendUrl;
+  const siteUrl = getPrimaryFrontendUrl();
   const now = new Date().toISOString().split('T')[0];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -71,16 +71,16 @@ router.get('/sitemap.xml', (_req: Request, res: Response) => {
 
 // ── Static Pages Sitemap ────────────────────────────────────────────────────
 router.get('/sitemap-pages.xml', (_req: Request, res: Response) => {
-  const siteUrl = config.frontendUrl;
+  const siteUrl = getPrimaryFrontendUrl();
   const now = new Date().toISOString().split('T')[0];
 
   const pages = [
     { path: '/', priority: '1.0', changefreq: 'daily' },
-    { path: '/#trending', priority: '0.8', changefreq: 'daily' },
-    { path: '/#categories', priority: '0.8', changefreq: 'weekly' },
-    { path: '/#new-releases', priority: '0.8', changefreq: 'daily' },
-    { path: '/#top-rated', priority: '0.8', changefreq: 'weekly' },
-    { path: '/#blog', priority: '0.7', changefreq: 'weekly' },
+    { path: '/trending', priority: '0.8', changefreq: 'daily' },
+    { path: '/categories', priority: '0.8', changefreq: 'weekly' },
+    { path: '/search', priority: '0.6', changefreq: 'weekly' },
+    { path: '/blog', priority: '0.7', changefreq: 'weekly' },
+    { path: '/pricing', priority: '0.4', changefreq: 'monthly' },
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -101,7 +101,7 @@ ${pages.map(p => `  <url>
 // ── Books Sitemap ───────────────────────────────────────────────────────────
 router.get('/sitemap-books.xml', async (_req: Request, res: Response) => {
   try {
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
     const books = await dbAll<any>(`
       SELECT slug, updated_at, cover_image, title FROM books 
       WHERE status = 'PUBLISHED' AND is_active = 1 
@@ -118,7 +118,7 @@ ${books.map(b => `  <url>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>${b.cover_image ? `
     <image:image>
-      <image:loc>${escapeXml(b.cover_image)}</image:loc>
+      <image:loc>${escapeXml(toAbsoluteSiteUrl(b.cover_image, siteUrl))}</image:loc>
       <image:title>${escapeXml(b.title)}</image:title>
     </image:image>` : ''}
   </url>`).join('\n')}
@@ -136,7 +136,7 @@ ${books.map(b => `  <url>
 // ── Categories Sitemap ──────────────────────────────────────────────────────
 router.get('/sitemap-categories.xml', async (_req: Request, res: Response) => {
   try {
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
     const categories = await dbAll<any>(`
       SELECT slug, updated_at FROM categories WHERE book_count > 0 ORDER BY book_count DESC
     `, []);
@@ -144,7 +144,7 @@ router.get('/sitemap-categories.xml', async (_req: Request, res: Response) => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${categories.map(c => `  <url>
-    <loc>${siteUrl}/categories/${c.slug}</loc>
+    <loc>${siteUrl}/category/${c.slug}</loc>
     <lastmod>${c.updated_at ? c.updated_at.split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -162,7 +162,7 @@ ${categories.map(c => `  <url>
 // ── Blog Sitemap ────────────────────────────────────────────────────────────
 router.get('/sitemap-blog.xml', async (_req: Request, res: Response) => {
   try {
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
     const posts = await dbAll<any>(`
       SELECT slug, updated_at, featured_image, title FROM blog_posts 
       WHERE status = 'PUBLISHED' 
@@ -179,7 +179,7 @@ ${posts.map(p => `  <url>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>${p.featured_image ? `
     <image:image>
-      <image:loc>${escapeXml(p.featured_image)}</image:loc>
+      <image:loc>${escapeXml(toAbsoluteSiteUrl(p.featured_image, siteUrl))}</image:loc>
       <image:title>${escapeXml(p.title)}</image:title>
     </image:image>` : ''}
   </url>`).join('\n')}
@@ -196,7 +196,7 @@ ${posts.map(p => `  <url>
 // ── Authors Sitemap ─────────────────────────────────────────────────────────
 router.get('/sitemap-authors.xml', async (_req: Request, res: Response) => {
   try {
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
     const authors = await dbAll<any>(`
       SELECT a.slug, a.updated_at, a.image_url, a.name
       FROM authors a
@@ -216,7 +216,7 @@ ${authors.map(a => `  <url>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>${a.image_url ? `
     <image:image>
-      <image:loc>${escapeXml(a.image_url)}</image:loc>
+      <image:loc>${escapeXml(toAbsoluteSiteUrl(a.image_url, siteUrl))}</image:loc>
       <image:title>${escapeXml(a.name)}</image:title>
     </image:image>` : ''}
   </url>`).join('\n')}
@@ -249,7 +249,7 @@ router.get('/api/seo/author/:slug', async (req: Request, res: Response) => {
       return;
     }
 
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
 
     // Get author's books for the JSON-LD
     const books = await dbAll<any>(`
@@ -263,7 +263,7 @@ router.get('/api/seo/author/:slug', async (req: Request, res: Response) => {
       '@type': 'Person',
       name: author.name,
       url: `${siteUrl}/author/${author.slug}`,
-      ...(author.image_url && { image: author.image_url }),
+      ...(author.image_url && { image: toAbsoluteSiteUrl(author.image_url, siteUrl) }),
       ...(author.bio && { description: author.bio }),
       ...(author.website_url && { sameAs: [author.website_url] }),
       ...(books.length > 0 && {
@@ -276,7 +276,7 @@ router.get('/api/seo/author/:slug', async (req: Request, res: Response) => {
           '@type': 'Book',
           name: b.title,
           url: `${siteUrl}/book/${b.slug}`,
-          ...(b.cover_image && { image: b.cover_image }),
+          ...(b.cover_image && { image: toAbsoluteSiteUrl(b.cover_image, siteUrl) }),
           ...(b.isbn13 && { isbn: b.isbn13 }),
           ...(b.published_date && { datePublished: b.published_date }),
         })),
@@ -316,7 +316,7 @@ router.get('/api/seo/book/:slug', async (req: Request, res: Response) => {
       return;
     }
 
-    const siteUrl = config.frontendUrl;
+    const siteUrl = getPrimaryFrontendUrl();
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Book',
@@ -327,7 +327,7 @@ router.get('/api/seo/book/:slug', async (req: Request, res: Response) => {
         name: book.author,
       },
       description: book.description || `${book.title} by ${book.author}`,
-      image: book.cover_image,
+      image: toAbsoluteSiteUrl(book.cover_image || '/og-image.png', siteUrl),
       url: `${siteUrl}/book/${book.slug}`,
       ...(book.isbn13 && { isbn: book.isbn13 }),
       ...(book.isbn10 && { identifier: { '@type': 'PropertyValue', propertyID: 'ISBN-10', value: book.isbn10 } }),
@@ -364,7 +364,7 @@ router.get('/api/seo/book/:slug', async (req: Request, res: Response) => {
 
 // Get JSON-LD for the homepage (WebSite + Organization + SearchAction)
 router.get('/api/seo/homepage', async (_req: Request, res: Response) => {
-  const siteUrl = config.frontendUrl;
+  const siteUrl = getPrimaryFrontendUrl();
   
   // Load site settings
   let siteName = 'The Book Times';
@@ -397,7 +397,7 @@ router.get('/api/seo/homepage', async (_req: Request, res: Response) => {
         '@type': 'SearchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: `${siteUrl}/?search={search_term_string}`,
+          urlTemplate: `${siteUrl}/search?q={search_term_string}`,
         },
         'query-input': 'required name=search_term_string',
       },

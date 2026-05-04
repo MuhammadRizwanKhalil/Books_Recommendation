@@ -1090,6 +1090,10 @@ export async function getPersonalizedRecommendations(
 ): Promise<PersonalizedResult> {
   const scores = new Map<string, number>();
   const strategies: string[] = [];
+  const addScore = (bookId: string, score: number) => {
+    if (!Number.isFinite(score) || score <= 0) return;
+    scores.set(bookId, (scores.get(bookId) || 0) + score);
+  };
 
   // Gather user's interaction profile
   const userReviews = await dbAll<any>(
@@ -1105,22 +1109,93 @@ export async function getPersonalizedRecommendations(
     [userId],
   );
 
+  let userViews: any[] = [];
+  try {
+    userViews = await dbAll<any>(`
+      SELECT entity_id as book_id, COUNT(*) as view_count, MAX(created_at) as last_viewed_at
+      FROM analytics_events
+      WHERE user_id = ?
+        AND entity_type = 'book'
+        AND event_type = 'view'
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+      GROUP BY entity_id
+      ORDER BY last_viewed_at DESC
+      LIMIT 80
+    `, [userId]);
+  } catch {
+    userViews = [];
+  }
+
   const interactedBookIds = new Set<string>([
     ...userReviews.map((r: any) => r.book_id),
     ...userProgress.map((p: any) => p.book_id),
     ...userWishlist.map((w: any) => w.book_id),
+    ...userViews.map((v: any) => v.book_id),
   ]);
 
-  const interactionCount = interactedBookIds.size;
-  const confidence = Math.min(1, interactionCount / 20); // Full confidence at 20+ interactions
+  const negativeBookIds = new Set<string>();
+  const signalWeights = new Map<string, number>();
+  const addSignal = (bookId: string, weight: number) => {
+    if (!bookId || !Number.isFinite(weight) || weight === 0) return;
+    signalWeights.set(bookId, (signalWeights.get(bookId) || 0) + weight);
+  };
+
+  for (const review of userReviews) {
+    const rating = Number(review.rating);
+    if (rating <= 2) {
+      negativeBookIds.add(review.book_id);
+      addSignal(review.book_id, -1);
+    } else if (rating >= 4) {
+      addSignal(review.book_id, 1.4 + (rating - 4) * 0.4);
+    } else if (rating >= 3) {
+      addSignal(review.book_id, 0.45);
+    }
+  }
+
+  for (const progress of userProgress) {
+    const personalRating = progress.personal_rating == null ? null : Number(progress.personal_rating);
+    if (personalRating != null) {
+      if (personalRating <= 2) {
+        negativeBookIds.add(progress.book_id);
+        addSignal(progress.book_id, -1);
+      } else if (personalRating >= 4) {
+        addSignal(progress.book_id, 1.25 + (personalRating - 4) * 0.35);
+      } else if (personalRating >= 3) {
+        addSignal(progress.book_id, 0.4);
+      }
+    }
+
+    if (progress.status === 'finished') addSignal(progress.book_id, 0.9);
+    else if (progress.status === 'reading') addSignal(progress.book_id, 0.65);
+    else if (progress.status === 'want-to-read') addSignal(progress.book_id, 0.25);
+    else if (progress.status === 'dnf') {
+      negativeBookIds.add(progress.book_id);
+      addSignal(progress.book_id, -0.8);
+    }
+  }
+
+  for (const wishlist of userWishlist) {
+    addSignal(wishlist.book_id, 0.35);
+  }
+
+  for (const view of userViews) {
+    addSignal(view.book_id, Math.min(0.4, Number(view.view_count || 1) * 0.08));
+  }
+
+  const confidence = Math.min(
+    1,
+    (userReviews.length * 2 + userProgress.length * 1.5 + userWishlist.length + userViews.length * 0.25) / 25,
+  );
+
+  const positiveSignalIds = Array.from(signalWeights.entries())
+    .filter(([, weight]) => weight > 0.2)
+    .sort(([, a], [, b]) => b - a)
+    .map(([bookId]) => bookId)
+    .slice(0, 60);
 
   // ─── Strategy 1: Collaborative Filtering ────────────────────────
   if (userReviews.length >= 3) {
     strategies.push('collaborative_filtering');
-    const userRatings = new Map<string, number>(
-      userReviews.map((r: any) => [r.book_id, Number(r.rating)]),
-    );
-
     // Find similar users (those who reviewed the same books with similar ratings)
     const reviewedBookIds = userReviews.map((r: any) => r.book_id);
     const placeholders = reviewedBookIds.map(() => '?').join(',');
@@ -1149,114 +1224,209 @@ export async function getPersonalizedRecommendations(
       `, [su.user_id]);
 
       for (const sb of suBooks) {
-        if (!interactedBookIds.has(sb.book_id)) {
+        if (!interactedBookIds.has(sb.book_id) && !negativeBookIds.has(sb.book_id)) {
           const cfScore = similarity * Number(sb.rating) * 6; // Scale to ~30 max
-          scores.set(sb.book_id, (scores.get(sb.book_id) || 0) + cfScore);
+          addScore(sb.book_id, cfScore);
         }
       }
     }
   }
 
   // ─── Strategy 2: Content-Based (user profile) ──────────────────
-  if (interactionCount >= 2) {
+  if (positiveSignalIds.length >= 2) {
     strategies.push('content_based');
 
-    // Build profile: preferred categories, average rating
-    const bookIds = Array.from(interactedBookIds);
-    const bookPlaceholders = bookIds.map(() => '?').join(',');
+    const signalPlaceholders = positiveSignalIds.map(() => '?').join(',');
 
-    // Top categories from user's books
-    const topCats = await dbAll<any>(`
-      SELECT bc.category_id, c.name, COUNT(*) as freq
+    const categoryRows = await dbAll<any>(`
+      SELECT bc.book_id, bc.category_id, c.name
       FROM book_categories bc
       JOIN categories c ON c.id = bc.category_id
-      WHERE bc.book_id IN (${bookPlaceholders})
-      GROUP BY bc.category_id
-      ORDER BY freq DESC LIMIT 5
-    `, bookIds);
+      WHERE bc.book_id IN (${signalPlaceholders})
+    `, positiveSignalIds);
+
+    const categoryWeights = new Map<string, number>();
+    for (const row of categoryRows) {
+      const weight = Math.max(0, signalWeights.get(row.book_id) || 0);
+      categoryWeights.set(row.category_id, (categoryWeights.get(row.category_id) || 0) + weight);
+    }
+
+    const topCats = Array.from(categoryWeights.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 8);
 
     if (topCats.length > 0) {
-      const catIds = topCats.map((c: any) => c.category_id);
+      const catIds = topCats.map(([categoryId]) => categoryId);
+      const maxCategoryWeight = Math.max(...topCats.map(([, weight]) => weight), 1);
       const catPlaceholders = catIds.map(() => '?').join(',');
+      const excludedIds = Array.from(new Set([...interactedBookIds, ...negativeBookIds]));
+      const excludedPlaceholders = excludedIds.map(() => '?').join(',');
 
-      // Find high-scoring books in preferred categories
       const cbBooks = await dbAll<any>(`
-        SELECT DISTINCT b.id, b.computed_score, COUNT(bc.category_id) as cat_overlap
+        SELECT b.id, b.computed_score, GROUP_CONCAT(DISTINCT bc.category_id) as category_ids
         FROM books b
         JOIN book_categories bc ON bc.book_id = b.id
         WHERE bc.category_id IN (${catPlaceholders})
-          AND b.id NOT IN (${bookPlaceholders})
+          ${excludedIds.length > 0 ? `AND b.id NOT IN (${excludedPlaceholders})` : ''}
           AND b.status = 'PUBLISHED' AND b.is_active = 1
         GROUP BY b.id
-        ORDER BY cat_overlap DESC, b.computed_score DESC
-        LIMIT 30
-      `, [...catIds, ...bookIds]);
+        ORDER BY COUNT(DISTINCT bc.category_id) DESC, b.computed_score DESC
+        LIMIT 100
+      `, [...catIds, ...excludedIds]);
 
       for (const cb of cbBooks) {
-        const cbScore = (cb.cat_overlap / topCats.length) * 20 + (Number(cb.computed_score) / 100) * 10;
-        scores.set(cb.id, (scores.get(cb.id) || 0) + cbScore);
+        const candidateCategories = String(cb.category_ids || '').split(',').filter(Boolean);
+        const weightedOverlap = candidateCategories.reduce((sum, categoryId) => {
+          return sum + (categoryWeights.get(categoryId) || 0);
+        }, 0);
+        const cbScore = (weightedOverlap / maxCategoryWeight) * 22 + (Number(cb.computed_score) / 100) * 10;
+        addScore(cb.id, cbScore);
       }
     }
 
     // Preferred authors
     const topAuthors = await dbAll<any>(`
-      SELECT author, COUNT(*) as freq FROM books
-      WHERE id IN (${bookPlaceholders})
-      GROUP BY author ORDER BY freq DESC LIMIT 3
-    `, bookIds);
+      SELECT id, author FROM books
+      WHERE id IN (${signalPlaceholders})
+        AND author IS NOT NULL AND author != ''
+    `, positiveSignalIds);
 
-    for (const ta of topAuthors) {
+    const authorWeights = new Map<string, number>();
+    for (const row of topAuthors) {
+      const weight = Math.max(0, signalWeights.get(row.id) || 0);
+      authorWeights.set(row.author, (authorWeights.get(row.author) || 0) + weight);
+    }
+
+    for (const [author, authorWeight] of Array.from(authorWeights.entries()).sort(([, a], [, b]) => b - a).slice(0, 5)) {
+      const excludedIds = Array.from(new Set([...interactedBookIds, ...negativeBookIds]));
+      const excludedPlaceholders = excludedIds.map(() => '?').join(',');
       const authorBooks = await dbAll<any>(`
         SELECT id, computed_score FROM books
-        WHERE author = ? AND id NOT IN (${bookPlaceholders})
+        WHERE author = ?
+          ${excludedIds.length > 0 ? `AND id NOT IN (${excludedPlaceholders})` : ''}
           AND status = 'PUBLISHED' AND is_active = 1
         ORDER BY computed_score DESC LIMIT 5
-      `, [ta.author, ...bookIds]);
+      `, [author, ...excludedIds]);
 
       for (const ab of authorBooks) {
-        const authorScore = 15 + (Number(ab.computed_score) / 100) * 5;
-        scores.set(ab.id, (scores.get(ab.id) || 0) + authorScore);
+        const authorScore = Math.min(22, 10 + authorWeight * 4) + (Number(ab.computed_score) / 100) * 5;
+        addScore(ab.id, authorScore);
       }
     }
   }
 
-  // ─── Strategy 3: Popularity Fallback ──────────────────────────
+  // ─── Strategy 3: Mood/Theme Profile ────────────────────────────
+  if (positiveSignalIds.length > 0) {
+    try {
+      const signalPlaceholders = positiveSignalIds.map(() => '?').join(',');
+      const analyses = await dbAll<any>(`
+        SELECT book_id, result
+        FROM ai_book_analysis
+        WHERE analysis_type = 'mood'
+          AND book_id IN (${signalPlaceholders})
+      `, positiveSignalIds);
+
+      const moodWeights = new Map<string, number>();
+      const themeWeights = new Map<string, number>();
+      for (const analysis of analyses) {
+        const weight = Math.max(0.2, signalWeights.get(analysis.book_id) || 0.2);
+        const data = typeof analysis.result === 'string' ? JSON.parse(analysis.result) : analysis.result;
+        for (const mood of data?.mood?.moods || []) {
+          moodWeights.set(mood, (moodWeights.get(mood) || 0) + weight);
+        }
+        for (const theme of data?.themes?.themes || []) {
+          themeWeights.set(theme, (themeWeights.get(theme) || 0) + weight);
+        }
+      }
+
+      const topMoods = Array.from(moodWeights.entries()).sort(([, a], [, b]) => b - a).slice(0, 8);
+      const topThemes = Array.from(themeWeights.entries()).sort(([, a], [, b]) => b - a).slice(0, 10);
+
+      if (topMoods.length > 0 || topThemes.length > 0) {
+        strategies.push('mood_profile');
+        const excludedIds = Array.from(new Set([...interactedBookIds, ...negativeBookIds]));
+        const excludedPlaceholders = excludedIds.map(() => '?').join(',');
+        const moodCandidates = await dbAll<any>(`
+          SELECT b.id, b.computed_score, a.result
+          FROM books b
+          JOIN ai_book_analysis a ON a.book_id = b.id
+          WHERE a.analysis_type = 'mood'
+            ${excludedIds.length > 0 ? `AND b.id NOT IN (${excludedPlaceholders})` : ''}
+            AND b.status = 'PUBLISHED' AND b.is_active = 1
+          ORDER BY b.computed_score DESC
+          LIMIT 220
+        `, excludedIds);
+
+        for (const candidate of moodCandidates) {
+          try {
+            const data = typeof candidate.result === 'string' ? JSON.parse(candidate.result) : candidate.result;
+            const candidateMoods = new Set<string>(data?.mood?.moods || []);
+            const candidateThemes = new Set<string>(data?.themes?.themes || []);
+            let moodScore = 0;
+
+            for (const [mood, weight] of topMoods) {
+              if (candidateMoods.has(mood)) moodScore += Math.min(8, 3 + weight * 2);
+            }
+            for (const [theme, weight] of topThemes) {
+              if (candidateThemes.has(theme)) moodScore += Math.min(6, 2 + weight * 1.5);
+            }
+
+            addScore(candidate.id, moodScore + (Number(candidate.computed_score) / 100) * 4);
+          } catch { /* skip malformed analysis */ }
+        }
+      }
+    } catch { /* mood analysis table/data may be unavailable */ }
+  }
+
+  // ─── Strategy 4: Popularity Fallback ──────────────────────────
   if (scores.size < limit) {
     strategies.push('popularity');
-    const exclusions = Array.from(new Set([...interactedBookIds, ...scores.keys()]));
-    const exPlaceholders = exclusions.length > 0 ? exclusions.map(() => '?').join(',') : "'none'";
+    const exclusions = Array.from(new Set([...interactedBookIds, ...negativeBookIds, ...scores.keys()]));
+    const exPlaceholders = exclusions.length > 0 ? exclusions.map(() => '?').join(',') : '';
 
     const popular = await dbAll<any>(`
       SELECT id, computed_score FROM books
       WHERE status = 'PUBLISHED' AND is_active = 1
         ${exclusions.length > 0 ? `AND id NOT IN (${exPlaceholders})` : ''}
-      ORDER BY computed_score DESC LIMIT ?
-    `, [...(exclusions.length > 0 ? exclusions : []), limit]);
+      ORDER BY computed_score DESC, ratings_count DESC, google_rating DESC
+      LIMIT ?
+    `, [...exclusions, Math.max(limit * 2, limit - scores.size)]);
 
-    for (const p of popular) {
-      if (!scores.has(p.id)) {
-        scores.set(p.id, Number(p.computed_score) * 0.3); // Lower weight for generic popularity
-      }
+    for (const popularBook of popular) {
+      addScore(popularBook.id, Number(popularBook.computed_score) * 0.25);
     }
   }
 
   // ─── Diversity Re-ranking ─────────────────────────────────────
   const ranked = Array.from(scores.entries())
+    .filter(([bookId]) => !interactedBookIds.has(bookId) && !negativeBookIds.has(bookId))
     .sort(([, a], [, b]) => b - a)
-    .slice(0, limit * 2); // Over-fetch for diversity
+    .slice(0, limit * 3); // Over-fetch for diversity
 
-  // Load categories for diversity
   const diverseResults: string[] = [];
   const usedCategories = new Set<string>();
+  const rankedIds = ranked.map(([bookId]) => bookId);
+  const categoriesByBook = new Map<string, string[]>();
+
+  if (rankedIds.length > 0) {
+    const rankedPlaceholders = rankedIds.map(() => '?').join(',');
+    const diversityRows = await dbAll<any>(`
+      SELECT book_id, category_id
+      FROM book_categories
+      WHERE book_id IN (${rankedPlaceholders})
+    `, rankedIds);
+
+    for (const row of diversityRows) {
+      const list = categoriesByBook.get(row.book_id) || [];
+      list.push(row.category_id);
+      categoriesByBook.set(row.book_id, list);
+    }
+  }
 
   for (const [bookId] of ranked) {
     if (diverseResults.length >= limit) break;
 
-    const bookCats = await dbAll<any>(
-      'SELECT category_id FROM book_categories WHERE book_id = ?',
-      [bookId],
-    );
-    const catIds = bookCats.map((c: any) => c.category_id);
+    const catIds = categoriesByBook.get(bookId) || [];
 
     // If more than half of the book's categories already represented, deprioritize
     const overlap = catIds.filter((c: string) => usedCategories.has(c)).length;

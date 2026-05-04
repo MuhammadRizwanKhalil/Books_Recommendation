@@ -19,7 +19,7 @@ import path from 'path';
 import { logger } from '../lib/logger.js';
 import fs from 'fs';
 import { dbGet, dbAll } from '../database.js';
-import { config } from '../config.js';
+import { getPrimaryFrontendUrl, slugifyPathSegment, toAbsoluteSiteUrl } from '../lib/siteUrl.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ interface PageMeta {
   ogType: string;
   ogUrl: string;
   canonical: string;
+  robots?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   extraTags?: string;
 }
@@ -42,8 +43,10 @@ const SITE_NAME = 'The Book Times';
 const DEFAULT_DESCRIPTION = 'Discover your next great read with AI-powered book recommendations. Explore 50,000+ books across every genre with personalized suggestions, ratings, and reviews.';
 const DEFAULT_OG_IMAGE = '/og-image.png';
 
+const SEO_TEMPLATE_URL = process.env.SEO_TEMPLATE_URL || 'http://app/index.html';
+
 function getSiteUrl(): string {
-  return config.frontendUrl.replace(/\/$/, '');
+  return getPrimaryFrontendUrl();
 }
 
 // ── Escape helpers ─────────────────────────────────────────────────────────
@@ -157,7 +160,7 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
   const siteUrl = getSiteUrl();
   try {
     const book = await dbGet<any>(`
-      SELECT b.*, GROUP_CONCAT(c.name SEPARATOR ', ') as category_names
+      SELECT b.*, GROUP_CONCAT(c.name SEPARATOR ', ') as category_names, GROUP_CONCAT(c.slug SEPARATOR ',') as category_slugs
       FROM books b 
       LEFT JOIN book_categories bc ON bc.book_id = b.id
       LEFT JOIN categories c ON c.id = bc.category_id
@@ -172,8 +175,8 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
       `Read ${book.title} by ${book.author}. ${book.description || ''}`, 160
     );
     const pageUrl = `${siteUrl}/book/${slug}`;
-    const ogImageUrl = book.og_image || book.cover_image || `${siteUrl}${DEFAULT_OG_IMAGE}`;
-    const canonicalUrl = book.canonical_url || pageUrl;
+    const ogImageUrl = toAbsoluteSiteUrl(book.og_image || book.cover_image || DEFAULT_OG_IMAGE, siteUrl);
+    const canonicalUrl = toAbsoluteSiteUrl(book.canonical_url || pageUrl, siteUrl);
     const robots = book.seo_robots || 'index, follow';
 
     const meta: any = {
@@ -185,6 +188,7 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
       ogType: 'book',
       ogUrl: pageUrl,
       canonical: canonicalUrl,
+      robots,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'Book',
@@ -192,7 +196,7 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
         ...(book.subtitle && { alternativeHeadline: book.subtitle }),
         author: { '@type': 'Person', name: book.author },
         description: book.description || description,
-        image: book.cover_image,
+        image: toAbsoluteSiteUrl(book.cover_image || DEFAULT_OG_IMAGE, siteUrl),
         url: pageUrl,
         ...(book.isbn13 && { isbn: book.isbn13 }),
         ...(book.publisher && { publisher: { '@type': 'Organization', name: book.publisher } }),
@@ -267,21 +271,24 @@ async function getBookMeta(slug: string): Promise<PageMeta | null> {
     }
 
     // Add BreadcrumbList schema alongside the Book schema
+    const firstCategoryName = book.category_names?.split(', ')[0];
+    const firstCategorySlug = book.category_slugs?.split(',')[0] || (firstCategoryName ? slugifyPathSegment(firstCategoryName) : '');
     const breadcrumbJsonLd = {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
-        ...(book.category_names ? [{
+        ...(firstCategoryName ? [{
           '@type': 'ListItem',
           position: 2,
-          name: book.category_names.split(', ')[0],
-          item: `${siteUrl}/category/${book.category_names.split(', ')[0].toLowerCase().replace(/\s+/g, '-')}`,
+          name: firstCategoryName,
+          item: `${siteUrl}/category/${firstCategorySlug}`,
         }] : []),
         {
           '@type': 'ListItem',
-          position: book.category_names ? 3 : 2,
+          position: firstCategoryName ? 3 : 2,
           name: book.title,
+          item: pageUrl,
         },
       ],
     };
@@ -319,7 +326,7 @@ async function getCategoryMeta(slug: string): Promise<PageMeta | null> {
       description,
       ogTitle: `${cat.name} Books`,
       ogDescription: description,
-      ogImage: cat.image_url || `${siteUrl}${DEFAULT_OG_IMAGE}`,
+      ogImage: toAbsoluteSiteUrl(cat.image_url || DEFAULT_OG_IMAGE, siteUrl),
       ogType: 'website',
       ogUrl: pageUrl,
       canonical: pageUrl,
@@ -354,8 +361,8 @@ async function getBlogPostMeta(slug: string): Promise<PageMeta | null> {
 
     const title = post.meta_title || `${post.title} | ${SITE_NAME} Blog`;
     const description = post.meta_description || truncate(post.excerpt || post.content || '', 160);
-    const pageUrl = post.canonical_url || `${siteUrl}/blog/${slug}`;
-    const ogImage = post.og_image || post.featured_image || `${siteUrl}${DEFAULT_OG_IMAGE}`;
+    const pageUrl = toAbsoluteSiteUrl(post.canonical_url || `/blog/${slug}`, siteUrl);
+    const ogImage = toAbsoluteSiteUrl(post.og_image || post.featured_image || DEFAULT_OG_IMAGE, siteUrl);
 
     const extraTagsArr = [
       post.published_at ? `<meta property="article:published_time" content="${escapeHtml(post.published_at)}" />` : '',
@@ -391,6 +398,7 @@ async function getBlogPostMeta(slug: string): Promise<PageMeta | null> {
       ogType: 'article',
       ogUrl: pageUrl,
       canonical: pageUrl,
+      robots: post.seo_robots || 'index, follow',
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
@@ -457,6 +465,7 @@ function getSearchMeta(query?: string): PageMeta {
     ogType: 'website',
     ogUrl: pageUrl,
     canonical: pageUrl,
+    robots: query ? 'noindex, follow' : 'index, follow',
   };
 }
 
@@ -508,6 +517,13 @@ function injectMeta(html: string, meta: PageMeta): string {
     /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/,
     `<link rel="canonical" href="${escapeHtml(meta.canonical)}" />`
   );
+
+  if (meta.robots) {
+    html = html.replace(
+      /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/,
+      `<meta name="robots" content="${escapeHtml(meta.robots)}" />`
+    );
+  }
 
   // Replace static JSON-LD with dynamic ones
   // Remove all existing <script type="application/ld+json"> blocks
@@ -585,6 +601,7 @@ export function createSeoRenderer(distPath: string) {
   // Read the HTML template once at startup
   const indexPath = path.join(distPath, 'index.html');
   let htmlTemplate = '';
+  let htmlTemplateFetchedAt = 0;
 
   try {
     htmlTemplate = fs.readFileSync(indexPath, 'utf-8');
@@ -592,6 +609,28 @@ export function createSeoRenderer(distPath: string) {
   } catch (err) {
     logger.warn({ data: indexPath }, '⚠️  SEO Renderer: Could not read index.html from');
     logger.warn('   Build the frontend first: cd app && npm run build');
+  }
+
+  async function getHtmlTemplate(): Promise<string> {
+    if (htmlTemplate) return htmlTemplate;
+    if (!SEO_TEMPLATE_URL) return '';
+
+    if (Date.now() - htmlTemplateFetchedAt < 5000) return '';
+    htmlTemplateFetchedAt = Date.now();
+
+    try {
+      const response = await fetch(SEO_TEMPLATE_URL, { cache: 'no-store' });
+      if (!response.ok) {
+        logger.warn({ data: `${SEO_TEMPLATE_URL} (${response.status})` }, 'SEO Renderer: template fetch failed');
+        return '';
+      }
+      htmlTemplate = await response.text();
+      logger.info({ data: SEO_TEMPLATE_URL }, 'SEO Renderer: HTML template fetched from');
+      return htmlTemplate;
+    } catch (err) {
+      logger.warn({ err }, 'SEO Renderer: could not fetch HTML template');
+      return '';
+    }
   }
 
   // ── LRU Cache for rendered HTML (avoids hitting DB on every request) ──
@@ -629,8 +668,10 @@ export function createSeoRenderer(distPath: string) {
       return next();
     }
 
+    const template = await getHtmlTemplate();
+
     // If we don't have the template, fall through
-    if (!htmlTemplate) {
+    if (!template) {
       return next();
     }
 
@@ -650,11 +691,11 @@ export function createSeoRenderer(distPath: string) {
       const meta = await getMetaForPath(req.path, req.query.q as string);
       if (!meta) {
         // Page not found — still serve the SPA and let React handle 404
-        res.send(htmlTemplate);
+        res.send(template);
         return;
       }
 
-      const html = injectMeta(htmlTemplate, meta);
+      const html = injectMeta(template, meta);
 
       // Store in cache
       setCache(cacheKey, html);
@@ -667,7 +708,7 @@ export function createSeoRenderer(distPath: string) {
       logger.error({ err: err }, 'SEO Renderer error');
       // Fallback: serve unmodified template
       res.set('Content-Type', 'text/html');
-      res.send(htmlTemplate);
+      res.send(template);
     }
   };
 }

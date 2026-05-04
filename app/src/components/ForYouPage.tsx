@@ -16,8 +16,24 @@ import type { BookResponse } from '@/api/client';
 const strategyIcons: Record<string, { icon: typeof Brain; label: string; color: string }> = {
   collaborative_filtering: { icon: Users, label: 'Based on Similar Readers', color: 'bg-blue-100 text-blue-800' },
   content_based: { icon: BookOpen, label: 'Based on Your Taste', color: 'bg-green-100 text-green-800' },
+  mood_profile: { icon: Sparkles, label: 'Mood & Theme Match', color: 'bg-purple-100 text-purple-800' },
   popularity: { icon: TrendingUp, label: 'Popular Picks', color: 'bg-orange-100 text-orange-800' },
 };
+
+function confidenceWidthClass(confidence: number) {
+  const percent = Math.max(0, Math.min(100, Math.round(confidence * 100)));
+  if (percent >= 95) return 'w-full';
+  if (percent >= 85) return 'w-11/12';
+  if (percent >= 75) return 'w-3/4';
+  if (percent >= 65) return 'w-2/3';
+  if (percent >= 55) return 'w-7/12';
+  if (percent >= 45) return 'w-1/2';
+  if (percent >= 35) return 'w-5/12';
+  if (percent >= 25) return 'w-1/4';
+  if (percent >= 15) return 'w-1/6';
+  if (percent > 0) return 'w-1/12';
+  return 'w-0';
+}
 
 export function ForYouPage() {
   const { user } = useAuth();
@@ -87,7 +103,7 @@ export function ForYouPage() {
           <Brain className="h-4 w-4" />
           Confidence: {Math.round(confidence * 100)}%
           <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${confidence * 100}%` }} />
+            <div className={`h-full bg-primary transition-all ${confidenceWidthClass(confidence)}`} />
           </div>
         </div>
         {strategies.map(s => {

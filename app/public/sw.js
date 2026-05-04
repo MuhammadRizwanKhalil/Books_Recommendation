@@ -1,8 +1,8 @@
 ﻿// The Book Times Service Worker
 // Provides offline caching, asset pre-caching, and API cache-first strategies
 
-// __BUILD_ID__ is replaced at Docker build time with the commit SHA so each
-// deploy invalidates old caches. Falls back to a stable id for local dev.
+// The build id token is replaced during production builds so each deploy
+// invalidates old app caches.
 const CACHE_VERSION = 'thebooktimes-__BUILD_ID__';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -14,6 +14,18 @@ const PRECACHE_URLS = [
   '/manifest.json',
 ];
 
+async function precacheAppShell() {
+  const cache = await caches.open(STATIC_CACHE);
+  await Promise.allSettled(
+    PRECACHE_URLS.map(async (url) => {
+      const response = await fetch(new Request(url, { cache: 'reload' }));
+      if (response.ok) {
+        await cache.put(url, response);
+      }
+    })
+  );
+}
+
 // â”€â”€ Cache size limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const API_CACHE_MAX = 100;     // Max API responses to cache
 const IMAGE_CACHE_MAX = 200;   // Max images to cache
@@ -22,8 +34,7 @@ const API_CACHE_TTL = 5 * 60 * 1000;  // 5 minutes for API data
 // â”€â”€ Install: pre-cache shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
+    precacheAppShell()
       .then(() => self.skipWaiting())
   );
 });
@@ -58,6 +69,12 @@ self.addEventListener('fetch', (event) => {
   // Skip auth-related API calls
   if (url.pathname.startsWith('/api/auth')) return;
 
+  // Never serve the service worker, manifest, or HTML shell from stale browser cache.
+  if (url.pathname === '/sw.js' || url.pathname === '/manifest.json' || url.pathname === '/index.html') {
+    event.respondWith(fetch(new Request(request, { cache: 'no-store' })));
+    return;
+  }
+
   // Strategy 1: API requests â€” Network-first with cache fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirstWithCache(request, API_CACHE, API_CACHE_TTL));
@@ -78,16 +95,7 @@ self.addEventListener('fetch', (event) => {
 
   // Strategy 4: Navigation (SPA pages) â€” Network-first, fallback to cached index.html
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache the response for offline
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put('/', clone));
-          return response;
-        })
-        .catch(() => caches.match('/'))
-    );
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 
@@ -104,6 +112,23 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(request))
   );
 });
+
+async function networkFirstNavigation(request) {
+  try {
+    const response = await fetch(new Request(request, { cache: 'no-store' }));
+    if (response.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      await cache.put('/', response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match('/') || await caches.match('/index.html');
+    return cached || new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+}
 
 // â”€â”€ Helper: Network-first with timed cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function networkFirstWithCache(request, cacheName, ttl) {
@@ -205,10 +230,10 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  if (event.data?.type === 'CLEAR_CACHE') {
-    caches.keys().then((keys) => {
-      keys.forEach((key) => caches.delete(key));
-    });
+  if (event.data?.type === 'CLEAR_CACHE' || event.data?.type === 'CLEAR_CACHES') {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+    );
   }
 });
 

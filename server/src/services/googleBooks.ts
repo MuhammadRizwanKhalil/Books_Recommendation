@@ -124,7 +124,7 @@ export interface NormalizedBook {
 
 const BASE_URL = 'https://www.googleapis.com/books/v1/volumes';
 const MAX_RESULTS_PER_PAGE = 40; // Google API max
-const REQUEST_DELAY_MS = 1500;    // Throttle between requests (generous to avoid 429)
+const REQUEST_DELAY_MS = config.importJob.googleRequestDelayMs;
 
 // Search queries for the initial "top books" fetch — 40+ queries to yield 1000+ unique books
 const TOP_BOOKS_QUERIES = [
@@ -233,7 +233,117 @@ function getDailyQueries(): string[] {
     `most anticipated books ${year}`,
     `best new fiction ${year}`,
     `best new nonfiction ${year}`,
+    `best books ${year} editors choice`,
+    `popular fiction ${year} highly rated`,
+    `popular nonfiction ${year} highly rated`,
   ];
+}
+
+interface BookQueryPlan {
+  query: string;
+  category?: string;
+  orderBy?: 'relevance' | 'newest';
+  maxNewBooks?: number;
+}
+
+interface CollectBooksOptions {
+  targetBooks: number;
+  maxNewPerQuery: number;
+  requestBudget: number;
+  existingGoogleIds?: Set<string>;
+  label: string;
+  onProgress?: (message: string) => void;
+  qualityGate?: (book: NormalizedBook) => boolean;
+}
+
+async function collectNormalizedBooksFromPlans(
+  plans: BookQueryPlan[],
+  options: CollectBooksOptions,
+): Promise<NormalizedBook[]> {
+  const allBooks: NormalizedBook[] = [];
+  const seenIds = new Set<string>(options.existingGoogleIds || []);
+  const requestBudget = Math.max(1, options.requestBudget);
+  let requestsUsed = 0;
+  let consecutiveFailures = 0;
+  const maxConsecutiveFailures = 3;
+
+  for (const plan of plans) {
+    if (allBooks.length >= options.targetBooks) break;
+    if (requestsUsed >= requestBudget) {
+      options.onProgress?.(`Request budget exhausted (${requestsUsed}/${requestBudget}) before target was reached.`);
+      break;
+    }
+    if (consecutiveFailures >= maxConsecutiveFailures) {
+      options.onProgress?.(`Aborting: ${consecutiveFailures} consecutive API failures — check your GOOGLE_BOOKS_API_KEY and quota.`);
+      break;
+    }
+
+    const perQueryTarget = Math.max(1, plan.maxNewBooks || options.maxNewPerQuery);
+    let startIndex = 0;
+    let newInQuery = 0;
+    let skippedExisting = 0;
+    let skippedInvalid = 0;
+    let rawSeen = 0;
+
+    options.onProgress?.(`Searching: "${plan.query}" (target ${perQueryTarget} new, ${requestsUsed}/${requestBudget} requests used)...`);
+
+    while (
+      newInQuery < perQueryTarget &&
+      allBooks.length < options.targetBooks &&
+      requestsUsed < requestBudget
+    ) {
+      try {
+        requestsUsed++;
+        const result = await searchBooks(plan.query, {
+          startIndex,
+          maxResults: MAX_RESULTS_PER_PAGE,
+          orderBy: plan.orderBy || 'relevance',
+        });
+        consecutiveFailures = 0;
+
+        const items = result.items || [];
+        if (items.length === 0) break;
+
+        rawSeen += items.length;
+        for (const volume of items) {
+          if (seenIds.has(volume.id)) {
+            skippedExisting++;
+            continue;
+          }
+          seenIds.add(volume.id);
+
+          const normalized = await normalizeVolume(volume, plan.category);
+          if (!normalized || (options.qualityGate && !options.qualityGate(normalized))) {
+            skippedInvalid++;
+            continue;
+          }
+
+          allBooks.push(normalized);
+          newInQuery++;
+          options.onProgress?.(`  ✓ ${normalized.title} by ${normalized.author} (${allBooks.length}/${options.targetBooks})`);
+
+          if (newInQuery >= perQueryTarget || allBooks.length >= options.targetBooks) break;
+        }
+
+        startIndex += items.length;
+        if (startIndex >= result.totalItems || items.length < MAX_RESULTS_PER_PAGE) break;
+
+        await delay(REQUEST_DELAY_MS);
+      } catch (err: any) {
+        consecutiveFailures++;
+        options.onProgress?.(`  ✗ Error fetching "${plan.query}": ${err.message}`);
+        break;
+      }
+    }
+
+    options.onProgress?.(
+      `  📊 Query complete: ${newInQuery} new, ${skippedExisting} existing, ${skippedInvalid} invalid/low-quality, ${rawSeen} raw, requests ${requestsUsed}/${requestBudget}`,
+    );
+    await delay(REQUEST_DELAY_MS);
+  }
+
+  options.onProgress?.(`${options.label}: ${allBooks.length} books collected using ${requestsUsed}/${requestBudget} Google Books requests.`);
+  return allBooks;
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -306,75 +416,24 @@ export async function fetchTopBooks(
   booksPerCategory: number = 30,
   onProgress?: (message: string) => void,
   existingGoogleIds?: Set<string>,
+  targetBooks: number = config.importJob.fullImportTargetBooks,
+  requestBudget: number = config.importJob.googleDailyRequestBudget,
 ): Promise<NormalizedBook[]> {
-  const allBooks: NormalizedBook[] = [];
-  const seenIds = new Set<string>(existingGoogleIds || []);
-  let consecutiveFailures = 0;
-  const MAX_CONSECUTIVE_FAILURES = 3; // Stop early if API keeps failing
+  const plans: BookQueryPlan[] = [
+    ...TOP_BOOKS_QUERIES.map(({ query, category }) => ({ query, category, orderBy: 'relevance' as const })),
+    { query: 'bestseller books highly rated', orderBy: 'relevance', maxNewBooks: Math.max(booksPerCategory, 80) },
+    { query: 'award winning books highly rated', orderBy: 'relevance', maxNewBooks: Math.max(booksPerCategory, 80) },
+  ];
 
-  for (const { query, category } of TOP_BOOKS_QUERIES) {
-    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      onProgress?.(`Aborting: ${consecutiveFailures} consecutive API failures — check your GOOGLE_BOOKS_API_KEY.`);
-      break;
-    }
-    onProgress?.(`Fetching top books for category: ${category}...`);
-    try {
-      const books = await fetchAllPages(query, booksPerCategory);
-      consecutiveFailures = 0; // Reset on success
-      let newInBatch = 0;
-      let skippedInBatch = 0;
-      for (const volume of books) {
-        if (seenIds.has(volume.id)) {
-          skippedInBatch++;
-          continue;
-        }
-        seenIds.add(volume.id);
-
-        const normalized = await normalizeVolume(volume, category);
-        if (normalized) {
-          // Quality gate: skip books with very low engagement for initial import
-          if (normalized.googleRating && normalized.googleRating < 3.0 && normalized.ratingsCount < 10) {
-            continue;
-          }
-          allBooks.push(normalized);
-          newInBatch++;
-          onProgress?.(`  ✓ ${normalized.title} by ${normalized.author} (★${normalized.googleRating ?? '?'} · ${normalized.ratingsCount} ratings)`);
-        }
-      }
-      if (skippedInBatch > 0) {
-        onProgress?.(`  ⏭ Skipped ${skippedInBatch} already-imported books in ${category}`);
-      }
-      onProgress?.(`  📊 ${category}: ${newInBatch} new, ${skippedInBatch} skipped (total so far: ${allBooks.length})`);
-    } catch (err: any) {
-      consecutiveFailures++;
-      onProgress?.(`  ✗ Error fetching ${category}: ${err.message}`);
-    }
-    await delay(REQUEST_DELAY_MS);
-  }
-
-  if (consecutiveFailures < MAX_CONSECUTIVE_FAILURES) {
-    // Also fetch general bestsellers
-    onProgress?.('Fetching general bestsellers...');
-    try {
-      const generalBooks = await fetchAllPages('bestseller books highly rated', 40);
-      for (const volume of generalBooks) {
-        if (seenIds.has(volume.id)) continue;
-        seenIds.add(volume.id);
-        const normalized = await normalizeVolume(volume);
-        if (normalized) {
-          if (normalized.googleRating && normalized.googleRating < 3.0 && normalized.ratingsCount < 10) {
-            continue;
-          }
-          allBooks.push(normalized);
-        }
-      }
-    } catch (err: any) {
-      onProgress?.(`  ✗ Error fetching general: ${err.message}`);
-    }
-  }
-
-  onProgress?.(`Total books fetched: ${allBooks.length}`);
-  return allBooks;
+  return collectNormalizedBooksFromPlans(plans, {
+    targetBooks,
+    maxNewPerQuery: booksPerCategory,
+    requestBudget,
+    existingGoogleIds,
+    label: 'Full import',
+    onProgress,
+    qualityGate: (book) => !(book.googleRating && book.googleRating < 3.0 && book.ratingsCount < 10),
+  });
 }
 
 /**
@@ -385,77 +444,22 @@ export async function fetchDailyNewBooks(
   maxPerQuery: number = 20,
   onProgress?: (message: string) => void,
   existingGoogleIds?: Set<string>,
+  targetBooks: number = config.importJob.dailyTargetBooks,
+  requestBudget: number = config.importJob.googleDailyRequestBudget,
 ): Promise<NormalizedBook[]> {
-  const allBooks: NormalizedBook[] = [];
-  const seenIds = new Set<string>(existingGoogleIds || []);
-  let consecutiveFailures = 0;
-  const MAX_CONSECUTIVE_FAILURES = 3; // Stop early if API keeps failing
+  const plans: BookQueryPlan[] = [
+    ...getDailyQueries().map((query) => ({ query, orderBy: 'newest' as const, maxNewBooks: maxPerQuery })),
+    ...TOP_BOOKS_QUERIES.map(({ query, category }) => ({ query, category, orderBy: 'newest' as const, maxNewBooks: maxPerQuery })),
+  ];
 
-  const dailyQueries = getDailyQueries();
-  for (const query of dailyQueries) {
-    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      onProgress?.(`Aborting: ${consecutiveFailures} consecutive API failures — check your GOOGLE_BOOKS_API_KEY.`);
-      break;
-    }
-    onProgress?.(`Searching: "${query}"...`);
-    try {
-      const result = await searchBooks(query, {
-        maxResults: maxPerQuery,
-        orderBy: 'newest',
-      });
-      consecutiveFailures = 0; // Reset on success
-      if (result.items) {
-        let skipped = 0;
-        for (const volume of result.items) {
-          if (seenIds.has(volume.id)) { skipped++; continue; }
-          seenIds.add(volume.id);
-          const normalized = await normalizeVolume(volume);
-          if (normalized) {
-            allBooks.push(normalized);
-            onProgress?.(`  ✓ ${normalized.title} by ${normalized.author}`);
-          }
-        }
-        if (skipped > 0) onProgress?.(`  ⏭ Skipped ${skipped} already-imported books`);
-      }
-    } catch (err: any) {
-      consecutiveFailures++;
-      onProgress?.(`  ✗ Error: ${err.message}`);
-    }
-    await delay(REQUEST_DELAY_MS);
-  }
-
-  // Also fetch newest across categories
-  for (const { query, category } of TOP_BOOKS_QUERIES) {
-    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      onProgress?.(`Aborting categories: repeated API failures.`);
-      break;
-    }
-    onProgress?.(`Checking new in ${category}...`);
-    try {
-      const result = await searchBooks(query, {
-        maxResults: 10,
-        orderBy: 'newest',
-      });
-      consecutiveFailures = 0;
-      if (result.items) {
-        for (const volume of result.items) {
-          if (seenIds.has(volume.id)) continue;
-          seenIds.add(volume.id);
-          const normalized = await normalizeVolume(volume, category);
-          if (normalized) {
-            allBooks.push(normalized);
-          }
-        }
-      }
-    } catch (err: any) {
-      consecutiveFailures++;
-      onProgress?.(`  ✗ Error: ${err.message}`);
-    }
-    await delay(REQUEST_DELAY_MS);
-  }
-
-  onProgress?.(`Daily new books found: ${allBooks.length}`);
-  return allBooks;
+  return collectNormalizedBooksFromPlans(plans, {
+    targetBooks,
+    maxNewPerQuery: maxPerQuery,
+    requestBudget,
+    existingGoogleIds,
+    label: 'Daily import',
+    onProgress,
+  });
 }
 
 // ── Normalization ───────────────────────────────────────────────────────────

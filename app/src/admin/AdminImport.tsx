@@ -265,8 +265,8 @@ export function AdminImport() {
             Manual Import
           </CardTitle>
           <CardDescription>
-            Trigger a book import from Google Books API manually.
-            The cron job also runs this automatically on schedule.
+            Trigger a quota-aware Google Books import manually.
+            The scheduled job uses the same daily target and request budget.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -274,7 +274,7 @@ export function AdminImport() {
             <div className="flex-1 p-4 border rounded-lg">
               <h3 className="font-semibold mb-1">Daily Import</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Fetch new &amp; trending books published recently. Quick incremental update.
+                Targets 500 new valid books by paging through new and trending queries while staying under the Google Books request budget.
               </p>
               <Button
                 onClick={() => handleRunImport('daily')}
@@ -293,7 +293,7 @@ export function AdminImport() {
             <div className="flex-1 p-4 border rounded-lg">
               <h3 className="font-semibold mb-1">Full Import</h3>
               <p className="text-sm text-muted-foreground mb-3">
-                Fetch top/popular books across all categories. Use for initial DB population.
+                Targets up to 1,000 new popular books across categories. Use separate daily runs to keep growing the catalog inside quota.
               </p>
               <Button
                 variant="outline"
@@ -445,8 +445,9 @@ export function AdminImport() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
               <div className="w-full sm:w-64">
-                <label className="text-sm font-medium mb-1.5 block">Fix mode</label>
+                <label htmlFor="amazon-fix-mode" className="text-sm font-medium mb-1.5 block">Fix mode</label>
                 <select
+                  id="amazon-fix-mode"
                   className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   value={amazonFixMode}
                   onChange={(e) => setAmazonFixMode(e.target.value as typeof amazonFixMode)}

@@ -158,7 +158,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
 
       <div className="container mx-auto px-4 pb-8 overflow-x-hidden">
         {/* ====== MAIN LAYOUT ====== */}
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-3 sm:pt-4 min-w-0">
+        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-6 sm:pt-8 min-w-0 items-start">
 
           {/* LEFT COLUMN — Image + Details + Affiliate + Quick actions */}
           <div className="space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
@@ -402,8 +402,10 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Details — rendered directly under description (was a tab) */}
-            <div className="space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
-              <ReadingCounts bookId={book.id} />
+            <div className="space-y-5 sm:space-y-6">
+              <div className="rounded-xl border bg-card p-4 sm:p-5">
+                <ReadingCounts bookId={book.id} />
+              </div>
               <FriendsReadingThis bookId={book.id} />
               <ContentWarnings bookId={book.id} />
               <StoryArcChart bookId={book.id} />
@@ -412,7 +414,9 @@ export function BookPage({ book, onBack }: BookPageProps) {
               {book.authorsData && book.authorsData.length > 0 && (
                 <AuthorSection authors={book.authorsData} />
               )}
-              <BookRecommendations bookId={book.id} />
+              <div className="rounded-xl border bg-card p-4 sm:p-5 overflow-hidden">
+                <BookRecommendations bookId={book.id} />
+              </div>
               <FeaturedInBlog bookId={book.id} />
               <BookQuotes bookId={book.id} />
             </div>

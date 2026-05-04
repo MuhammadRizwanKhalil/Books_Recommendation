@@ -30,6 +30,15 @@ const DEFAULTS = {
   canonical: 'https://thebooktimes.com',
 };
 
+function toAbsoluteUrl(value?: string) {
+  if (!value) return '';
+  try {
+    return new URL(value, window.location.origin).href;
+  } catch {
+    return value;
+  }
+}
+
 /**
  * Hook to dynamically update document title, meta description,
  * Open Graph tags, Twitter cards, canonical URL, and JSON-LD
@@ -90,15 +99,15 @@ export function useSEO({
     // ── Open Graph ──────────────────────────────────────────────────────
     setMeta('property', 'og:title', ogTitle || title);
     setMeta('property', 'og:description', ogDescription || description || DEFAULTS.ogDescription);
-    if (ogImage) setMeta('property', 'og:image', ogImage);
+    if (ogImage) setMeta('property', 'og:image', toAbsoluteUrl(ogImage));
     if (ogType) setMeta('property', 'og:type', ogType);
-    if (ogUrl) setMeta('property', 'og:url', ogUrl);
+    if (ogUrl) setMeta('property', 'og:url', toAbsoluteUrl(ogUrl));
 
     // ── Twitter Card ────────────────────────────────────────────────────
     setMeta('name', 'twitter:card', ogImage ? 'summary_large_image' : 'summary');
     setMeta('name', 'twitter:title', ogTitle || title);
     setMeta('name', 'twitter:description', ogDescription || description || DEFAULTS.ogDescription);
-    if (ogImage) setMeta('name', 'twitter:image', ogImage);
+    if (ogImage) setMeta('name', 'twitter:image', toAbsoluteUrl(ogImage));
 
     // ── Extra meta tags ─────────────────────────────────────────────────
     if (extraMeta) {
@@ -115,7 +124,7 @@ export function useSEO({
         canonicalEl.setAttribute('rel', 'canonical');
         document.head.appendChild(canonicalEl);
       }
-      canonicalEl.setAttribute('href', canonical);
+      canonicalEl.setAttribute('href', toAbsoluteUrl(canonical));
     }
 
     // ── JSON-LD Structured Data ─────────────────────────────────────────
