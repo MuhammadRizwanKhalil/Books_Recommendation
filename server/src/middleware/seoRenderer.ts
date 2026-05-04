@@ -44,6 +44,7 @@ const DEFAULT_DESCRIPTION = 'Discover your next great read with AI-powered book 
 const DEFAULT_OG_IMAGE = '/og-image.png';
 
 const SEO_TEMPLATE_URL = process.env.SEO_TEMPLATE_URL || 'http://app/index.html';
+const HTML_NO_STORE = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
 
 function getSiteUrl(): string {
   return getPrimaryFrontendUrl();
@@ -682,7 +683,7 @@ export function createSeoRenderer(distPath: string) {
       const cached = getCached(cacheKey);
       if (cached) {
         res.set('Content-Type', 'text/html');
-        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+        res.set('Cache-Control', HTML_NO_STORE);
         res.set('X-SEO-Cache', 'HIT');
         res.send(cached);
         return;
@@ -701,13 +702,14 @@ export function createSeoRenderer(distPath: string) {
       setCache(cacheKey, html);
 
       res.set('Content-Type', 'text/html');
-      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+      res.set('Cache-Control', HTML_NO_STORE);
       res.set('X-SEO-Cache', 'MISS');
       res.send(html);
     } catch (err) {
       logger.error({ err: err }, 'SEO Renderer error');
       // Fallback: serve unmodified template
       res.set('Content-Type', 'text/html');
+      res.set('Cache-Control', HTML_NO_STORE);
       res.send(template);
     }
   };
