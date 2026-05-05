@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense, createContext, useContext } from 'react';
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
-import { ScrollToTop } from '@/components/ScrollToTop';
 import { BackToTop } from '@/components/BackToTop';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthModal } from '@/components/AuthModal';
@@ -793,7 +792,6 @@ function App() {
         {!isAdminView && !isLegalView && <Footer />}
         <WishlistDrawer />
         <AdminBar />
-        <ScrollToTop />
         <BackToTop />
       </div>
     </AppNavContext.Provider>
