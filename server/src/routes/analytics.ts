@@ -64,31 +64,34 @@ router.get('/public-stats', async (_req: Request, res: Response) => {
 // ── GET /api/analytics/popular-searches — public top searched terms ─────────
 // Returns the most-searched non-empty queries from the last N days. Cached.
 router.get('/popular-searches', async (req: Request, res: Response) => {
+  const days = Math.min(90, Math.max(1, parseInt(req.query.days as string || '30', 10)));
+  const limit = Math.min(40, Math.max(1, parseInt(req.query.limit as string || '20', 10)));
+
   try {
-    const days = Math.min(90, Math.max(1, parseInt(req.query.days as string || '30', 10)));
-    const limit = Math.min(40, Math.max(1, parseInt(req.query.limit as string || '20', 10)));
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 
     const rows = await dbAll<any>(
-      `SELECT query, COUNT(*) as count
+      `SELECT MIN(TRIM(\`query\`)) as query, COUNT(*) as search_count
        FROM search_queries
        WHERE created_at >= ?
-         AND query IS NOT NULL
-         AND LENGTH(TRIM(query)) >= 2
-         AND results_count > 0
-       GROUP BY LOWER(TRIM(query))
-       ORDER BY count DESC
+         AND \`query\` IS NOT NULL
+         AND CHAR_LENGTH(TRIM(\`query\`)) >= 2
+         AND COALESCE(results_count, 0) > 0
+       GROUP BY LOWER(TRIM(\`query\`))
+       ORDER BY search_count DESC
        LIMIT ?`,
       [since, limit],
     );
 
     res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=1200');
     res.json({
-      terms: rows.map(r => ({ query: String(r.query).trim(), count: Number(r.count) })),
+      terms: rows.map(r => ({ query: String(r.query).trim(), count: Number(r.search_count) })),
       period: `Last ${days} days`,
     });
   } catch (err: any) {
-    res.status(500).json({ terms: [], error: 'Failed to fetch popular searches' });
+    logger.warn({ err: err?.message }, 'Failed to fetch popular searches; returning empty fallback');
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json({ terms: [], period: `Last ${days} days` });
   }
 });
 

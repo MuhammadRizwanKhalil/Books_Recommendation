@@ -37,8 +37,21 @@ function isAllowedDomain(urlStr: string): boolean {
   }
 }
 
+const FALLBACK_COVER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600" role="img" aria-label="Book cover unavailable"><rect width="400" height="600" fill="#f4f1ea"/><rect x="48" y="64" width="304" height="472" rx="18" fill="#fffaf2" stroke="#d8cfc0" stroke-width="4"/><path d="M118 170h164M118 215h164M118 260h118" stroke="#9a8f7d" stroke-width="14" stroke-linecap="round"/><path d="M132 388h136v18H132zm28 42h80v14h-80z" fill="#9a8f7d" opacity=".9"/><text x="200" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#6f6251">The Book Times</text><text x="200" y="366" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#8d806e">Cover unavailable</text></svg>`;
+
+function sendFallbackImage(res: Response, reason: string): void {
+  const body = Buffer.from(FALLBACK_COVER_SVG);
+  res.status(200).set({
+    'Content-Type': 'image/svg+xml; charset=utf-8',
+    'Content-Length': String(body.length),
+    'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+    'X-Image-Proxy-Fallback': reason,
+  });
+  res.send(body);
+}
+
 // ── Image proxy endpoint ────────────────────────────────────────────────────
-router.get('/image', rateLimit('image-proxy', 60, 60 * 1000), async (req: Request, res: Response) => {
+router.get('/image', rateLimit('image-proxy', 300, 60 * 1000), async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;
   const width = Math.min(Math.max(parseInt(req.query.w as string) || 0, 0), 2400);
   const height = Math.min(Math.max(parseInt(req.query.h as string) || 0, 0), 2400);
@@ -50,7 +63,7 @@ router.get('/image', rateLimit('image-proxy', 60, 60 * 1000), async (req: Reques
   }
 
   if (!isAllowedDomain(imageUrl)) {
-    res.status(403).json({ error: 'Domain not allowed' });
+    sendFallbackImage(res, 'domain-not-allowed');
     return;
   }
 
@@ -78,15 +91,26 @@ router.get('/image', rateLimit('image-proxy', 60, 60 * 1000), async (req: Reques
     });
 
     if (!response.ok) {
-      res.status(response.status).json({ error: 'Failed to fetch image' });
+      logger.warn({ status: response.status, url: imageUrl }, 'Image proxy upstream fetch failed');
+      sendFallbackImage(res, 'upstream-fetch-failed');
       return;
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
 
+    if (buffer.length === 0) {
+      sendFallbackImage(res, 'empty-upstream-response');
+      return;
+    }
+
     // Try to use sharp for optimization if available
     let outputBuffer = buffer;
     let outputContentType = response.headers.get('content-type') || contentType;
+
+    if (outputContentType && !outputContentType.toLowerCase().startsWith('image/')) {
+      sendFallbackImage(res, 'upstream-non-image');
+      return;
+    }
 
     try {
       const sharp = (await import('sharp')).default;
@@ -133,8 +157,8 @@ router.get('/image', rateLimit('image-proxy', 60, 60 * 1000), async (req: Reques
 
     res.send(outputBuffer);
   } catch (err: any) {
-    logger.error({ err: err.message }, 'Image proxy error');
-    res.status(500).json({ error: 'Image processing failed' });
+    logger.error({ err: err.message }, 'Image proxy error; serving fallback image');
+    sendFallbackImage(res, 'proxy-error');
   }
 });
 

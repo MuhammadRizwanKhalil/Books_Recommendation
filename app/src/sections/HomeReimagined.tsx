@@ -11,12 +11,14 @@ import {
   Compass,
   Flame,
   Layers3,
+  Library,
   Mail,
   Search,
   Sparkles,
   Star,
   TrendingUp,
   Trophy,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -42,6 +44,9 @@ type HomeAction = {
   requiresAuth?: boolean;
 };
 
+const CAROUSEL_AUTO_SCROLL_SPEED = 0.18;
+const CAROUSEL_DRAG_CLICK_THRESHOLD = 8;
+
 const HOME_ACTIONS: HomeAction[] = [
   { label: 'For You', description: 'Personalized picks', href: '/for-you', icon: Sparkles, requiresAuth: true },
   { label: 'Trending', description: 'What is hot this week', href: '/trending', icon: Flame },
@@ -54,14 +59,13 @@ const HOME_ACTIONS: HomeAction[] = [
 function InfiniteFlipBookCarousel({
   books,
   loading,
-  onOpenBook,
   emptyMessage = 'Books are loading. Please check back in a moment.',
 }: {
   books: Book[];
   loading: boolean;
-  onOpenBook: (book: Book) => void;
   emptyMessage?: string;
 }) {
+  const prefersReducedMotion = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const animationRef = useRef<number>(0);
@@ -85,14 +89,14 @@ function InfiniteFlipBookCarousel({
 
   useEffect(() => {
     const element = scrollRef.current;
-    if (!element || books.length === 0) return;
+    if (!element || books.length === 0 || prefersReducedMotion) return;
 
     let lastTime = 0;
 
     const animate = (time: number) => {
       if (!pausedRef.current && !isDraggingRef.current && lastTime) {
         const delta = time - lastTime;
-        const nextScrollLeft = element.scrollLeft + 0.55 * (delta / 16);
+        const nextScrollLeft = element.scrollLeft + CAROUSEL_AUTO_SCROLL_SPEED * (delta / 16);
         element.scrollLeft = normalizeScrollLeft(element, nextScrollLeft);
       }
 
@@ -102,7 +106,7 @@ function InfiniteFlipBookCarousel({
 
     animationRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [books.length]);
+  }, [books.length, prefersReducedMotion]);
 
   if (loading) {
     return (
@@ -129,7 +133,6 @@ function InfiniteFlipBookCarousel({
     dragDistanceRef.current = 0;
     dragStartXRef.current = event.clientX;
     dragStartScrollRef.current = element.scrollLeft;
-    element.setPointerCapture(event.pointerId);
   };
 
   const movePointerDrag = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -143,26 +146,22 @@ function InfiniteFlipBookCarousel({
     element.scrollLeft = normalizeScrollLeft(element, nextScrollLeft);
   };
 
-  const endPointerDrag = (pointerId: number) => {
-    const element = scrollRef.current;
-    if (!element || !isDraggingRef.current) return;
+  const endPointerDrag = () => {
+    if (!isDraggingRef.current) return;
 
     isDraggingRef.current = false;
     pausedRef.current = false;
-
-    if (element.hasPointerCapture(pointerId)) {
-      element.releasePointerCapture(pointerId);
-    }
   };
 
-  const handleCardClick = (event: React.MouseEvent<HTMLButtonElement>, book: Book) => {
-    if (dragDistanceRef.current > 8) {
+  const handleCardClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (dragDistanceRef.current > CAROUSEL_DRAG_CLICK_THRESHOLD) {
       event.preventDefault();
       dragDistanceRef.current = 0;
       return;
     }
 
-    onOpenBook(book);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    dragDistanceRef.current = 0;
   };
 
   return (
@@ -175,10 +174,10 @@ function InfiniteFlipBookCarousel({
         className="flex gap-4 overflow-x-auto scrollbar-hide py-1 select-none touch-pan-y cursor-grab active:cursor-grabbing"
         onPointerDown={startPointerDrag}
         onPointerMove={movePointerDrag}
-        onPointerUp={(event) => endPointerDrag(event.pointerId)}
-        onPointerCancel={(event) => endPointerDrag(event.pointerId)}
-        onPointerLeave={(event) => {
-          if (isDraggingRef.current) endPointerDrag(event.pointerId);
+        onPointerUp={endPointerDrag}
+        onPointerCancel={endPointerDrag}
+        onPointerLeave={() => {
+          if (isDraggingRef.current) endPointerDrag();
         }}
         onMouseEnter={() => {
           pausedRef.current = true;
@@ -194,11 +193,11 @@ function InfiniteFlipBookCarousel({
         }}
       >
         {displayBooks.map((book, index) => (
-          <button
+          <Link
             key={`${book.id}-${index}`}
-            type="button"
+            to={`/books/${book.slug}`}
             className="group/flip w-[138px] shrink-0 text-left sm:w-[156px] md:w-[168px] [perspective:1000px]"
-            onClick={(event) => handleCardClick(event, book)}
+            onClick={handleCardClick}
             aria-label={`Open ${book.title}`}
           >
             <div className="relative aspect-[2/3] w-full transition-transform duration-500 [transform-style:preserve-3d] group-hover/flip:[transform:rotateY(180deg)]">
@@ -231,7 +230,7 @@ function InfiniteFlipBookCarousel({
                 <p className="text-[11px] font-semibold text-primary">Tap to open</p>
               </div>
             </div>
-          </button>
+          </Link>
         ))}
       </div>
     </div>
@@ -528,6 +527,200 @@ function HomeSeoDiscoveryStrip({ categories }: { categories: Category[] }) {
   );
 }
 
+// ── Editor's Pick Hero ──────────────────────────────────────────────────────
+function EditorsPickSection({
+  books,
+  loading,
+  onOpenBook,
+}: {
+  books: Book[];
+  loading: boolean;
+  onOpenBook: (book: Book) => void;
+}) {
+  const pick = books[0];
+  const supporting = books.slice(1, 4);
+
+  if (loading) {
+    return (
+      <section className="py-7 sm:py-9">
+        <div className="container mx-auto px-4">
+          <div className="rounded-3xl border border-border/70 bg-background/70 p-6 sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[280px_1fr] lg:items-center">
+              <div className="aspect-[2/3] w-full max-w-[260px] mx-auto animate-pulse rounded-2xl bg-muted" />
+              <div className="space-y-3">
+                <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+                <div className="h-8 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="h-20 w-full animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!pick) return null;
+
+  return (
+    <section aria-labelledby="editors-pick-title" className="py-7 sm:py-9">
+      <div className="container mx-auto px-4">
+        <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-primary/[0.07] via-background to-background p-5 sm:p-7 lg:p-9">
+          <div className="pointer-events-none absolute -left-12 -top-12 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+          <div className="pointer-events-none absolute -right-16 -bottom-16 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+
+          <div className="relative grid gap-6 lg:gap-10 lg:grid-cols-[260px_1fr] lg:items-center">
+            <motion.button
+              type="button"
+              onClick={() => onOpenBook(pick)}
+              className="group relative mx-auto block w-full max-w-[240px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              aria-label={`Open ${pick.title}`}
+            >
+              <div className="overflow-hidden rounded-2xl border border-white/15 shadow-[0_30px_50px_-25px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:-translate-y-1">
+                <img
+                  src={pick.coverImage}
+                  alt={`${pick.title} by ${pick.author}`}
+                  className="aspect-[2/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="eager"
+                  fetchPriority="high"
+                  onError={handleImgError}
+                />
+              </div>
+              <span className="absolute -top-2 -left-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-md">
+                <Sparkles className="h-3 w-3" />
+                Editor&apos;s Pick
+              </span>
+            </motion.button>
+
+            <div className="min-w-0">
+              <Badge variant="secondary" className="mb-2 gap-1">
+                <Trophy className="h-3 w-3" />
+                Featured This Week
+              </Badge>
+              <h2 id="editors-pick-title" className="font-brand-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight leading-tight">
+                {pick.title}
+              </h2>
+              <p className="mt-1 text-sm sm:text-base text-muted-foreground">by <span className="font-medium text-foreground">{pick.author}</span></p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                  <Star className="h-3 w-3 fill-current" />
+                  {formatRating(pick.googleRating)}
+                </span>
+                {pick.pageCount ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+                    <BookOpen className="h-3 w-3" />
+                    {pick.pageCount} pages
+                  </span>
+                ) : null}
+                {pick.categories?.[0] ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+                    <Layers3 className="h-3 w-3" />
+                    {pick.categories[0]}
+                  </span>
+                ) : null}
+              </div>
+
+              {pick.description ? (
+                <p className="mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-muted-foreground line-clamp-4">
+                  {truncateText(pick.description, 320)}
+                </p>
+              ) : null}
+
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                <Button onClick={() => onOpenBook(pick)} size="lg" className="gap-2">
+                  Read full review
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" asChild size="lg">
+                  <Link to="/trending">More trending picks</Link>
+                </Button>
+              </div>
+
+              {supporting.length > 0 ? (
+                <div className="mt-6 border-t border-border/60 pt-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Also worth a look</p>
+                  <div className="flex flex-wrap gap-2">
+                    {supporting.map((book) => (
+                      <button
+                        key={book.id}
+                        type="button"
+                        onClick={() => onOpenBook(book)}
+                        className="group flex max-w-[260px] items-center gap-2 rounded-full border border-border/70 bg-background/80 px-2 py-1.5 text-left transition-colors hover:border-primary/40 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label={`Open ${book.title}`}
+                      >
+                        <img
+                          src={book.coverImage}
+                          alt=""
+                          aria-hidden
+                          className="h-7 w-5 rounded object-cover"
+                          loading="lazy"
+                          onError={handleImgError}
+                        />
+                        <span className="truncate text-xs font-medium group-hover:text-primary">{book.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Catalog Trust Strip ─────────────────────────────────────────────────────
+function CatalogTrustStrip({
+  categories,
+  trendingCount,
+  newReleasesCount,
+}: {
+  categories: Category[];
+  trendingCount: number;
+  newReleasesCount: number;
+}) {
+  const totalBooks = categories.reduce((sum, c) => sum + (c.bookCount || 0), 0);
+
+  const stats: Array<{ icon: LucideIcon; label: string; value: string }> = [
+    { icon: Library, label: 'Books in catalog', value: totalBooks > 0 ? `${formatStat(totalBooks)}+` : '—' },
+    { icon: Layers3, label: 'Categories', value: categories.length > 0 ? `${categories.length}+` : '—' },
+    { icon: TrendingUp, label: 'Trending now', value: trendingCount > 0 ? String(trendingCount) : '—' },
+    { icon: CalendarDays, label: 'New this month', value: newReleasesCount > 0 ? String(newReleasesCount) : '—' },
+    { icon: Users, label: 'Updated', value: 'Daily' },
+  ];
+
+  return (
+    <section aria-label="Catalog highlights" className="pt-1 sm:pt-2">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 rounded-2xl border border-border/65 bg-background/70 p-3 sm:p-4">
+          {stats.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center gap-3 rounded-xl px-2.5 py-2">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-base font-semibold leading-tight">{value}</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function formatStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(n);
+}
+
 export function HomeReimagined() {
   const { isAuthenticated } = useAuth();
   const { openBook } = useAppNav();
@@ -611,6 +804,10 @@ export function HomeReimagined() {
 
   return (
     <div className="font-brand-ui">
+      <EditorsPickSection books={topTwentyBooks} loading={topTwentyLoading} onOpenBook={openBook} />
+
+      <CatalogTrustStrip categories={categories} trendingCount={trendingBooks.length} newReleasesCount={newReleaseBooks.length} />
+
       <section className="py-7 sm:py-9">
         <div className="container mx-auto px-4">
           <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-background via-background to-primary/5 p-4 sm:p-5">
@@ -683,7 +880,6 @@ export function HomeReimagined() {
           <InfiniteFlipBookCarousel
             books={topTwentyBooks}
             loading={topTwentyLoading}
-            onOpenBook={openBook}
             emptyMessage="Top books are loading. Please check back in a moment."
           />
         </div>
@@ -720,7 +916,6 @@ export function HomeReimagined() {
               <InfiniteFlipBookCarousel
                 books={trendingBooks}
                 loading={trendingLoading}
-                onOpenBook={openBook}
                 emptyMessage="Trending books are loading."
               />
             </div>
@@ -742,7 +937,6 @@ export function HomeReimagined() {
               <InfiniteFlipBookCarousel
                 books={newReleaseBooks}
                 loading={newReleaseLoading}
-                onOpenBook={openBook}
                 emptyMessage="New releases are loading."
               />
             </div>

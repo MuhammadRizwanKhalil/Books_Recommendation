@@ -1,4 +1,4 @@
-﻿import { Heart, ExternalLink, ShoppingCart, ChevronLeft, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown } from 'lucide-react';
+﻿import { Heart, ExternalLink, ShoppingCart, ChevronLeft, BookOpen, Calendar, Building2, BarChart3, User as UserIcon, Pencil, Search, ChevronDown, Star, Clock, FileText, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -111,7 +111,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-background overflow-x-hidden"
+      className="min-h-screen bg-background"
     >
       {/* Unified top bar: Back + inline breadcrumb + admin edit (one row, no duplication) */}
       <div className="sticky top-14 sm:top-16 z-40 bg-background border-b shadow-sm overflow-x-hidden">
@@ -156,18 +156,19 @@ export function BookPage({ book, onBack }: BookPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-8 overflow-x-hidden">
+      <div className="container mx-auto px-4 pb-24 lg:pb-8 overflow-x-hidden">
         {/* ====== MAIN LAYOUT ====== */}
-        <div className="grid lg:grid-cols-[340px_1fr] gap-6 lg:gap-10 pt-16 min-w-0 items-start">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[340px_1fr] lg:gap-10 pt-16 min-w-0 lg:items-start">
 
           {/* LEFT COLUMN — Image + Details + Affiliate + Quick actions */}
-          <div className="space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
-            {/* Cover with zoom modal */}
+          {/* On mobile, this sidebar appears AFTER the main content (order-2). Cover is rendered inside the right column on mobile. */}
+          <div className="order-2 lg:order-none space-y-4 flex flex-col items-center lg:items-stretch lg:max-w-none">
+            {/* Cover — desktop only; mobile renders cover inside the right column at the top */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="w-full max-w-[260px] sm:max-w-[300px] lg:max-w-none"
+              className="hidden lg:block w-full max-w-[260px] sm:max-w-[300px] lg:max-w-none"
             >
               <CoverZoom
                 bookId={book.id}
@@ -223,8 +224,8 @@ export function BookPage({ book, onBack }: BookPageProps) {
               </div>
             </div>
 
-            {/* Buy / Affiliate — under details */}
-            <div className="w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 space-y-3">
+            {/* Buy / Affiliate — under details. Hidden on mobile because MobileActionBar covers purchase. */}
+            <div className="hidden lg:block w-full max-w-[420px] lg:max-w-none rounded-2xl border bg-card p-4 space-y-3">
               <h3 className="font-semibold text-sm">Buy This Book</h3>
               {book.price ? (
                 <div className="flex items-baseline gap-2">
@@ -338,8 +339,19 @@ export function BookPage({ book, onBack }: BookPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="space-y-5 sm:space-y-6 min-w-0"
+            className="order-1 lg:order-none space-y-5 sm:space-y-6 min-w-0 w-full"
           >
+            {/* Mobile-only cover at the top of the content column */}
+            <div className="lg:hidden flex justify-center">
+              <div className="w-full max-w-[240px] sm:max-w-[280px]">
+                <CoverZoom
+                  bookId={book.id}
+                  title={book.title}
+                  fallbackCoverImage={book.coverImage}
+                />
+              </div>
+            </div>
+
             {/* Header — title + author */}
             <div>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -392,8 +404,16 @@ export function BookPage({ book, onBack }: BookPageProps) {
               <InlineRatingWidget bookSlug={book.slug} userRating={book.userRating} />
             </div>
 
+            {/* Quick stats strip — at-a-glance metrics */}
+            <QuickStatsStrip book={book} />
+
+            {/* In-page section nav — quick jump pills */}
+            <SectionPills hasReviews hasRecommendations />
+
             {/* Description — primary content */}
-            <DescriptionSection description={book.description} />
+            <section id="about" className="scroll-mt-32">
+              <DescriptionSection description={book.description} />
+            </section>
 
             {/* Compact mood + pace — inline, components self-hide when no data */}
             <div className="flex flex-col gap-2 sm:gap-3">
@@ -402,7 +422,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Details — rendered directly under description (was a tab) */}
-            <div className="space-y-5 sm:space-y-6">
+            <div id="details" className="space-y-5 sm:space-y-6 scroll-mt-32">
               <div className="rounded-xl border bg-card p-4 sm:p-5">
                 <ReadingCounts bookId={book.id} />
               </div>
@@ -414,7 +434,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
               {book.authorsData && book.authorsData.length > 0 && (
                 <AuthorSection authors={book.authorsData} />
               )}
-              <div className="rounded-xl border bg-card p-4 sm:p-5 overflow-hidden">
+              <div id="recommendations" className="rounded-xl border bg-card p-4 sm:p-5 overflow-hidden scroll-mt-32">
                 <BookRecommendations bookId={book.id} />
               </div>
               <FeaturedInBlog bookId={book.id} />
@@ -422,6 +442,7 @@ export function BookPage({ book, onBack }: BookPageProps) {
             </div>
 
             {/* Tabs — Reviews / Community / Tools */}
+            <section id="reviews" className="scroll-mt-32">
             <Tabs defaultValue="reviews" className="w-full">
               <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/60 p-1.5 rounded-xl">
                 <TabsTrigger value="reviews" className="h-9">Reviews</TabsTrigger>
@@ -443,10 +464,143 @@ export function BookPage({ book, onBack }: BookPageProps) {
                 <BookQuizzes bookId={book.id} />
               </TabsContent>
             </Tabs>
+            </section>
           </motion.div>
         </div>
       </div>
+
+      {/* Sticky mobile action bar — quick access to Buy / Wishlist / Status */}
+      <MobileActionBar
+        book={book}
+        isLiked={isLiked}
+        onWishlistToggle={() => toggleWishlist(book)}
+        onAffiliateClick={handleAffiliateClick}
+      />
     </motion.div>
+  );
+}
+
+// ── Quick Stats Strip ─────────────────────────────────────────────────────
+function QuickStatsStrip({ book }: { book: Book }) {
+  const readingHours =
+    book.pageCount && book.pageCount > 0 ? Math.max(1, Math.round((book.pageCount * 1.7) / 60)) : null;
+  const publishedYear = book.publishedDate ? new Date(book.publishedDate).getFullYear() : null;
+
+  const stats: Array<{ icon: typeof Star; label: string; value: string }> = [];
+  if (book.googleRating) {
+    stats.push({ icon: Star, label: 'Rating', value: `${formatRating(book.googleRating)} / 5` });
+  }
+  if (book.pageCount) {
+    stats.push({ icon: FileText, label: 'Pages', value: formatNumber(book.pageCount) });
+  }
+  if (readingHours) {
+    stats.push({ icon: Clock, label: 'Reading time', value: `~${readingHours}h` });
+  }
+  if (publishedYear && !Number.isNaN(publishedYear)) {
+    stats.push({ icon: Calendar, label: 'Published', value: String(publishedYear) });
+  }
+
+  if (stats.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {stats.map(({ icon: Icon, label, value }) => (
+        <div
+          key={label}
+          className="rounded-xl border bg-card/60 px-3 py-2.5 flex flex-col gap-0.5 transition-colors hover:border-primary/40"
+        >
+          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+          </div>
+          <div className="text-base sm:text-lg font-semibold leading-tight">{value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── In-page Section Pill Nav ──────────────────────────────────────────────
+function SectionPills({ hasReviews, hasRecommendations }: { hasReviews?: boolean; hasRecommendations?: boolean }) {
+  const pills: Array<{ id: string; label: string; icon: typeof BookOpen }> = [
+    { id: 'about', label: 'About', icon: BookOpen },
+    { id: 'details', label: 'Details', icon: Sparkles },
+  ];
+  if (hasRecommendations) pills.push({ id: 'recommendations', label: 'You may also like', icon: Star });
+  if (hasReviews) pills.push({ id: 'reviews', label: 'Reviews', icon: MessageSquare });
+
+  const handleJump = (id: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <nav aria-label="Page sections" className="-mx-1 overflow-x-auto scrollbar-hide">
+      <ul className="flex items-center gap-2 px-1 py-1 min-w-max">
+        {pills.map((p) => (
+          <li key={p.id}>
+            <a
+              href={`#${p.id}`}
+              onClick={handleJump(p.id)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <p.icon className="h-3.5 w-3.5" />
+              {p.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+// ── Sticky Mobile Action Bar (mobile-only) ────────────────────────────────
+function MobileActionBar({
+  book,
+  isLiked,
+  onWishlistToggle,
+  onAffiliateClick,
+}: {
+  book: Book;
+  isLiked: boolean;
+  onWishlistToggle: () => void;
+  onAffiliateClick: () => void;
+}) {
+  const isDirectLink = !!book.amazonUrl && book.amazonUrl.includes('/dp/');
+  return (
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-3 py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] shadow-[0_-4px_18px_-12px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center gap-2">
+        <Button
+          variant={isLiked ? 'default' : 'outline'}
+          size="icon"
+          className="h-11 w-11 shrink-0"
+          onClick={onWishlistToggle}
+          aria-label={isLiked ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
+        </Button>
+        {book.amazonUrl ? (
+          <Button asChild size="lg" className="flex-1 h-11 gap-2">
+            <a
+              href={book.amazonUrl}
+              target="_blank"
+              rel="nofollow sponsored noopener noreferrer"
+              onClick={onAffiliateClick}
+            >
+              {isDirectLink ? <ShoppingCart className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+              {isDirectLink ? 'Buy on Amazon' : 'Find on Amazon'}
+            </a>
+          </Button>
+        ) : (
+          <Button size="lg" variant="secondary" disabled className="flex-1 h-11 gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Coming Soon
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
